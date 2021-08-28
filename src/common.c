@@ -8,8 +8,9 @@
 
 #include "driver.h"
 #include "png.h"
-#include "harddisk.h"
-#include "artwork.h"
+#include "chd.h"//#include "hard disk.h"
+
+//#include "artwork.h"
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -19,9 +20,7 @@
 
 
 /***************************************************************************
-
     Constants
-
 ***************************************************************************/
 
 // VERY IMPORTANT: osd_alloc_bitmap must allocate also a "safety area" 16 pixels wide all
@@ -29,14 +28,11 @@
 // routines don't clip at boundaries of the bitmap.
 #define BITMAP_SAFETY			16
 
-#define MAX_MALLOCS				8192
-
-
+//#define MAX_MALLOCS			8192
+#define MAX_MALLOCS				4096
 
 /***************************************************************************
-
     Type definitions
-
 ***************************************************************************/
 
 struct malloc_info
@@ -70,9 +66,11 @@ int resource_tracking_tag = 0;
 
 /* generic NVRAM */
 size_t generic_nvram_size;
-data8_t *generic_nvram;
-data16_t *generic_nvram16;
-data32_t *generic_nvram32;
+UINT8 *generic_nvram;
+UINT16 *generic_nvram16;
+#if (0==PSP_NO_CPU32)
+UINT32 *generic_nvram32;
+#endif //(0==PSP_NO_CPU32)
 
 /* disks */
 static struct chd_file *disk_handle[4];
@@ -87,18 +85,17 @@ int system_bios;
 
 ***************************************************************************/
 
-void showdisclaimer(void)   /* MAURY_BEGIN: dichiarazione */
-{
-	printf("MAME is an emulator: it reproduces, more or less faithfully, the behaviour of\n"
-		 "several arcade machines. But hardware is useless without software, so an image\n"
-		 "of the ROMs which run on that hardware is required. Such ROMs, like any other\n"
-		 "commercial software, are copyrighted material and it is therefore illegal to\n"
-		 "use them if you don't own the original arcade machine. Needless to say, ROMs\n"
-		 "are not distributed together with MAME. Distribution of MAME together with ROM\n"
-		 "images is a violation of copyright law and should be promptly reported to the\n"
-		 "authors so that appropriate legal action can be taken.\n\n");
-}                           /* MAURY_END: dichiarazione */
-
+//void showdisclaimer(void)   /* MAURY_BEGIN: dichiarazione */
+//{
+//	printf("MAME is an emulator: it reproduces, more or less faithfully, the behaviour of\n"
+//		 "several arcade machines. But hardware is useless without software, so an image\n"
+//		 "of the ROMs which run on that hardware is required. Such ROMs, like any other\n"
+//		 "commercial software, are copyrighted material and it is therefore illegal to\n"
+//		 "use them if you don't own the original arcade machine. Needless to say, ROMs\n"
+//		 "are not distributed together with MAME. Distribution of MAME together with ROM\n"
+//		 "images is a violation of copyright law and should be promptly reported to the\n"
+//		 "authors so that appropriate legal action can be taken.\n\n");
+//}                           /* MAURY_END: dichiarazione */
 
 
 /***************************************************************************
@@ -292,8 +289,10 @@ void *nvram_select(void)
 		return generic_nvram;
 	if (generic_nvram16)
 		return generic_nvram16;
+#if (0==PSP_NO_CPU32)
 	if (generic_nvram32)
 		return generic_nvram32;
+#endif //(0==PSP_NO_CPU32)
 	osd_die("generic nvram handler called without nvram in the memory map\n");
 	return 0;
 }
@@ -612,7 +611,7 @@ void save_screen_snapshot_as(mame_file *fp, struct mame_bitmap *bitmap)
 		bounds = Machine->visible_area;
 	}
 	memcpy(saved_rgb_components, direct_rgb_components, sizeof(direct_rgb_components));
-	artwork_override_screenshot_params(&bitmap, &bounds, direct_rgb_components);
+	//artwork_override_screenshot_params(&bitmap, &bounds, direct_rgb_components);
 
 	/* allow the OSD system to muck with the screenshot */
 	osdcopy = osd_override_snapshot(bitmap, &bounds);
@@ -963,7 +962,7 @@ static void handle_missing_file(struct rom_load_data *romdata, const struct RomM
 
 static void dump_wrong_and_correct_checksums(struct rom_load_data* romdata, const char* hash, const char* acthash)
 {
-	unsigned i;
+//	unsigned i;
 	char chksum[256];
 	unsigned found_functions;
 	unsigned wrong_functions;
@@ -985,18 +984,18 @@ static void dump_wrong_and_correct_checksums(struct rom_load_data* romdata, cons
        activate this only in debug buils, but many developers only use
        release builds, so I keep it as is for now. */
 	wrong_functions = 0;
-	for (i=0;i<HASH_NUM_FUNCTIONS;i++)
-		if (hash_data_extract_printable_checksum(hash, 1<<i, chksum) == 2)
-			wrong_functions |= 1<<i;
+	//i=0;//for (i=0;i<HASH_NUM_FUNCTIONS;i++)
+		if (hash_data_extract_printable_checksum(hash, 1/*<<i*/, chksum) == 2)
+			wrong_functions |= 1/*<<i*/;
 
 	if (wrong_functions)
 	{
-		for (i=0;i<HASH_NUM_FUNCTIONS;i++)
-			if (wrong_functions & (1<<i))
+		//i=0;//for (i=0;i<HASH_NUM_FUNCTIONS;i++)
+			if (wrong_functions & (1/*<<i*/))
 			{
 				sprintf(&romdata->errorbuf[strlen(romdata->errorbuf)],
 					"\tInvalid %s checksum treated as 0 (check leading zeros)\n",
-					hash_function_name(1<<i));
+					hash_function_name(1/*<<i*/));
 
 				romdata->warnings++;
 			}
@@ -1565,8 +1564,8 @@ static int process_disk_entries(struct rom_load_data *romdata, const struct RomM
 			/* get the header and extract the MD5/SHA1 */
 			header = *chd_get_header(source);
 			hash_data_clear(acthash);
-			hash_data_insert_binary_checksum(acthash, HASH_MD5, header.md5);
-			hash_data_insert_binary_checksum(acthash, HASH_SHA1, header.sha1);
+		//	hash_data_insert_binary_checksum(acthash, HASH_MD5, header.md5);
+		//	hash_data_insert_binary_checksum(acthash, HASH_SHA1, header.sha1);
 
 			/* verify the MD5 */
 			if (!hash_data_is_equal(ROM_GETHASHDATA(romp), acthash, 0))

@@ -103,7 +103,7 @@ void sn76477_get_info(void *token, UINT32 state, union sndinfo *info);
 void sn76496_get_info(void *token, UINT32 state, union sndinfo *info);
 void pokey_get_info(void *token, UINT32 state, union sndinfo *info);
 void nesapu_get_info(void *token, UINT32 state, union sndinfo *info);
-void astrocade_get_info(void *token, UINT32 state, union sndinfo *info);
+
 void namco_get_info(void *token, UINT32 state, union sndinfo *info);
 void namco_15xx_get_info(void *token, UINT32 state, union sndinfo *info);
 void namco_cus30_get_info(void *token, UINT32 state, union sndinfo *info);
@@ -165,8 +165,8 @@ void sid8580_get_info(void *token, UINT32 state, union sndinfo *info);
 void es5503_get_info(void *token, UINT32 state, union sndinfo *info);
 #endif
 
-void filter_volume_get_info(void *token, UINT32 state, union sndinfo *info);
-void filter_rc_get_info(void *token, UINT32 state, union sndinfo *info);
+//void filter_volume_get_info(void *token, UINT32 state, union sndinfo *info);
+//void filter_rc_get_info(void *token, UINT32 state, union sndinfo *info);
 
 
 
@@ -250,9 +250,6 @@ const struct
 #endif
 #if (HAS_NES)
 	{ SOUND_NES, nesapu_get_info },
-#endif
-#if (HAS_ASTROCADE)
-	{ SOUND_ASTROCADE, astrocade_get_info },
 #endif
 #if (HAS_NAMCO)
 	{ SOUND_NAMCO, namco_get_info },
@@ -405,29 +402,9 @@ const struct
 	{ SOUND_ES8712, es8712_get_info },
 #endif
 
-#ifdef MESS
-#if (HAS_BEEP)
-	{ SOUND_BEEP, beep_get_info },
-#endif
-#if (HAS_SPEAKER)
-	{ SOUND_SPEAKER, speaker_get_info },
-#endif
-#if (HAS_WAVE)
-	{ SOUND_WAVE, wave_get_info },
-#endif
-#if (HAS_SID6581)
-	{ SOUND_SID6581, sid6581_get_info },
-#endif
-#if (HAS_SID8580)
-	{ SOUND_SID8580, sid8580_get_info },
-#endif
-#if (HAS_ES5503)
-	{ SOUND_ES5503, es5503_get_info },
-#endif
-#endif
 
-	{ SOUND_FILTER_VOLUME, filter_volume_get_info },
-	{ SOUND_FILTER_RC, filter_rc_get_info },
+//	{ SOUND_FILTER_VOLUME, filter_volume_get_info },
+//	{ SOUND_FILTER_RC, filter_rc_get_info },
 };
 
 
@@ -524,7 +501,9 @@ static UINT8 sound_matrix[SOUND_COUNT][MAX_SOUND];
 static int totalspeakers;
 static struct speaker_info speaker[MAX_SPEAKER];
 
-static INT16 *finalmix;
+//TMK static INT16 *finalmix;
+INT16 *finalmix;
+int finalmixLen, finalmixCur, finalmixCurNow, finalmixCounter;	//TMK ADD
 static INT32 *leftmix, *rightmix;
 static int samples_this_frame;
 static int global_sound_enabled;
@@ -579,7 +558,12 @@ int sound_start(void)
 		return 1;
 
 	/* allocate memory for mix buffers */
-	finalmix = auto_malloc(Machine->sample_rate * sizeof(*finalmix));
+//TMK	finalmix = auto_malloc(Machine->sample_rate * sizeof(*finalmix));
+	finalmixCur =finalmixCurNow =finalmixCounter =0;
+	finalmixLen =Machine->sample_rate;
+	finalmixLen =((finalmixLen +0x7ff) & ~0x7ff); // 2048の倍数になる様調整
+	finalmix = auto_malloc(finalmixLen * sizeof(*finalmix));
+
 	leftmix = auto_malloc(Machine->sample_rate * sizeof(*leftmix));
 	rightmix = auto_malloc(Machine->sample_rate * sizeof(*rightmix));
 
@@ -941,22 +925,20 @@ void sound_stop(void)
 	if (wavfile)
 		wav_close(wavfile);
 
-#ifdef MAME_DEBUG
-{
-	int spknum;
-
-	/* log the maximum sample values for all speakers */
-	for (spknum = 0; spknum < totalspeakers; spknum++)
-	{
-		struct speaker_info *spk = &speaker[spknum];
-#ifdef WIN32
-		printf("Speaker \"%s\" - max = %d (gain *= %f) - %d%% samples clipped\n", spk->speaker->tag, spk->max_sample, 32767.0 / (spk->max_sample ? spk->max_sample : 1), (int)((double)spk->clipped_samples * 100.0 / spk->total_samples));
-#else
-		logerror("Speaker \"%s\" - max = %d (gain *= %f) - %d%% samples clipped\n", spk->speaker->tag, spk->max_sample, 32767.0 / (spk->max_sample ? spk->max_sample : 1), (int)((double)spk->clipped_samples * 100.0 / spk->total_samples));
-#endif
-	}
-}
-#endif /* MAME_DEBUG */
+//#ifdef MAME_DEBUG
+//{
+//	int spknum;
+//	/* log the maximum sample values for all speakers */
+//	for (spknum = 0; spknum < totalspeakers; spknum++)
+//	{
+//		struct speaker_info *spk = &speaker[spknum];
+//		logerror(
+//			"Speaker \"%s\" - max = %d (gain *= %f) - %d%% samples clipped\n",
+//			spk->speaker->tag, spk->max_sample, 32767.0 / (spk->max_sample ? spk->max_sample : 1),
+//			(int)((float)spk->clipped_samples * 100.0 / spk->total_samples));
+//	}
+//}
+//#endif /* MAME_DEBUG */
 
 	/* stop all the sound chips */
 	for (sndnum = 0; sndnum < MAX_SOUND; sndnum++)
@@ -975,6 +957,8 @@ void sound_stop(void)
 	totalsnd = 0;
 	memset(&speaker, 0, sizeof(speaker));
 	memset(&sound, 0, sizeof(sound));
+
+	finalmix =0x00;	//TMK
 }
 
 
@@ -1111,6 +1095,8 @@ void sound_frame_update(void)
 		}
 	}
 
+//TMK ADD
+	finalmixCurNow =finalmixCur;
 	/* now downmix the final result */
 	for (sample = 0; sample < samples_this_frame; sample++)
 	{
@@ -1118,26 +1104,33 @@ void sound_frame_update(void)
 
 		/* clamp the left side */
 		samp = leftmix[sample];
-		if (samp < -32768)
-			samp = -32768;
-		else if (samp > 32767)
-			samp = 32767;
-		finalmix[sample*2+0] = samp;
+		if (samp < -32768)			samp = -32768;
+		else if (samp > 32767)		samp = 32767;
+//TMK		finalmix[sample*2+0] = samp;
+		finalmix[finalmixCur++] = samp;
 
 		/* clamp the right side */
 		samp = rightmix[sample];
-		if (samp < -32768)
-			samp = -32768;
-		else if (samp > 32767)
-			samp = 32767;
-		finalmix[sample*2+1] = samp;
+		if (samp < -32768)			samp = -32768;
+		else if (samp > 32767)		samp = 32767;
+//TMK		finalmix[sample*2+1] = samp;
+		finalmix[finalmixCur++] = samp;
+
+//TMK
+		if (finalmixCur >=finalmixLen) {
+			finalmixCur =0;
+//			finalmixCounter ++;
+//			if (finalmixCounter >1000)	finalmixCounter =0;
+		}
 	}
 
 	if (wavfile)
-		wav_add_data_16(wavfile, finalmix, samples_this_frame * 2);
+		wav_add_data_16(wavfile, &finalmix[finalmixCurNow], samples_this_frame * 2);	// データは正常でない
+//TMK		wav_add_data_16(wavfile, finalmix, samples_this_frame * 2);
 
 	/* play the result */
-	samples_this_frame = osd_update_audio_stream(finalmix);
+//TMK	samples_this_frame = osd_update_audio_stream(finalmix);
+	samples_this_frame = osd_update_audio_stream(&finalmix[finalmixCurNow]);		// データは正常でない
 
 	/* update the streamer */
 	streams_frame_update();
@@ -1166,7 +1159,7 @@ int sound_scalebufferpos(int value)
 	/* clamp to protect against negative time */
 	if (elapsed.seconds < 0)
 		elapsed = time_zero;
-	result = (int)((double)value * mame_time_to_double(elapsed) * Machine->refresh_rate);
+	result = (int)((float)value * mame_time_to_double(elapsed) * Machine->refresh_rate);
 
 	if (value >= 0)
 		return (result < value) ? result : value;
@@ -1720,21 +1713,21 @@ INLINE void latch_clear(int which)
 
 
 WRITE8_HANDLER( soundlatch_w )        { latch_w(0, data); }
-WRITE16_HANDLER( soundlatch_word_w )  { latch_w(0, data); }
 WRITE8_HANDLER( soundlatch2_w )       { latch_w(1, data); }
-WRITE16_HANDLER( soundlatch2_word_w ) { latch_w(1, data); }
 WRITE8_HANDLER( soundlatch3_w )       { latch_w(2, data); }
-WRITE16_HANDLER( soundlatch3_word_w ) { latch_w(2, data); }
 WRITE8_HANDLER( soundlatch4_w )       { latch_w(3, data); }
+WRITE16_HANDLER( soundlatch_word_w )  { latch_w(0, data); }
+WRITE16_HANDLER( soundlatch2_word_w ) { latch_w(1, data); }
+WRITE16_HANDLER( soundlatch3_word_w ) { latch_w(2, data); }
 WRITE16_HANDLER( soundlatch4_word_w ) { latch_w(3, data); }
 
 READ8_HANDLER( soundlatch_r )         { return latch_r(0); }
-READ16_HANDLER( soundlatch_word_r )   { return latch_r(0); }
 READ8_HANDLER( soundlatch2_r )        { return latch_r(1); }
-READ16_HANDLER( soundlatch2_word_r )  { return latch_r(1); }
 READ8_HANDLER( soundlatch3_r )        { return latch_r(2); }
-READ16_HANDLER( soundlatch3_word_r )  { return latch_r(2); }
 READ8_HANDLER( soundlatch4_r )        { return latch_r(3); }
+READ16_HANDLER( soundlatch_word_r )   { return latch_r(0); }
+READ16_HANDLER( soundlatch2_word_r )  { return latch_r(1); }
+READ16_HANDLER( soundlatch3_word_r )  { return latch_r(2); }
 READ16_HANDLER( soundlatch4_word_r )  { return latch_r(3); }
 
 WRITE8_HANDLER( soundlatch_clear_w )  { latch_clear(0); }

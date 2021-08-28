@@ -11,7 +11,7 @@ According to Richard Bush, the C-Chip is an encrypted Z80 which communicates
 with the main board as a protection feature.
 
 
-Superman (revised SJ 060601)
+Superman (revised SJ 060601)[TAITO X SYSTEM]
 --------
 
 In Superman, the C-chip's main purpose is to handle player inputs and
@@ -28,7 +28,7 @@ necessary cycles to the cchip to switch banks.
 This code requires that the player & coin inputs be in input ports 4-6.
 
 
-Mega Blast
+Mega Blast [TAITO F2 SYSTEM]
 ----------
 
 C-Chip simply used as RAM, the game doesn't even bother to change banks.
@@ -139,7 +139,7 @@ logerror("cchip1_r bank: %02x offset: %04x\n",current_bank,offset);
 
 /* Mega Blast */
 
-data16_t *cchip_ram;
+UINT16 *cchip_ram;
 
 WRITE16_HANDLER( cchip2_word_w )
 {

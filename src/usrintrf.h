@@ -46,21 +46,21 @@ extern UINT8 ui_dirty;
 
 struct GfxElement *builduifont(void);
 void pick_uifont_colors(void);
-void displaytext(struct mame_bitmap *bitmap,const struct DisplayText *dt);
+void displaytext(const struct DisplayText *dt);
 
-void ui_drawchar(struct mame_bitmap *dest, int ch, int color, int sx, int sy);
-void ui_text(struct mame_bitmap *bitmap,const char *buf,int x,int y);
-void ui_drawbox(struct mame_bitmap *bitmap,int leftx,int topy,int width,int height);
-void ui_displaymessagewindow(struct mame_bitmap *bitmap,const char *text);
-void ui_displaymenu(struct mame_bitmap *bitmap,const char **items,const char **subitems,char *flag,int selected,int arrowize_subitem);
-void ui_display_fps(struct mame_bitmap *bitmap);
-int showcopyright(struct mame_bitmap *bitmap);
-int showgamewarnings(struct mame_bitmap *bitmap);
-int showgameinfo(struct mame_bitmap *bitmap);
+void ui_drawchar(int ch, int color, int sx, int sy);
+void ui_text(const char *buf,int x,int y);
+void ui_drawbox(int leftx,int topy,int width,int height);
+void ui_displaymessagewindow(const char *text);
+void ui_displaymenu(const char **items,const char **subitems,char *flag,int selected,int arrowize_subitem);
+void ui_display_fps(void);
+int showcopyright(void);
+int showgamewarnings(void);
+int showgameinfo(void);
 void set_ui_visarea (int xmin, int ymin, int xmax, int ymax);
 
 void init_user_interface(void);
-int handle_user_interface(struct mame_bitmap *bitmap);
+int handle_user_interface(void/*struct mame_bitmap *bitmap*/);
 
 void ui_show_fps_temp(double seconds);
 void ui_show_fps_set(int show);
@@ -76,9 +76,9 @@ int setup_active(void);
 int is_game_paused(void);
 #endif
 
-void switch_ui_orientation(struct mame_bitmap *bitmap);
-void switch_debugger_orientation(struct mame_bitmap *bitmap);
-void switch_true_orientation(struct mame_bitmap *bitmap);
+void switch_ui_orientation(void);
+void switch_debugger_orientation(void);
+void switch_true_orientation(void);
 
 #ifdef __GNUC__
 void CLIB_DECL usrintf_showmessage(const char *text,...)

@@ -57,9 +57,11 @@ TODO:
 #include <string.h>
 #include "cpuintrf.h"
 #include "state.h"
-#include "mamedbg.h"
+#include "mame.h"//#include "mamedbg.h"
 #include "m6800.h"
 
+
+#define BIG_SWITCH 0
 
 #define VERBOSE 0
 
@@ -1358,10 +1360,12 @@ static offs_t m6803_dasm(char *buffer, offs_t pc)
 }
 #endif
 
-#if (HAS_M6803)
 
+#if (HAS_M6803||HAS_HD63701)
 static READ8_HANDLER( m6803_internal_registers_r );
 static WRITE8_HANDLER( m6803_internal_registers_w );
+#endif
+#if (HAS_M6803)
 
 static ADDRESS_MAP_START(m6803_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(m6803_internal_registers_r, m6803_internal_registers_w)
@@ -1429,7 +1433,7 @@ static int hd63701_execute(int cycles)
 			CALL_MAME_DEBUG;
 			ireg=M_RDOP(PCD);
 			PC++;
-
+#if BIG_SWITCH
 			switch( ireg )
 			{
 				case 0x00: trap(); break;
@@ -1689,6 +1693,9 @@ static int hd63701_execute(int cycles)
 				case 0xfe: ldx_ex(); break;
 				case 0xff: stx_ex(); break;
 			}
+#else
+			(*hd63701_insn[ireg])();
+#endif
 			INCREMENT_COUNTER(cycles_63701[ireg]);
 		}
 	} while( m6800_ICount>0 );

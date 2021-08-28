@@ -130,8 +130,8 @@
 #include <stdlib.h>
 #include <zlib.h>
 #include "hash.h"
-#include "md5.h"
-#include "sha1.h"
+//#include "md5.h"
+//#include "sha1.h"
 #include "osd_cpu.h"
 #include "mame.h"
 #include "common.h"
@@ -148,9 +148,9 @@
 
 typedef struct
 {
-	const char* name;           // human-readable name
-	char code;                  // single-char code used within the hash string
-	unsigned int size;          // checksum size in bytes
+	const char* name;			//"crc" human-readable name
+	char code;					//'c' single-char code used within the hash string
+	unsigned int size;			// 4 checksum size in bytes
 
 	// Functions used to calculate the hash of a memory block
 	void (*calculate_begin)(void);
@@ -163,36 +163,35 @@ static void h_crc_begin(void);
 static void h_crc_buffer(const void* mem, unsigned long len);
 static void h_crc_end(UINT8* chksum);
 
-static void h_sha1_begin(void);
-static void h_sha1_buffer(const void* mem, unsigned long len);
-static void h_sha1_end(UINT8* chksum);
+//static void h_sha1_begin(void);
+//static void h_sha1_buffer(const void* mem, unsigned long len);
+//static void h_sha1_end(UINT8* chksum);
 
-static void h_md5_begin(void);
-static void h_md5_buffer(const void* mem, unsigned long len);
-static void h_md5_end(UINT8* chksum);
+//static void h_md5_begin(void);
+//static void h_md5_buffer(const void* mem, unsigned long len);
+//static void h_md5_end(UINT8* chksum);
 
-static const hash_function_desc hash_descs[HASH_NUM_FUNCTIONS] =
+static const hash_function_desc hash_descs[1/*HASH_NUM_FUNCTIONS*/] =
 {
 	{
 		"crc", 'c', 4,
 		h_crc_begin,
 		h_crc_buffer,
 		h_crc_end
-	},
+	}//,
 
-	{
-		"sha1", 's', 20,
-		h_sha1_begin,
-		h_sha1_buffer,
-		h_sha1_end
-	},
-
-	{
-		"md5", 'm', 16,
-		h_md5_begin,
-		h_md5_buffer,
-		h_md5_end
-	},
+//	{
+//		"sha1", 's', 20,
+//		h_sha1_begin,
+//		h_sha1_buffer,
+//		h_sha1_end
+//	},
+//	{
+//		"md5", 'm', 16,
+//		h_md5_begin,
+//		h_md5_buffer,
+//		h_md5_end
+//	},
 };
 
 const char* info_strings[] =
@@ -310,7 +309,7 @@ int hash_data_is_equal(const char* d1, const char* d2, unsigned int functions)
 	if (!functions)
 		functions = ~functions;
 
-	for (i=1; i != (1<<HASH_NUM_FUNCTIONS); i<<=1)
+	i=1;//for (i=1; i != (1<<HASH_NUM_FUNCTIONS); i<<=1)
 		if (functions & i)
 		{
 			int offs1, offs2;
@@ -497,29 +496,14 @@ unsigned int hash_data_used_functions(const char* data)
 	if (!data)
 		return 0;
 
-	for (i=0;i<HASH_NUM_FUNCTIONS;i++)
+	i=0;//for (i=0;i<HASH_NUM_FUNCTIONS;i++)
 		if (hash_data_has_checksum(data, 1<<i))
 			res |= 1<<i;
 
 	return res;
 }
 
-int hash_data_insert_printable_checksum(char* d, unsigned int function, const char* checksum)
-{
-	const hash_function_desc* desc;
-	UINT8 binary_checksum[20];
-
-	desc = hash_get_function_desc(function);
-
-	ASSERT(desc->size <= sizeof(binary_checksum));
-
-	if (hex_string_to_binary(binary_checksum, checksum, desc->size))
-		return 2;
-
-	return hash_data_insert_binary_checksum(d, function, binary_checksum);
-}
-
-int hash_data_insert_binary_checksum(char* d, unsigned int function, const UINT8* checksum)
+int hash_data_insert_binary_checksum_crc(char* d, unsigned int function, const UINT8* checksum)
 {
 	int offset;
 
@@ -530,7 +514,6 @@ int hash_data_insert_binary_checksum(char* d, unsigned int function, const UINT8
 		d += strlen(d);
 		d += hash_data_add_binary_checksum(d, function, checksum);
 		*d = '\0';
-
 		return 1;
 	}
 	else
@@ -538,13 +521,25 @@ int hash_data_insert_binary_checksum(char* d, unsigned int function, const UINT8
 		// Move to the start of the whole checksum signature, not only to the checksum
 		// itself
 		d += offset - 2;
-
 		// Overwrite previous checksum with new one
 		hash_data_add_binary_checksum(d, function, checksum);
-
 		return 2;
 	}
 }
+//int hash_data_insert_printable_checksum(char* d, unsigned int function, const char* checksum)
+//{
+//	const hash_function_desc* desc;
+//	UINT8 binary_checksum[20];
+//
+//	desc = hash_get_function_desc(function);
+//
+//	ASSERT(desc->size <= sizeof(binary_checksum));
+//
+//	if (hex_string_to_binary(binary_checksum, checksum, desc->size))
+//		return 2;
+//
+//	return hash_data_insert_binary_checksum(d, function, binary_checksum);
+//}
 
 void hash_compute(char* dst, const unsigned char* data, unsigned long length, unsigned int functions)
 {
@@ -556,7 +551,7 @@ void hash_compute(char* dst, const unsigned char* data, unsigned long length, un
 	if (functions == 0)
 		functions = ~functions;
 
-	for (i=0;i<HASH_NUM_FUNCTIONS;i++)
+	i=0;//for (i=0;i<HASH_NUM_FUNCTIONS;i++)
 	{
 		unsigned func = 1 << i;
 
@@ -586,7 +581,7 @@ void hash_data_print(const char* data, unsigned int functions, char* buffer)
 
 	buffer[0] = '\0';
 
-	for (i=0;i<HASH_NUM_FUNCTIONS;i++)
+	i=0;//for (i=0;i<HASH_NUM_FUNCTIONS;i++)
 	{
 		unsigned func = 1 << i;
 
@@ -642,7 +637,7 @@ int hash_verify_string(const char *hash)
 				return FALSE;
 
 			/* we have a proper code */
-			len = hash_descs[i].size * 2;
+			len = /*hash_descs[i].size*/4 * 2;
 			hash += 2;
 
 			for (i = 0; (hash[i] != '#') && (i < len); i++)
@@ -686,38 +681,3 @@ static void h_crc_end(UINT8* bin_chksum)
 }
 
 
-struct sha1_ctx sha1ctx;
-
-static void h_sha1_begin(void)
-{
-	sha1_init(&sha1ctx);
-}
-
-static void h_sha1_buffer(const void* mem, unsigned long len)
-{
-	sha1_update(&sha1ctx, len, (UINT8*)mem);
-}
-
-static void h_sha1_end(UINT8* bin_chksum)
-{
-	sha1_final(&sha1ctx);
-	sha1_digest(&sha1ctx, 20, bin_chksum);
-}
-
-
-static struct MD5Context md5_ctx;
-
-static void h_md5_begin(void)
-{
-	MD5Init(&md5_ctx);
-}
-
-static void h_md5_buffer(const void* mem, unsigned long len)
-{
-	MD5Update(&md5_ctx, (md5byte*)mem, len);
-}
-
-static void h_md5_end(UINT8* bin_chksum)
-{
-	MD5Final(bin_chksum, &md5_ctx);
-}

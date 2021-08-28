@@ -1,31 +1,25 @@
 /*********************************************************************
 
-    usrintrf.c
+	usrintrf.c
 
-    Functions used to handle MAME's user interface.
+	Functions used to handle MAME's user interface.
 
 *********************************************************************/
 
 #include "driver.h"
-#include "info.h"
-#include "vidhrdw/vector.h"
+//#include "info.h"
+//#include "artwork.h"//#include "vidhrdw/vector.h"
 #include "datafile.h"
 #include <stdarg.h>
-#include <math.h>
+//#include <math.h>
 #include "ui_text.h"
 #include "state.h"
-
-#ifdef MESS
-#include "mess.h"
-#include "mesintrf.h"
-#include "inputx.h"
-#endif
 
 
 
 /***************************************************************************
 
-    Externals
+	Externals
 
 ***************************************************************************/
 
@@ -35,11 +29,11 @@ extern char build_version[];
 /* MARTINEZ.F 990207 Memory Card */
 
 struct MEMCARDinterface memcard_intf;
-int	mcd_action;
-int	mcd_number;
-int	memcard_status;
-int	memcard_number;
-int	memcard_manager;
+int mcd_action;
+int mcd_number;
+int memcard_status;
+int memcard_number;
+int memcard_manager;
 
 #if defined(__sgi) && !defined(MESS)
 static int game_paused = 0; /* not zero if the game is paused */
@@ -49,7 +43,7 @@ static int game_paused = 0; /* not zero if the game is paused */
 
 /***************************************************************************
 
-    Local variables
+	Local variables
 
 ***************************************************************************/
 
@@ -74,150 +68,18 @@ static int show_profiler;
 
 UINT8 ui_dirty;
 
-
+int input_port_settings_modify; 	//TMK
 
 /***************************************************************************
-
-    Font data
-
+	Font data
 ***************************************************************************/
-
-static const UINT8 uifontdata[] =
-{
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* [ 0- 1] */
-	0x7c,0x80,0x98,0x90,0x80,0xbc,0x80,0x7c,0xf8,0x04,0x64,0x44,0x04,0xf4,0x04,0xf8,	/* [ 2- 3] tape pos 1 */
-	0x7c,0x80,0x98,0x88,0x80,0xbc,0x80,0x7c,0xf8,0x04,0x64,0x24,0x04,0xf4,0x04,0xf8,	/* [ 4- 5] tape pos 2 */
-	0x7c,0x80,0x88,0x98,0x80,0xbc,0x80,0x7c,0xf8,0x04,0x24,0x64,0x04,0xf4,0x04,0xf8,	/* [ 6- 7] tape pos 3 */
-	0x7c,0x80,0x90,0x98,0x80,0xbc,0x80,0x7c,0xf8,0x04,0x44,0x64,0x04,0xf4,0x04,0xf8,	/* [ 8- 9] tape pos 3 */
-	0x30,0x48,0x84,0xb4,0xb4,0x84,0x48,0x30,0x30,0x48,0x84,0x84,0x84,0x84,0x48,0x30,	/* [10-11] */
-	0x00,0xfc,0x84,0x8c,0xd4,0xa4,0xfc,0x00,0x00,0xfc,0x84,0x84,0x84,0x84,0xfc,0x00,	/* [12-13] */
-	0x00,0x38,0x7c,0x7c,0x7c,0x38,0x00,0x00,0x00,0x30,0x68,0x78,0x78,0x30,0x00,0x00,	/* [14-15] circle & bullet */
-	0x80,0xc0,0xe0,0xf0,0xe0,0xc0,0x80,0x00,0x04,0x0c,0x1c,0x3c,0x1c,0x0c,0x04,0x00,	/* [16-17] R/L triangle */
-	0x20,0x70,0xf8,0x20,0x20,0xf8,0x70,0x20,0x48,0x48,0x48,0x48,0x48,0x00,0x48,0x00,
-	0x00,0x00,0x30,0x68,0x78,0x30,0x00,0x00,0x00,0x30,0x68,0x78,0x78,0x30,0x00,0x00,
-	0x70,0xd8,0xe8,0xe8,0xf8,0xf8,0x70,0x00,0x1c,0x7c,0x74,0x44,0x44,0x4c,0xcc,0xc0,
-	0x20,0x70,0xf8,0x70,0x70,0x70,0x70,0x00,0x70,0x70,0x70,0x70,0xf8,0x70,0x20,0x00,
-	0x00,0x10,0xf8,0xfc,0xf8,0x10,0x00,0x00,0x00,0x20,0x7c,0xfc,0x7c,0x20,0x00,0x00,
-	0xb0,0x54,0xb8,0xb8,0x54,0xb0,0x00,0x00,0x00,0x28,0x6c,0xfc,0x6c,0x28,0x00,0x00,
-	0x00,0x30,0x30,0x78,0x78,0xfc,0x00,0x00,0xfc,0x78,0x78,0x30,0x30,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x20,0x20,0x20,0x20,0x00,0x20,0x00,
-	0x50,0x50,0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0xf8,0x50,0xf8,0x50,0x00,0x00,
-	0x20,0x70,0xc0,0x70,0x18,0xf0,0x20,0x00,0x40,0xa4,0x48,0x10,0x20,0x48,0x94,0x08,
-	0x60,0x90,0xa0,0x40,0xa8,0x90,0x68,0x00,0x10,0x20,0x40,0x00,0x00,0x00,0x00,0x00,
-	0x20,0x40,0x40,0x40,0x40,0x40,0x20,0x00,0x10,0x08,0x08,0x08,0x08,0x08,0x10,0x00,
-	0x20,0xa8,0x70,0xf8,0x70,0xa8,0x20,0x00,0x00,0x20,0x20,0xf8,0x20,0x20,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x30,0x30,0x60,0x00,0x00,0x00,0xf8,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x30,0x30,0x00,0x00,0x08,0x10,0x20,0x40,0x80,0x00,0x00,
-	0x70,0x88,0x88,0x88,0x88,0x88,0x70,0x00,0x10,0x30,0x10,0x10,0x10,0x10,0x10,0x00,
-	0x70,0x88,0x08,0x10,0x20,0x40,0xf8,0x00,0x70,0x88,0x08,0x30,0x08,0x88,0x70,0x00,
-	0x10,0x30,0x50,0x90,0xf8,0x10,0x10,0x00,0xf8,0x80,0xf0,0x08,0x08,0x88,0x70,0x00,
-	0x70,0x80,0xf0,0x88,0x88,0x88,0x70,0x00,0xf8,0x08,0x08,0x10,0x20,0x20,0x20,0x00,
-	0x70,0x88,0x88,0x70,0x88,0x88,0x70,0x00,0x70,0x88,0x88,0x88,0x78,0x08,0x70,0x00,
-	0x00,0x00,0x30,0x30,0x00,0x30,0x30,0x00,0x00,0x00,0x30,0x30,0x00,0x30,0x30,0x60,
-	0x10,0x20,0x40,0x80,0x40,0x20,0x10,0x00,0x00,0x00,0xf8,0x00,0xf8,0x00,0x00,0x00,
-	0x40,0x20,0x10,0x08,0x10,0x20,0x40,0x00,0x70,0x88,0x08,0x10,0x20,0x00,0x20,0x00,
-	0x30,0x48,0x94,0xa4,0xa4,0x94,0x48,0x30,0x70,0x88,0x88,0xf8,0x88,0x88,0x88,0x00,
-	0xf0,0x88,0x88,0xf0,0x88,0x88,0xf0,0x00,0x70,0x88,0x80,0x80,0x80,0x88,0x70,0x00,
-	0xf0,0x88,0x88,0x88,0x88,0x88,0xf0,0x00,0xf8,0x80,0x80,0xf0,0x80,0x80,0xf8,0x00,
-	0xf8,0x80,0x80,0xf0,0x80,0x80,0x80,0x00,0x70,0x88,0x80,0x98,0x88,0x88,0x70,0x00,
-	0x88,0x88,0x88,0xf8,0x88,0x88,0x88,0x00,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x00,
-	0x08,0x08,0x08,0x08,0x88,0x88,0x70,0x00,0x88,0x90,0xa0,0xc0,0xa0,0x90,0x88,0x00,
-	0x80,0x80,0x80,0x80,0x80,0x80,0xf8,0x00,0x88,0xd8,0xa8,0x88,0x88,0x88,0x88,0x00,
-	0x88,0xc8,0xa8,0x98,0x88,0x88,0x88,0x00,0x70,0x88,0x88,0x88,0x88,0x88,0x70,0x00,
-	0xf0,0x88,0x88,0xf0,0x80,0x80,0x80,0x00,0x70,0x88,0x88,0x88,0x88,0x88,0x70,0x08,
-	0xf0,0x88,0x88,0xf0,0x88,0x88,0x88,0x00,0x70,0x88,0x80,0x70,0x08,0x88,0x70,0x00,
-	0xf8,0x20,0x20,0x20,0x20,0x20,0x20,0x00,0x88,0x88,0x88,0x88,0x88,0x88,0x70,0x00,
-	0x88,0x88,0x88,0x88,0x88,0x50,0x20,0x00,0x88,0x88,0x88,0x88,0xa8,0xd8,0x88,0x00,
-	0x88,0x50,0x20,0x20,0x20,0x50,0x88,0x00,0x88,0x88,0x88,0x50,0x20,0x20,0x20,0x00,
-	0xf8,0x08,0x10,0x20,0x40,0x80,0xf8,0x00,0x30,0x20,0x20,0x20,0x20,0x20,0x30,0x00,
-	0x40,0x40,0x20,0x20,0x10,0x10,0x08,0x08,0x30,0x10,0x10,0x10,0x10,0x10,0x30,0x00,
-	0x20,0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,
-	0x40,0x20,0x10,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x70,0x08,0x78,0x88,0x78,0x00,
-	0x80,0x80,0xf0,0x88,0x88,0x88,0xf0,0x00,0x00,0x00,0x70,0x88,0x80,0x80,0x78,0x00,
-	0x08,0x08,0x78,0x88,0x88,0x88,0x78,0x00,0x00,0x00,0x70,0x88,0xf8,0x80,0x78,0x00,
-	0x18,0x20,0x70,0x20,0x20,0x20,0x20,0x00,0x00,0x00,0x78,0x88,0x88,0x78,0x08,0x70,
-	0x80,0x80,0xf0,0x88,0x88,0x88,0x88,0x00,0x20,0x00,0x20,0x20,0x20,0x20,0x20,0x00,
-	0x20,0x00,0x20,0x20,0x20,0x20,0x20,0xc0,0x80,0x80,0x90,0xa0,0xe0,0x90,0x88,0x00,
-	0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x00,0x00,0x00,0xf0,0xa8,0xa8,0xa8,0xa8,0x00,
-	0x00,0x00,0xb0,0xc8,0x88,0x88,0x88,0x00,0x00,0x00,0x70,0x88,0x88,0x88,0x70,0x00,
-	0x00,0x00,0xf0,0x88,0x88,0xf0,0x80,0x80,0x00,0x00,0x78,0x88,0x88,0x78,0x08,0x08,
-	0x00,0x00,0xb0,0xc8,0x80,0x80,0x80,0x00,0x00,0x00,0x78,0x80,0x70,0x08,0xf0,0x00,
-	0x20,0x20,0x70,0x20,0x20,0x20,0x18,0x00,0x00,0x00,0x88,0x88,0x88,0x98,0x68,0x00,
-	0x00,0x00,0x88,0x88,0x88,0x50,0x20,0x00,0x00,0x00,0xa8,0xa8,0xa8,0xa8,0x50,0x00,
-	0x00,0x00,0x88,0x50,0x20,0x50,0x88,0x00,0x00,0x00,0x88,0x88,0x88,0x78,0x08,0x70,
-	0x00,0x00,0xf8,0x10,0x20,0x40,0xf8,0x00,0x08,0x10,0x10,0x20,0x10,0x10,0x08,0x00,
-	0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x40,0x20,0x20,0x10,0x20,0x20,0x40,0x00,
-	0x00,0x68,0xb0,0x00,0x00,0x00,0x00,0x00,0x20,0x50,0x20,0x50,0xa8,0x50,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x20,0x20,0x40,0x0c,0x10,0x38,0x10,0x20,0x20,0xc0,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x28,0x28,0x50,0x00,0x00,0x00,0x00,0x00,0x00,0xa8,0x00,
-	0x70,0xa8,0xf8,0x20,0x20,0x20,0x20,0x00,0x70,0xa8,0xf8,0x20,0x20,0xf8,0xa8,0x70,
-	0x20,0x50,0x88,0x00,0x00,0x00,0x00,0x00,0x44,0xa8,0x50,0x20,0x68,0xd4,0x28,0x00,
-	0x88,0x70,0x88,0x60,0x30,0x88,0x70,0x00,0x00,0x10,0x20,0x40,0x20,0x10,0x00,0x00,
-	0x78,0xa0,0xa0,0xb0,0xa0,0xa0,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x10,0x20,0x20,0x00,0x00,0x00,0x00,0x00,
-	0x10,0x10,0x20,0x00,0x00,0x00,0x00,0x00,0x28,0x50,0x50,0x00,0x00,0x00,0x00,0x00,
-	0x28,0x28,0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x30,0x78,0x78,0x30,0x00,0x00,
-	0x00,0x00,0x00,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x00,0x00,0x00,0x00,
-	0x68,0xb0,0x00,0x00,0x00,0x00,0x00,0x00,0xf4,0x5c,0x54,0x54,0x00,0x00,0x00,0x00,
-	0x88,0x70,0x78,0x80,0x70,0x08,0xf0,0x00,0x00,0x40,0x20,0x10,0x20,0x40,0x00,0x00,
-	0x00,0x00,0x70,0xa8,0xb8,0xa0,0x78,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0x88,0x88,0x50,0x20,0x20,0x20,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0x20,0x20,0x20,0x20,0x20,0x00,
-	0x00,0x20,0x70,0xa8,0xa0,0xa8,0x70,0x20,0x30,0x48,0x40,0xe0,0x40,0x48,0xf0,0x00,
-	0x00,0x48,0x30,0x48,0x48,0x30,0x48,0x00,0x88,0x88,0x50,0xf8,0x20,0xf8,0x20,0x00,
-	0x20,0x20,0x20,0x00,0x20,0x20,0x20,0x00,0x78,0x80,0x70,0x88,0x70,0x08,0xf0,0x00,
-	0xd8,0xd8,0x00,0x00,0x00,0x00,0x00,0x00,0x30,0x48,0x94,0xa4,0xa4,0x94,0x48,0x30,
-	0x60,0x10,0x70,0x90,0x70,0x00,0x00,0x00,0x00,0x28,0x50,0xa0,0x50,0x28,0x00,0x00,
-	0x00,0x00,0x00,0xf8,0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x78,0x00,0x00,0x00,0x00,
-	0x30,0x48,0xb4,0xb4,0xa4,0xb4,0x48,0x30,0x7c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x60,0x90,0x90,0x60,0x00,0x00,0x00,0x00,0x20,0x20,0xf8,0x20,0x20,0x00,0xf8,0x00,
-	0x60,0x90,0x20,0x40,0xf0,0x00,0x00,0x00,0x60,0x90,0x20,0x90,0x60,0x00,0x00,0x00,
-	0x10,0x20,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x88,0x88,0x88,0xc8,0xb0,0x80,
-	0x78,0xd0,0xd0,0xd0,0x50,0x50,0x50,0x00,0x00,0x00,0x00,0x30,0x30,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x10,0x20,0x00,0x20,0x60,0x20,0x20,0x70,0x00,0x00,0x00,
-	0x20,0x50,0x20,0x00,0x00,0x00,0x00,0x00,0x00,0xa0,0x50,0x28,0x50,0xa0,0x00,0x00,
-	0x40,0x48,0x50,0x28,0x58,0xa8,0x38,0x08,0x40,0x48,0x50,0x28,0x44,0x98,0x20,0x3c,
-	0xc0,0x28,0xd0,0x28,0xd8,0xa8,0x38,0x08,0x20,0x00,0x20,0x40,0x80,0x88,0x70,0x00,
-	0x40,0x20,0x70,0x88,0xf8,0x88,0x88,0x00,0x10,0x20,0x70,0x88,0xf8,0x88,0x88,0x00,
-	0x70,0x00,0x70,0x88,0xf8,0x88,0x88,0x00,0x68,0xb0,0x70,0x88,0xf8,0x88,0x88,0x00,
-	0x50,0x00,0x70,0x88,0xf8,0x88,0x88,0x00,0x20,0x50,0x70,0x88,0xf8,0x88,0x88,0x00,
-	0x78,0xa0,0xa0,0xf0,0xa0,0xa0,0xb8,0x00,0x70,0x88,0x80,0x80,0x88,0x70,0x08,0x70,
-	0x40,0x20,0xf8,0x80,0xf0,0x80,0xf8,0x00,0x10,0x20,0xf8,0x80,0xf0,0x80,0xf8,0x00,
-	0x70,0x00,0xf8,0x80,0xf0,0x80,0xf8,0x00,0x50,0x00,0xf8,0x80,0xf0,0x80,0xf8,0x00,
-	0x40,0x20,0x70,0x20,0x20,0x20,0x70,0x00,0x10,0x20,0x70,0x20,0x20,0x20,0x70,0x00,
-	0x70,0x00,0x70,0x20,0x20,0x20,0x70,0x00,0x50,0x00,0x70,0x20,0x20,0x20,0x70,0x00,
-	0x70,0x48,0x48,0xe8,0x48,0x48,0x70,0x00,0x68,0xb0,0x88,0xc8,0xa8,0x98,0x88,0x00,
-	0x40,0x20,0x70,0x88,0x88,0x88,0x70,0x00,0x10,0x20,0x70,0x88,0x88,0x88,0x70,0x00,
-	0x70,0x00,0x70,0x88,0x88,0x88,0x70,0x00,0x68,0xb0,0x70,0x88,0x88,0x88,0x70,0x00,
-	0x50,0x00,0x70,0x88,0x88,0x88,0x70,0x00,0x00,0x88,0x50,0x20,0x50,0x88,0x00,0x00,
-	0x00,0x74,0x88,0x90,0xa8,0x48,0xb0,0x00,0x40,0x20,0x88,0x88,0x88,0x88,0x70,0x00,
-	0x10,0x20,0x88,0x88,0x88,0x88,0x70,0x00,0x70,0x00,0x88,0x88,0x88,0x88,0x70,0x00,
-	0x50,0x00,0x88,0x88,0x88,0x88,0x70,0x00,0x10,0xa8,0x88,0x50,0x20,0x20,0x20,0x00,
-	0x00,0x80,0xf0,0x88,0x88,0xf0,0x80,0x80,0x60,0x90,0x90,0xb0,0x88,0x88,0xb0,0x00,
-	0x40,0x20,0x70,0x08,0x78,0x88,0x78,0x00,0x10,0x20,0x70,0x08,0x78,0x88,0x78,0x00,
-	0x70,0x00,0x70,0x08,0x78,0x88,0x78,0x00,0x68,0xb0,0x70,0x08,0x78,0x88,0x78,0x00,
-	0x50,0x00,0x70,0x08,0x78,0x88,0x78,0x00,0x20,0x50,0x70,0x08,0x78,0x88,0x78,0x00,
-	0x00,0x00,0xf0,0x28,0x78,0xa0,0x78,0x00,0x00,0x00,0x70,0x88,0x80,0x78,0x08,0x70,
-	0x40,0x20,0x70,0x88,0xf8,0x80,0x70,0x00,0x10,0x20,0x70,0x88,0xf8,0x80,0x70,0x00,
-	0x70,0x00,0x70,0x88,0xf8,0x80,0x70,0x00,0x50,0x00,0x70,0x88,0xf8,0x80,0x70,0x00,
-	0x40,0x20,0x00,0x60,0x20,0x20,0x70,0x00,0x10,0x20,0x00,0x60,0x20,0x20,0x70,0x00,
-	0x20,0x50,0x00,0x60,0x20,0x20,0x70,0x00,0x50,0x00,0x00,0x60,0x20,0x20,0x70,0x00,
-	0x50,0x60,0x10,0x78,0x88,0x88,0x70,0x00,0x68,0xb0,0x00,0xf0,0x88,0x88,0x88,0x00,
-	0x40,0x20,0x00,0x70,0x88,0x88,0x70,0x00,0x10,0x20,0x00,0x70,0x88,0x88,0x70,0x00,
-	0x20,0x50,0x00,0x70,0x88,0x88,0x70,0x00,0x68,0xb0,0x00,0x70,0x88,0x88,0x70,0x00,
-	0x00,0x50,0x00,0x70,0x88,0x88,0x70,0x00,0x00,0x20,0x00,0xf8,0x00,0x20,0x00,0x00,
-	0x00,0x00,0x68,0x90,0xa8,0x48,0xb0,0x00,0x40,0x20,0x88,0x88,0x88,0x98,0x68,0x00,
-	0x10,0x20,0x88,0x88,0x88,0x98,0x68,0x00,0x70,0x00,0x88,0x88,0x88,0x98,0x68,0x00,
-	0x50,0x00,0x88,0x88,0x88,0x98,0x68,0x00,0x10,0x20,0x88,0x88,0x88,0x78,0x08,0x70,
-	0x80,0xf0,0x88,0x88,0xf0,0x80,0x80,0x80,0x50,0x00,0x88,0x88,0x88,0x78,0x08,0x70
-};
+//hankaku_font5x10
+extern const unsigned char hankaku_font5x10[];
 
 #define MAX_UIFONT_SIZE 8 /* max(width,height) */
 static const struct GfxLayout uifontlayout =
 {
-	6,8,
+	(6+1),8,
 	256,
 	1,
 	{ 0 },
@@ -227,35 +89,34 @@ static const struct GfxLayout uifontlayout =
 };
 
 
-
-
 #if 0
 #pragma mark UTILITIES
 #endif
 
 /*-------------------------------------------------
-    ui_markdirty - mark a raw rectangle dirty
+	ui_markdirty - mark a raw rectangle dirty
 -------------------------------------------------*/
 
 INLINE void ui_markdirty(const struct rectangle *rect)
 {
-	artwork_mark_ui_dirty(rect->min_x, rect->min_y, rect->max_x, rect->max_y);
+	//artwork_mark_ui_dirty(rect->min_x, rect->min_y, rect->max_x, rect->max_y);
 	ui_dirty = 5;
 }
 
 
 
 /*-------------------------------------------------
-    ui_raw2rot_rect - convert a rect from raw
-    coordinates to rotated coordinates
+	ui_raw2rot_rect - convert a rect from raw
+	coordinates to rotated coordinates
 -------------------------------------------------*/
 
 static void ui_raw2rot_rect(struct rectangle *rect)
 {
 	int temp, w, h;
-
 	/* get the effective screen size, including artwork */
-	artwork_get_screensize(&w, &h);
+	//artwork_get_screensize(&w, &h);
+	w = Machine->drv->screen_width;
+	h = Machine->drv->screen_height;
 
 	/* apply X flip */
 	if (Machine->ui_orientation & ORIENTATION_FLIP_X)
@@ -284,16 +145,17 @@ static void ui_raw2rot_rect(struct rectangle *rect)
 
 
 /*-------------------------------------------------
-    ui_rot2raw_rect - convert a rect from rotated
-    coordinates to raw coordinates
+	ui_rot2raw_rect - convert a rect from rotated
+	coordinates to raw coordinates
 -------------------------------------------------*/
 
 static void ui_rot2raw_rect(struct rectangle *rect)
 {
 	int temp, w, h;
-
 	/* get the effective screen size, including artwork */
-	artwork_get_screensize(&w, &h);
+	//artwork_get_screensize(&w, &h);
+	w = Machine->drv->screen_width;
+	h = Machine->drv->screen_height;
 
 	/* apply X/Y swap first */
 	if (Machine->ui_orientation & ORIENTATION_SWAP_XY)
@@ -322,8 +184,8 @@ static void ui_rot2raw_rect(struct rectangle *rect)
 
 
 /*-------------------------------------------------
-    set_ui_visarea - called by the OSD code to
-    set the UI's domain
+	set_ui_visarea - called by the OSD code to
+	set the UI's domain
 -------------------------------------------------*/
 
 void set_ui_visarea(int xmin, int ymin, int xmax, int ymax)
@@ -339,11 +201,11 @@ void set_ui_visarea(int xmin, int ymin, int xmax, int ymax)
 	ui_raw2rot_rect(&uirotbounds);
 
 	/* make some easier-to-access globals */
-	uirotwidth = uirotbounds.max_x - uirotbounds.min_x + 1;
+	uirotwidth  = uirotbounds.max_x - uirotbounds.min_x + 1;
 	uirotheight = uirotbounds.max_y - uirotbounds.min_y + 1;
 
 	/* remove me */
-	Machine->uiwidth = uirotbounds.max_x - uirotbounds.min_x + 1;
+	Machine->uiwidth  = uirotbounds.max_x - uirotbounds.min_x + 1;
 	Machine->uiheight = uirotbounds.max_y - uirotbounds.min_y + 1;
 	Machine->uixmin = uirotbounds.min_x;
 	Machine->uiymin = uirotbounds.min_y;
@@ -355,12 +217,12 @@ void set_ui_visarea(int xmin, int ymin, int xmax, int ymax)
 
 
 /*-------------------------------------------------
-    erase_screen - erase the screen
+	erase_screen - erase the screen
 -------------------------------------------------*/
 
-static void erase_screen(struct mame_bitmap *bitmap)
+static void erase_screen(void)
 {
-	fillbitmap(bitmap, get_black_pen(), NULL);
+	fillbitmap(Machine->scrbitmap, get_black_pen(), NULL);
 	schedule_full_refresh();
 }
 
@@ -372,7 +234,7 @@ static void erase_screen(struct mame_bitmap *bitmap)
 #endif
 
 /*-------------------------------------------------
-    builduifont - build the user interface fonts
+	builduifont - build the user interface fonts
 -------------------------------------------------*/
 
 struct GfxElement *builduifont(void)
@@ -388,25 +250,9 @@ struct GfxElement *builduifont(void)
 		freegfx(Machine->uirotfont);
 
 	/* first decode a straight on version for games */
-	Machine->uifont = font = decodegfx(uifontdata, &layout);
+	Machine->uifont = font = decodegfx(hankaku_font5x10, &layout);
 	Machine->uifontwidth = layout.width;
 	Machine->uifontheight = layout.height;
-
-	/* pixel double horizontally */
-	if (uirotwidth >= 420)
-	{
-		for (i = 0; i < layout.width; i++)
-			layout.xoffset[i*2+0] = layout.xoffset[i*2+1] = uifontlayout.xoffset[i];
-		layout.width *= 2;
-	}
-
-	/* pixel double vertically */
-	if (uirotheight >= 420)
-	{
-		for (i = 0; i < layout.height; i++)
-			layout.yoffset[i*2+0] = layout.yoffset[i*2+1] = uifontlayout.yoffset[i];
-		layout.height *= 2;
-	}
 
 	/* apply swappage */
 	if (Machine->ui_orientation & ORIENTATION_SWAP_XY)
@@ -434,12 +280,12 @@ struct GfxElement *builduifont(void)
 	}
 
 	/* decode rotated font */
-	Machine->uirotfont = decodegfx(uifontdata, &layout);
+	Machine->uirotfont = decodegfx(hankaku_font5x10, &layout);
 
 	/* set the raw and rotated character width/height */
-	uirawcharwidth = layout.width;
+	uirawcharwidth  = layout.width;
 	uirawcharheight = layout.height;
-	uirotcharwidth = (Machine->ui_orientation & ORIENTATION_SWAP_XY) ? layout.height : layout.width;
+	uirotcharwidth  = (Machine->ui_orientation & ORIENTATION_SWAP_XY) ? layout.height : layout.width;
 	uirotcharheight = (Machine->ui_orientation & ORIENTATION_SWAP_XY) ? layout.width : layout.height;
 
 	/* set up the bogus colortable */
@@ -460,10 +306,10 @@ struct GfxElement *builduifont(void)
 
 
 /*-------------------------------------------------
-    ui_drawchar - draw a rotated character
+	ui_drawchar - draw a rotated character
 -------------------------------------------------*/
 
-void ui_drawchar(struct mame_bitmap *dest, int ch, int color, int sx, int sy)
+void ui_drawchar(int ch, int color, int sx, int sy)
 {
 	struct rectangle bounds;
 
@@ -480,7 +326,7 @@ void ui_drawchar(struct mame_bitmap *dest, int ch, int color, int sx, int sy)
 	ui_rot2raw_rect(&bounds);
 
 	/* now render */
-	drawgfx(dest, Machine->uirotfont, ch, color, 0, 0, bounds.min_x, bounds.min_y, &uirawbounds, TRANSPARENCY_NONE, 0);
+	drawgfx(Machine->scrbitmap, Machine->uirotfont, ch, color, 0, 0, bounds.min_x, bounds.min_y, &uirawbounds, TRANSPARENCY_NONE, 0);
 
 	/* mark dirty */
 	ui_markdirty(&bounds);
@@ -489,14 +335,14 @@ void ui_drawchar(struct mame_bitmap *dest, int ch, int color, int sx, int sy)
 
 
 /*-------------------------------------------------
-    ui_text_ex - draw a string to the screen
+	ui_text_ex - draw a string to the screen
 -------------------------------------------------*/
 
-static void ui_text_ex(struct mame_bitmap *bitmap, const char *buf_begin, const char *buf_end, int x, int y, int color)
+static void ui_text_ex(const char *buf_begin, const char *buf_end, int x, int y, int color)
 {
 	for ( ; buf_begin != buf_end; ++buf_begin)
 	{
-		ui_drawchar(bitmap, *buf_begin, color, x, y);
+		ui_drawchar(*buf_begin, color, x, y);
 		x += uirotcharwidth;
 	}
 }
@@ -504,36 +350,36 @@ static void ui_text_ex(struct mame_bitmap *bitmap, const char *buf_begin, const 
 
 
 /*-------------------------------------------------
-    ui_text_ex - draw a string to the screen
+	ui_text_ex - draw a string to the screen
 -------------------------------------------------*/
 
-void ui_text(struct mame_bitmap *bitmap, const char *buf, int x, int y)
+void ui_text(const char *buf, int x, int y)
 {
-	ui_text_ex(bitmap, buf, buf + strlen(buf), x, y, UI_COLOR_NORMAL);
+	ui_text_ex(buf, buf + strlen(buf), x, y, UI_COLOR_NORMAL);
 }
 
 
 
 /*-------------------------------------------------
-    displaytext - display a series of text lines
+	displaytext - display a series of text lines
 -------------------------------------------------*/
 
-void displaytext(struct mame_bitmap *bitmap, const struct DisplayText *dt)
+void displaytext(const struct DisplayText *dt)
 {
    /* loop until we run out of descriptors */
    for ( ; dt->text; dt++)
    {
-      ui_text_ex(bitmap, dt->text, dt->text + strlen(dt->text), dt->x, dt->y, dt->color);
+	  ui_text_ex(dt->text, dt->text + strlen(dt->text), dt->x, dt->y, dt->color);
    }
 }
 
 
 
 /*-------------------------------------------------
-    multiline_extract - extract one line from a
-    multiline buffer; return the number of
-    characters in the line; pbegin points to the
-    start of the next line
+	multiline_extract - extract one line from a
+	multiline buffer; return the number of
+	characters in the line; pbegin points to the
+	start of the next line
 -------------------------------------------------*/
 
 static unsigned multiline_extract(const char **pbegin, const char *end, unsigned maxchars)
@@ -600,8 +446,8 @@ static unsigned multiline_extract(const char **pbegin, const char *end, unsigned
 
 
 /*-------------------------------------------------
-    multiline_size - compute the output size of a
-    multiline string
+	multiline_size - compute the output size of a
+	multiline string
 -------------------------------------------------*/
 
 static void multiline_size(int *dx, int *dy, const char *begin, const char *end, unsigned maxchars)
@@ -627,8 +473,8 @@ static void multiline_size(int *dx, int *dy, const char *begin, const char *end,
 
 
 /*-------------------------------------------------
-    multilinebox_size - compute the output size of
-    a multiline string with box
+	multilinebox_size - compute the output size of
+	a multiline string with box
 -------------------------------------------------*/
 
 static void multilinebox_size(int *dx, int *dy, const char *begin, const char *end, unsigned maxchars)
@@ -642,17 +488,17 @@ static void multilinebox_size(int *dx, int *dy, const char *begin, const char *e
 
 
 /*-------------------------------------------------
-    ui_multitext_ex - display a multiline string
+	ui_multitext_ex - display a multiline string
 -------------------------------------------------*/
 
-static void ui_multitext_ex(struct mame_bitmap *bitmap, const char *begin, const char *end, unsigned maxchars, int x, int y, int color)
+static void ui_multitext_ex(const char *begin, const char *end, unsigned maxchars, int x, int y, int color)
 {
 	/* extract lines until the end */
 	while (begin != end)
 	{
 		const char *line_begin = begin;
 		unsigned len = multiline_extract(&begin, end, maxchars);
-		ui_text_ex(bitmap, line_begin, line_begin + len, x, y, color);
+		ui_text_ex(line_begin, line_begin + len, x, y, color);
 		y += 3*uirotcharheight/2;
 	}
 }
@@ -660,30 +506,30 @@ static void ui_multitext_ex(struct mame_bitmap *bitmap, const char *begin, const
 
 
 /*-------------------------------------------------
-    ui_multitextbox_ex - display a multiline
-    string with box
+	ui_multitextbox_ex - display a multiline
+	string with box
 -------------------------------------------------*/
 
-static void ui_multitextbox_ex(struct mame_bitmap *bitmap, const char *begin, const char *end, unsigned maxchars, int x, int y, int dx, int dy, int color)
+static void ui_multitextbox_ex(const char *begin, const char *end, unsigned maxchars, int x, int y, int dx, int dy, int color)
 {
 	/* draw the box first */
-	ui_drawbox(bitmap, x, y, dx, dy);
+	ui_drawbox(x, y, dx, dy);
 
 	/* indent by half a character */
 	x += uirotcharwidth/2;
 	y += uirotcharheight/2;
 
 	/* draw the text */
-	ui_multitext_ex(bitmap, begin, end, maxchars, x, y, color);
+	ui_multitext_ex(begin, end, maxchars, x, y, color);
 }
 
 
 
 /*-------------------------------------------------
-    ui_drawbox - draw a black box with white border
+	ui_drawbox - draw a black box with white border
 -------------------------------------------------*/
 
-void ui_drawbox(struct mame_bitmap *bitmap, int leftx, int topy, int width, int height)
+void ui_drawbox(int leftx, int topy, int width, int height)
 {
 	struct rectangle bounds, tbounds;
 	pen_t black, white;
@@ -703,25 +549,25 @@ void ui_drawbox(struct mame_bitmap *bitmap, int leftx, int topy, int width, int 
 	tbounds = bounds;
 	tbounds.max_y = tbounds.min_y;
 	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
+	fillbitmap(Machine->scrbitmap, white, &tbounds);
 
 	/* bottom edge */
 	tbounds = bounds;
 	tbounds.min_y = tbounds.max_y;
 	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
+	fillbitmap(Machine->scrbitmap, white, &tbounds);
 
 	/* left edge */
 	tbounds = bounds;
 	tbounds.max_x = tbounds.min_x;
 	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
+	fillbitmap(Machine->scrbitmap, white, &tbounds);
 
 	/* right edge */
 	tbounds = bounds;
 	tbounds.min_x = tbounds.max_x;
 	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
+	fillbitmap(Machine->scrbitmap, white, &tbounds);
 
 	/* fill in the middle with black */
 	tbounds = bounds;
@@ -730,7 +576,7 @@ void ui_drawbox(struct mame_bitmap *bitmap, int leftx, int topy, int width, int 
 	tbounds.max_x--;
 	tbounds.max_y--;
 	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, black, &tbounds);
+	fillbitmap(Machine->scrbitmap, black, &tbounds);
 
 	/* mark things dirty */
 	ui_rot2raw_rect(&bounds);
@@ -740,80 +586,79 @@ void ui_drawbox(struct mame_bitmap *bitmap, int leftx, int topy, int width, int 
 
 
 /*-------------------------------------------------
-    drawbar - draw a thermometer bar
+	drawbar - draw a thermometer bar
 -------------------------------------------------*/
-
-static void drawbar(struct mame_bitmap *bitmap, int leftx, int topy, int width, int height, int percentage, int default_percentage)
-{
-	struct rectangle bounds, tbounds;
-	UINT32 black, white;
-
-	/* make a rect and orient/clip it */
-	bounds.min_x = uirotbounds.min_x + leftx;
-	bounds.min_y = uirotbounds.min_y + topy;
-	bounds.max_x = bounds.min_x + width - 1;
-	bounds.max_y = bounds.min_y + height - 1;
-	sect_rect(&bounds, &uirotbounds);
-
-	/* pick colors from the colortable */
-	black = Machine->uirotfont->colortable[0];
-	white = Machine->uirotfont->colortable[1];
-
-	/* draw the top default percentage marker */
-	tbounds = bounds;
-	tbounds.min_x += (width - 1) * default_percentage / 100;
-	tbounds.max_x = tbounds.min_x;
-	tbounds.max_y = tbounds.min_y + height / 8;
-	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
-
-	/* draw the bottom default percentage marker */
-	tbounds = bounds;
-	tbounds.min_x += (width - 1) * default_percentage / 100;
-	tbounds.max_x = tbounds.min_x;
-	tbounds.min_y = tbounds.max_y - height / 8;
-	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
-
-	/* draw the top line of the bar */
-	tbounds = bounds;
-	tbounds.min_y += height / 8;
-	tbounds.max_y = tbounds.min_y;
-	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
-
-	/* draw the bottom line of the bar */
-	tbounds = bounds;
-	tbounds.max_y -= height / 8;
-	tbounds.min_y = tbounds.max_y;
-	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
-
-	/* fill in the percentage */
-	tbounds = bounds;
-	tbounds.max_x = tbounds.min_x + (width - 1) * percentage / 100;
-	tbounds.min_y += height / 8;
-	tbounds.max_y -= height / 8;
-	ui_rot2raw_rect(&tbounds);
-	fillbitmap(bitmap, white, &tbounds);
-
-	/* mark things dirty */
-	ui_rot2raw_rect(&bounds);
-	ui_markdirty(&bounds);
-}
-
+//static void drawbar(int leftx, int topy, int width, int height, int percentage, int default_percentage)
+//{
+//	struct rectangle bounds, tbounds;
+//	UINT32 black, white;
+//
+//	/* make a rect and orient/clip it */
+//	bounds.min_x = uirotbounds.min_x + leftx;
+//	bounds.min_y = uirotbounds.min_y + topy;
+//	bounds.max_x = bounds.min_x + width - 1;
+//	bounds.max_y = bounds.min_y + height - 1;
+//	sect_rect(&bounds, &uirotbounds);
+//
+//	/* pick colors from the colortable */
+//	black = Machine->uirotfont->colortable[0];
+//	white = Machine->uirotfont->colortable[1];
+//
+//	/* draw the top default percentage marker */
+//	tbounds = bounds;
+//	tbounds.min_x += (width - 1) * default_percentage / 100;
+//	tbounds.max_x = tbounds.min_x;
+//	tbounds.max_y = tbounds.min_y + height / 8;
+//	ui_rot2raw_rect(&tbounds);
+//	fillbitmap(Machine->scrbitmap, white, &tbounds);
+//
+//	/* draw the bottom default percentage marker */
+//	tbounds = bounds;
+//	tbounds.min_x += (width - 1) * default_percentage / 100;
+//	tbounds.max_x = tbounds.min_x;
+//	tbounds.min_y = tbounds.max_y - height / 8;
+//	ui_rot2raw_rect(&tbounds);
+//	fillbitmap(Machine->scrbitmap, white, &tbounds);
+//
+//	/* draw the top line of the bar */
+//	tbounds = bounds;
+//	tbounds.min_y += height / 8;
+//	tbounds.max_y = tbounds.min_y;
+//	ui_rot2raw_rect(&tbounds);
+//	fillbitmap(Machine->scrbitmap, white, &tbounds);
+//
+//	/* draw the bottom line of the bar */
+//	tbounds = bounds;
+//	tbounds.max_y -= height / 8;
+//	tbounds.min_y = tbounds.max_y;
+//	ui_rot2raw_rect(&tbounds);
+//	fillbitmap(Machine->scrbitmap, white, &tbounds);
+//
+//	/* fill in the percentage */
+//	tbounds = bounds;
+//	tbounds.max_x = tbounds.min_x + (width - 1) * percentage / 100;
+//	tbounds.min_y += height / 8;
+//	tbounds.max_y -= height / 8;
+//	ui_rot2raw_rect(&tbounds);
+//	fillbitmap(Machine->scrbitmap, white, &tbounds);
+//
+//	/* mark things dirty */
+//	ui_rot2raw_rect(&bounds);
+//	ui_markdirty(&bounds);
+//}
 
 
-void ui_displaymenu(struct mame_bitmap *bitmap,const char **items,const char **subitems,char *flag,int selected,int arrowize_subitem)
+
+void ui_displaymenu(const char **items,const char **subitems,char *flag,int selected,int arrowize_subitem)
 {
 	struct DisplayText dt[256];
 	int curr_dt;
-	const char *lefthilight = ui_getstring (UI_lefthilight);
-	const char *righthilight = ui_getstring (UI_righthilight);
-	const char *uparrow = ui_getstring (UI_uparrow);
-	const char *downarrow = ui_getstring (UI_downarrow);
-	const char *leftarrow = ui_getstring (UI_leftarrow);
-	const char *rightarrow = ui_getstring (UI_rightarrow);
+	const char *lefthilight 	= ui_getstring (UI_lefthilight);
+	const char *righthilight 	= ui_getstring (UI_righthilight);
+	const char *uparrow 		= ui_getstring (UI_uparrow);
+	const char *downarrow 		= ui_getstring (UI_downarrow);
+	const char *leftarrow 		= ui_getstring (UI_leftarrow);
+	const char *rightarrow 		= ui_getstring (UI_rightarrow);
 	int i,count,len,maxlen,highlen;
 	int leftoffs,topoffs,visible,topitem;
 	int selected_long;
@@ -847,7 +692,7 @@ void ui_displaymenu(struct mame_bitmap *bitmap,const char **items,const char **s
 	topoffs = (uirotheight - (3 * visible + 1) * uirotcharheight / 2) / 2;
 
 	/* black background */
-	ui_drawbox(bitmap,leftoffs,topoffs,maxlen * uirotcharwidth,(3 * visible + 1) * uirotcharheight / 2);
+	ui_drawbox(leftoffs,topoffs,maxlen * uirotcharwidth,(3 * visible + 1) * uirotcharheight / 2);
 
 	selected_long = 0;
 	curr_dt = 0;
@@ -954,7 +799,7 @@ void ui_displaymenu(struct mame_bitmap *bitmap,const char **items,const char **s
 
 	dt[curr_dt].text = 0;	/* terminate array */
 
-	displaytext(bitmap,dt);
+	displaytext(dt);
 
 	if (selected_long)
 	{
@@ -974,12 +819,12 @@ void ui_displaymenu(struct mame_bitmap *bitmap,const char **items,const char **s
 		if (long_y + long_dy > uirotheight)
 			long_y = topoffs + i * 3*uirotcharheight/2 - long_dy;
 
-		ui_multitextbox_ex(bitmap,subitems[selected],subitems[selected] + strlen(subitems[selected]), long_max, long_x,long_y,long_dx,long_dy, UI_COLOR_NORMAL);
+		ui_multitextbox_ex(subitems[selected],subitems[selected] + strlen(subitems[selected]), long_max, long_x,long_y,long_dx,long_dy, UI_COLOR_NORMAL);
 	}
 }
 
 
-void ui_displaymessagewindow(struct mame_bitmap *bitmap,const char *text)
+void ui_displaymessagewindow(const char *text)
 {
 	struct DisplayText dt[256];
 	int curr_dt;
@@ -1043,7 +888,7 @@ void ui_displaymessagewindow(struct mame_bitmap *bitmap,const char *text)
 	topoffs = (uirotheight - (3 * lines + 1) * uirotcharheight / 2) / 2;
 
 	/* black background */
-	ui_drawbox(bitmap,leftoffs,topoffs,maxlen * uirotcharwidth,(3 * lines + 1) * uirotcharheight / 2);
+	ui_drawbox(leftoffs,topoffs,maxlen * uirotcharwidth,(3 * lines + 1) * uirotcharheight / 2);
 
 	curr_dt = 0;
 	c = textcopy;
@@ -1060,7 +905,7 @@ void ui_displaymessagewindow(struct mame_bitmap *bitmap,const char *text)
 			c++;
 		}
 
-		if (*c2 == '\t')    /* center text */
+		if (*c2 == '\t')	/* center text */
 		{
 			c2++;
 			dt[curr_dt].x = (uirotwidth - uirotcharwidth * (c - c2)) / 2;
@@ -1078,12 +923,12 @@ void ui_displaymessagewindow(struct mame_bitmap *bitmap,const char *text)
 
 	dt[curr_dt].text = 0;	/* terminate array */
 
-	displaytext(bitmap,dt);
+	displaytext(dt);
 }
 
 
 
-static void showcharset(struct mame_bitmap *bitmap)
+static void showcharset(void)
 {
 	int i;
 	char buf[80];
@@ -1121,7 +966,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					colortable = Machine->pens;
 					strcpy(buf,"PALETTE");
 				}
-				else if (bank == 1)	/* clut */
+				else if (bank == 1) /* clut */
 				{
 					total_colors = Machine->drv->color_table_len;
 					colortable = Machine->remapped_colortable;
@@ -1136,7 +981,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 
 				/*if (changed) -- temporary */
 				{
-					erase_screen(bitmap);
+					erase_screen();
 
 					if (total_colors)
 					{
@@ -1159,12 +1004,12 @@ static void showcharset(struct mame_bitmap *bitmap)
 
 							sx = 3*uirotcharwidth + (uirotcharwidth*4/3)*(i % 16);
 							sprintf(bf,"%X",i);
-							ui_text(bitmap,bf,sx,2*uirotcharheight);
+							ui_text(bf,sx,2*uirotcharheight);
 							if (16*i < colors)
 							{
 								sy = 3*uirotcharheight + (uirotcharheight)*(i % 16);
 								sprintf(bf,"%3X",i+16*palpage);
-								ui_text(bitmap,bf,0,sy);
+								ui_text(bf,0,sy);
 							}
 						}
 
@@ -1176,13 +1021,13 @@ static void showcharset(struct mame_bitmap *bitmap)
 							bounds.max_x = bounds.min_x + uirotcharwidth*4/3 - 1;
 							bounds.max_y = bounds.min_y + uirotcharheight - 1;
 							ui_rot2raw_rect(&bounds);
-							fillbitmap(bitmap, colortable[i + 256*palpage], &bounds);
+							fillbitmap(Machine->scrbitmap, colortable[i + 256*palpage], &bounds);
 						}
 					}
 					else
-						ui_text(bitmap,"N/A",3*uirotcharwidth,2*uirotcharheight);
+						ui_text("N/A",3*uirotcharwidth,2*uirotcharheight);
 
-					ui_text(bitmap,buf,0,0);
+					ui_text(buf,0,0);
 					changed = 0;
 				}
 
@@ -1202,7 +1047,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					int flipx,flipy;
 					int lastdrawn=0;
 
-					erase_screen(bitmap);
+					erase_screen();
 
 					/* validity check after char bank change */
 					if (firstdrawn >= Machine->gfx[bank]->total_elements)
@@ -1223,7 +1068,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 						bounds.max_y = bounds.min_y + crotheight - 1;
 						ui_rot2raw_rect(&bounds);
 
-						drawgfx(bitmap,Machine->gfx[bank],
+						drawgfx(Machine->scrbitmap,Machine->gfx[bank],
 								i+firstdrawn,color,  /*sprite num, color*/
 								flipx,flipy,bounds.min_x,bounds.min_y,
 								0,Machine->gfx[bank]->colortable ? TRANSPARENCY_NONE : TRANSPARENCY_NONE_RAW,0);
@@ -1232,7 +1077,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					}
 
 					sprintf(buf,"GFXSET %d COLOR %2X CODE %X-%X",bank,color,firstdrawn,lastdrawn);
-					ui_text(bitmap,buf,0,0);
+					ui_text(buf,0,0);
 					changed = 0;
 				}
 
@@ -1252,10 +1097,10 @@ static void showcharset(struct mame_bitmap *bitmap)
 						tilemap_ypos += tilemap_height;
 					tilemap_ypos %= tilemap_height;
 
-					erase_screen(bitmap);
-					tilemap_nb_draw (bitmap, bank, tilemap_xpos, tilemap_ypos);
+					erase_screen();
+					tilemap_nb_draw(Machine->scrbitmap, bank, tilemap_xpos, tilemap_ypos);
 					sprintf(buf, "TILEMAP %d (%dx%d)  X:%d  Y:%d", bank, tilemap_width, tilemap_height, tilemap_xpos, tilemap_ypos);
-					ui_text(bitmap,buf,0,0);
+					ui_text(buf,0,0);
 					changed = 0;
 					skip_tmap = 0;
 				}
@@ -1314,7 +1159,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 			{
 				bank = next_bank;
 				mode = next_mode;
-//              firstdrawn = 0;
+//				firstdrawn = 0;
 				changed = 1;
 			}
 		}
@@ -1350,7 +1195,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 			{
 				bank = next_bank;
 				mode = next_mode;
-//              firstdrawn = 0;
+//				firstdrawn = 0;
 				changed = 1;
 			}
 		}
@@ -1382,7 +1227,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					if (skip_tmap)
 						tilemap_ypos -= skip_tmap;
 					else
-						tilemap_ypos -= bitmap->height/4;
+						tilemap_ypos -= Machine->scrbitmap->height/4;
 					changed = 1;
 					break;
 				}
@@ -1414,7 +1259,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					if (skip_tmap)
 						tilemap_ypos += skip_tmap;
 					else
-						tilemap_ypos += bitmap->height/4;
+						tilemap_ypos += Machine->scrbitmap->height/4;
 					changed = 1;
 					break;
 				}
@@ -1430,7 +1275,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					if (skip_tmap)
 						tilemap_xpos -= skip_tmap;
 					else
-						tilemap_xpos -= bitmap->width/4;
+						tilemap_xpos -= Machine->scrbitmap->width/4;
 					changed = 1;
 					break;
 				}
@@ -1446,7 +1291,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 					if (skip_tmap)
 						tilemap_xpos += skip_tmap;
 					else
-						tilemap_xpos += bitmap->width/4;
+						tilemap_xpos += Machine->scrbitmap->width/4;
 					changed = 1;
 					break;
 				}
@@ -1487,7 +1332,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 		}
 
 		if (input_ui_pressed(IPT_UI_SNAPSHOT))
-			save_screen_snapshot(bitmap);
+			save_screen_snapshot(Machine->scrbitmap);
 	} while (!input_ui_pressed(IPT_UI_SHOW_GFX) &&
 			!input_ui_pressed(IPT_UI_CANCEL));
 
@@ -1496,7 +1341,7 @@ static void showcharset(struct mame_bitmap *bitmap)
 
 
 
-static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_name, UINT32 switch_setting)
+static int switchmenu(int selected, UINT32 switch_name, UINT32 switch_setting)
 {
 	#define MAX_DIP_SWITCHES 256
 	const char *menu_item[MAX_DIP_SWITCHES+2];	// 2 more for "return to mainmenu" and end-of-list marker
@@ -1530,7 +1375,7 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 
 	if (total == 0) return 0;
 
-	menu_item[total] = ui_getstring (UI_returntomain);
+	menu_item[total] 	= ui_getstring (UI_returntomain);
 	menu_item[total + 1] = 0;	/* terminate array */
 	total++;
 
@@ -1546,7 +1391,7 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 				in++;
 
 			if (in->type != switch_setting)
-				menu_subitem[i] = ui_getstring (UI_INVALID);
+				menu_subitem[i] 	= "INVALID";
 			else menu_subitem[i] = input_port_name(in);
 		}
 		else menu_subitem[i] = 0;	/* no subitem */
@@ -1592,7 +1437,7 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 		}
 	}
 
-	ui_displaymenu(bitmap,menu_item,menu_subitem,flag,sel,arrowize);
+	ui_displaymenu(menu_item,menu_subitem,flag,sel,arrowize);
 
 	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
 		sel = (sel + 1) % total;
@@ -1623,6 +1468,8 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 
 			/* tell updatescreen() to clean after us (in case the window changes size) */
 			schedule_full_refresh();
+
+			input_port_settings_modify =1; //TMK
 		}
 	}
 
@@ -1649,6 +1496,8 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 
 			/* tell updatescreen() to clean after us (in case the window changes size) */
 			schedule_full_refresh();
+
+			input_port_settings_modify =1; //TMK
 		}
 	}
 
@@ -1673,27 +1522,10 @@ static int switchmenu(struct mame_bitmap *bitmap, int selected, UINT32 switch_na
 
 
 
-static int setdipswitches(struct mame_bitmap *bitmap, int selected)
+static int setdipswitches(int selected)
 {
-	return switchmenu(bitmap, selected, IPT_DIPSWITCH_NAME, IPT_DIPSWITCH_SETTING);
+	return switchmenu(selected, IPT_DIPSWITCH_NAME, IPT_DIPSWITCH_SETTING);
 }
-
-
-
-#ifdef MESS
-static int setconfiguration(struct mame_bitmap *bitmap, int selected)
-{
-	return switchmenu(bitmap, selected, IPT_CONFIG_NAME, IPT_CONFIG_SETTING);
-}
-
-
-
-static int setcategories(struct mame_bitmap *bitmap, int selected)
-{
-	return switchmenu(bitmap, selected, IPT_CATEGORY_NAME, IPT_CATEGORY_SETTING);
-}
-#endif /* MESS */
-
 
 
 /* This flag is used for record OR sequence of key/joy */
@@ -1701,12 +1533,13 @@ static int setcategories(struct mame_bitmap *bitmap, int selected)
 /* it's used byt setdefkeysettings, setdefjoysettings, setkeysettings, setjoysettings */
 static int record_first_insert = 1;
 
-#define MAX_PORT_ENTRIES		1000
+//#define MAX_PORT_ENTRIES		1000
+#define MAX_PORT_ENTRIES		512
 
 static char menu_item_buffer[MAX_PORT_ENTRIES][96];
 static char menu_subitem_buffer[MAX_PORT_ENTRIES][96];
 
-static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
+static int setdefcodesettings(int selected)
 {
 	static input_seq_t starting_seq;
 	static int menugroup = -1;
@@ -1733,7 +1566,7 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 		menu_item[total++] = ui_getstring (UI_returntomain);
 		menu_item[total] = 0;
 
-		ui_displaymenu(bitmap,menu_item,0,0,sel,0);
+		ui_displaymenu(menu_item,0,0,sel,0);
 	}
 	else
 	{
@@ -1804,7 +1637,7 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 			int ret;
 
 			menu_subitem[sel & SEL_MASK] = "    ";
-			ui_displaymenu(bitmap,menu_item,menu_subitem,flag,sel & SEL_MASK,3);
+			ui_displaymenu(menu_item,menu_subitem,flag,sel & SEL_MASK,3);
 
 			ret = seq_read_async(entry[sel & SEL_MASK],record_first_insert);
 
@@ -1831,7 +1664,7 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 		}
 
 
-		ui_displaymenu(bitmap,menu_item,menu_subitem,flag,sel,0);
+		ui_displaymenu(menu_item,menu_subitem,flag,sel,0);
 	}
 
 	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
@@ -1872,6 +1705,8 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 
 			/* tell updatescreen() to clean after us (in case the window changes size) */
 			schedule_full_refresh();
+
+			input_port_settings_modify =1; //TMK
 		}
 	}
 
@@ -1898,6 +1733,8 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 					seq_set_1(entry[sel], CODE_NONE);
 
 				schedule_full_refresh();
+
+				input_port_settings_modify =1; //TMK
 			}
 		}
 	}
@@ -1918,7 +1755,7 @@ static int setdefcodesettings(struct mame_bitmap *bitmap,int selected)
 
 
 
-static int setcodesettings(struct mame_bitmap *bitmap,int selected)
+static int setcodesettings(int selected)
 {
 	static input_code_t starting_code = CODE_NONE;
 	const char *menu_item[MAX_PORT_ENTRIES];
@@ -2009,7 +1846,7 @@ static int setcodesettings(struct mame_bitmap *bitmap,int selected)
 		int ret;
 
 		menu_subitem[sel & SEL_MASK] = "    ";
-		ui_displaymenu(bitmap,menu_item,menu_subitem, (char *) flag,sel & SEL_MASK,3);
+		ui_displaymenu(menu_item,menu_subitem, (char *) flag,sel & SEL_MASK,3);
 
 		ret = seq_read_async(seq[sel & SEL_MASK],record_first_insert);
 
@@ -2033,7 +1870,7 @@ static int setcodesettings(struct mame_bitmap *bitmap,int selected)
 	}
 
 
-	ui_displaymenu(bitmap,menu_item,menu_subitem, (char *) flag,sel,0);
+	ui_displaymenu(menu_item,menu_subitem, (char *) flag,sel,0);
 
 	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
 	{
@@ -2059,6 +1896,8 @@ static int setcodesettings(struct mame_bitmap *bitmap,int selected)
 
 			/* tell updatescreen() to clean after us (in case the window changes size) */
 			schedule_full_refresh();
+
+			input_port_settings_modify =1; //TMK
 		}
 	}
 
@@ -2075,6 +1914,8 @@ static int setcodesettings(struct mame_bitmap *bitmap,int selected)
 				seq_set_1(seq[sel], CODE_NONE);
 
 			schedule_full_refresh();
+
+			input_port_settings_modify =1; //TMK
 		}
 	}
 
@@ -2092,7 +1933,7 @@ static int setcodesettings(struct mame_bitmap *bitmap,int selected)
 }
 
 
-static int calibratejoysticks(struct mame_bitmap *bitmap,int selected)
+static int calibratejoysticks(int selected)
 {
 	const char *msg;
 	static char buf[2048];
@@ -2121,7 +1962,7 @@ static int calibratejoysticks(struct mame_bitmap *bitmap,int selected)
 			sel &= SEL_MASK;
 		}
 
-		ui_displaymessagewindow(bitmap,buf);
+		ui_displaymessagewindow(buf);
 	}
 	else
 	{
@@ -2136,7 +1977,7 @@ static int calibratejoysticks(struct mame_bitmap *bitmap,int selected)
 		else
 		{
 			strcpy (buf, msg);
-			ui_displaymessagewindow(bitmap,buf);
+			ui_displaymessagewindow(buf);
 			sel |= 1 << SEL_BITS;
 		}
 	}
@@ -2154,7 +1995,7 @@ static int calibratejoysticks(struct mame_bitmap *bitmap,int selected)
 
 #define MAX_ANALOG_ENTRIES 80
 
-static int settraksettings(struct mame_bitmap *bitmap,int selected)
+static int settraksettings(int selected)
 {
 	const char *menu_item[MAX_ANALOG_ENTRIES];
 	const char *menu_subitem[MAX_ANALOG_ENTRIES];
@@ -2249,7 +2090,7 @@ static int settraksettings(struct mame_bitmap *bitmap,int selected)
 		else menu_subitem[i] = 0;	/* no subitem */
 	}
 
-	ui_displaymenu(bitmap,menu_item,menu_subitem,0,sel,arrowize);
+	ui_displaymenu(menu_item,menu_subitem,0,sel,arrowize);
 
 	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
 		sel = (sel + 1) % total2;
@@ -2355,7 +2196,7 @@ static int settraksettings(struct mame_bitmap *bitmap,int selected)
 }
 
 #ifndef MESS
-static int mame_stats(struct mame_bitmap *bitmap,int selected)
+static int mame_stats(int selected)
 {
 	char temp[10];
 	char buf[2048];
@@ -2368,7 +2209,7 @@ static int mame_stats(struct mame_bitmap *bitmap,int selected)
 
 	if (dispensed_tickets)
 	{
-		strcat(buf, ui_getstring (UI_tickets));
+		strcat(buf, "Tickets dispensed");
 		strcat(buf, ": ");
 		sprintf(temp, "%d\n\n", dispensed_tickets);
 		strcat(buf, temp);
@@ -2376,11 +2217,11 @@ static int mame_stats(struct mame_bitmap *bitmap,int selected)
 
 	for (i=0; i<COIN_COUNTERS; i++)
 	{
-		strcat(buf, ui_getstring (UI_coin));
+		strcat(buf, "Coin");
 		sprintf(temp, " %c: ", i+'A');
 		strcat(buf, temp);
 		if (!coin_count[i])
-			strcat (buf, ui_getstring (UI_NA));
+			strcat (buf, "NA");
 		else
 		{
 			sprintf (temp, "%d", coin_count[i]);
@@ -2389,7 +2230,7 @@ static int mame_stats(struct mame_bitmap *bitmap,int selected)
 		if (coinlockedout[i])
 		{
 			strcat(buf, " ");
-			strcat(buf, ui_getstring (UI_locked));
+			strcat(buf, "(locked)");
 			strcat(buf, "\n");
 		}
 		else
@@ -2407,7 +2248,7 @@ static int mame_stats(struct mame_bitmap *bitmap,int selected)
 		strcat(buf," ");
 		strcat(buf,ui_getstring (UI_righthilight));
 
-		ui_displaymessagewindow(bitmap,buf);
+		ui_displaymessagewindow(buf);
 
 		if (input_ui_pressed(IPT_UI_SELECT))
 			sel = -1;
@@ -2428,27 +2269,27 @@ static int mame_stats(struct mame_bitmap *bitmap,int selected)
 }
 #endif
 
-int showcopyright(struct mame_bitmap *bitmap)
+int showcopyright(void)
 {
 	int done;
 	char buf[1000];
 	char buf2[256];
 
-	strcpy (buf, ui_getstring(UI_copyright1));
+	strcpy (buf, "Usage of emulators in conjunction with ROMs you don't own is forbidden by copyright law.");
 	strcat (buf, "\n\n");
-	sprintf(buf2, ui_getstring(UI_copyright2), Machine->gamedrv->description);
+	sprintf(buf2, "IF YOU ARE NOT LEGALLY ENTITLED TO PLAY \"%s\" ON THIS EMULATOR, PRESS ESC.", Machine->gamedrv->description);
 	strcat (buf, buf2);
 	strcat (buf, "\n\n");
-	strcat (buf, ui_getstring(UI_copyright3));
+	strcat (buf, "Otherwise, type OK or move the joystick left then right to continue");
 
 	setup_selected = -1;////
 	done = 0;
 
 	do
 	{
-		erase_screen(bitmap);
-		ui_drawbox(bitmap,0,0,uirotwidth,uirotheight);
-		ui_displaymessagewindow(bitmap,buf);
+		erase_screen();
+		ui_drawbox(0,0,uirotwidth,uirotheight);
+		ui_displaymessagewindow(buf);
 
 		update_video_and_audio();
 		if (input_ui_pressed(IPT_UI_CANCEL))
@@ -2465,38 +2306,32 @@ int showcopyright(struct mame_bitmap *bitmap)
 	} while (done < 2);
 
 	setup_selected = 0;////
-	erase_screen(bitmap);
+	erase_screen();
 	update_video_and_audio();
 
 	return 0;
 }
 
-static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
+static int displaygameinfo(int selected)
 {
 	int i;
 	char buf[2048];
-	char buf2[32];
 	int sel;
-
 
 	sel = selected - 1;
 
-
-	sprintf(buf,"%s\n%s %s\n\n%s:\n",Machine->gamedrv->description,Machine->gamedrv->year,Machine->gamedrv->manufacturer,
-		ui_getstring (UI_cpu));
+	sprintf(buf,"%s\n%s %s\n\nCPU:\n",Machine->gamedrv->description,Machine->gamedrv->year,Machine->gamedrv->manufacturer	);
 	i = 0;
 	while (i < MAX_CPU && Machine->drv->cpu[i].cpu_type)
 	{
 		int type,clock,count;
 
-		type = Machine->drv->cpu[i].cpu_type;
+		type  = Machine->drv->cpu[i].cpu_type;
 		clock = Machine->drv->cpu[i].cpu_clock;
 		count = 1;
-
 		i++;
-
 		while (i < MAX_CPU
-				&& Machine->drv->cpu[i].cpu_type == type
+				&& Machine->drv->cpu[i].cpu_type  == type
 				&& Machine->drv->cpu[i].cpu_clock == clock)
 		{
 			count++;
@@ -2506,7 +2341,7 @@ static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
 		if (count > 1)
 			sprintf(&buf[strlen(buf)],"%dx",count);
 
-		sprintf(&buf[strlen(buf)],"%s",cputype_name(type));
+		strcat(buf, cputype_name(type));
 
 		if (clock >= 1000000)
 			sprintf(&buf[strlen(buf)]," %d.%06d MHz",
@@ -2519,10 +2354,7 @@ static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
 
 		strcat(buf,"\n");
 	}
-
-	sprintf (buf2, "\n%s", ui_getstring (UI_sound));
-	strcat (buf, buf2);
-	strcat(buf,":\n");
+	strcat(buf,"\nSound:\n");
 
 	i = 0;
 	while (i < MAX_SOUND && Machine->drv->sound[i].sound_type)
@@ -2564,32 +2396,20 @@ static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
 
 		strcat(buf,"\n");
 	}
-
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-		sprintf(&buf[strlen(buf)],"\n%s\n", ui_getstring (UI_vectorgame));
-	else
-	{
-		sprintf(&buf[strlen(buf)],"\n%s:\n", ui_getstring (UI_screenres));
-		sprintf(&buf[strlen(buf)],"%d x %d (%s) %f Hz\n",
-				Machine->visible_area.max_x - Machine->visible_area.min_x + 1,
-				Machine->visible_area.max_y - Machine->visible_area.min_y + 1,
-				(Machine->gamedrv->flags & ORIENTATION_SWAP_XY) ? "V" : "H",
-				Machine->refresh_rate);
-	}
-
+	strcat(buf,"\nScreen Resolution:\n");
+	sprintf(&buf[strlen(buf)],"%d x %d (%s) %f Hz\n",
+		Machine->visible_area.max_x - Machine->visible_area.min_x + 1,
+		Machine->visible_area.max_y - Machine->visible_area.min_y + 1,
+		(Machine->gamedrv->flags & ORIENTATION_SWAP_XY) ? "V" : "H",
+		Machine->refresh_rate);
 
 	if (sel == -1)
 	{
 		/* startup info, print MAME version and ask for any key */
-
-		sprintf (buf2, "\n\t%s ", ui_getstring (UI_mame));	/* \t means that the line will be centered */
-		strcat(buf, buf2);
-
-		strcat(buf,build_version);
-		sprintf (buf2, "\n\t%s", ui_getstring (UI_anykey));
-		strcat(buf,buf2);
-		ui_drawbox(bitmap,0,0,uirotwidth,uirotheight);
-		ui_displaymessagewindow(bitmap,buf);
+		/* \t means that the line will be centered */
+		strcat(buf, "\n\t""MAME 0.97 for psp""\n\t""Press Any Key");
+		ui_drawbox(0,0,uirotwidth,uirotheight);
+		ui_displaymessagewindow(buf);
 
 		sel = 0;
 		if (code_read_async() != CODE_NONE)
@@ -2605,7 +2425,7 @@ static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
 		strcat(buf," ");
 		strcat(buf,ui_getstring (UI_righthilight));
 
-		ui_displaymessagewindow(bitmap,buf);
+		ui_displaymessagewindow(buf);
 
 		if (input_ui_pressed(IPT_UI_SELECT))
 			sel = -1;
@@ -2626,7 +2446,7 @@ static int displaygameinfo(struct mame_bitmap *bitmap,int selected)
 }
 
 
-int showgamewarnings(struct mame_bitmap *bitmap)
+int showgamewarnings(void)
 {
 	int i;
 	char buf[2048];
@@ -2639,16 +2459,6 @@ int showgamewarnings(struct mame_bitmap *bitmap)
 
 		strcpy(buf, ui_getstring (UI_knownproblems));
 		strcat(buf, "\n\n");
-
-#ifdef MESS
-		if (Machine->gamedrv->flags & GAME_COMPUTER)
-		{
-			strcpy(buf, ui_getstring (UI_comp1));
-			strcat(buf, "\n\n");
-			strcat(buf, ui_getstring (UI_comp2));
-			strcat(buf, "\n");
-		}
-#endif
 
 		if (Machine->gamedrv->flags & GAME_IMPERFECT_COLORS)
 		{
@@ -2735,9 +2545,9 @@ int showgamewarnings(struct mame_bitmap *bitmap)
 		done = 0;
 		do
 		{
-			erase_screen(bitmap);
-			ui_drawbox(bitmap,0,0,uirotwidth,uirotheight);
-			ui_displaymessagewindow(bitmap,buf);
+			erase_screen();
+			ui_drawbox(0,0,uirotwidth,uirotheight);
+			ui_displaymessagewindow(buf);
 
 			update_video_and_audio();
 			if (input_ui_pressed(IPT_UI_CANCEL))
@@ -2751,31 +2561,24 @@ int showgamewarnings(struct mame_bitmap *bitmap)
 		} while (done < 2);
 	}
 
-	erase_screen(bitmap);
+	erase_screen();
 	update_video_and_audio();
 
 	return 0;
 }
 
 
-int showgameinfo(struct mame_bitmap *bitmap)
+int showgameinfo(void)
 {
 	/* clear the input memory */
 	while (code_read_async() != CODE_NONE) {};
 
-	while (displaygameinfo(bitmap,0) == 1)
+	while (displaygameinfo(0) == 1)
 	{
 		update_video_and_audio();
 	}
 
-	#ifdef MESS
-	while (displayimageinfo(bitmap,0) == 1)
-	{
-		update_video_and_audio();
-	}
-	#endif
-
-	erase_screen(bitmap);
+	erase_screen();
 	/* make sure that the screen is really cleared, in case autoframeskip kicked in */
 	update_video_and_audio();
 	update_video_and_audio();
@@ -2785,6 +2588,7 @@ int showgameinfo(struct mame_bitmap *bitmap)
 	return 0;
 }
 
+#if 00
 /* Word-wraps the text in the specified buffer to fit in maxwidth characters per line.
    The contents of the buffer are modified.
    Known limitations: Words longer than maxwidth cause the function to fail. */
@@ -2820,7 +2624,9 @@ static void wordwrap_text_buffer (char *buffer, int maxwidth)
 			buffer++;
 	}
 }
+#endif
 
+#if 00
 static int count_lines_in_buffer (char *buffer)
 {
 	int lines = 0;
@@ -2831,9 +2637,8 @@ static int count_lines_in_buffer (char *buffer)
 
 	return lines;
 }
-
 /* Display lines from buffer, starting with line 'scroll', in a width x height text window */
-static void display_scroll_message (struct mame_bitmap *bitmap, int *scroll, int width, int height, char *buf)
+static void display_scroll_message (int *scroll, int width, int height, char *buf)
 {
 	struct DisplayText dt[256];
 	int curr_dt = 0;
@@ -2851,7 +2656,7 @@ static void display_scroll_message (struct mame_bitmap *bitmap, int *scroll, int
 	leftoffs = (uirotwidth - uirotcharwidth * (width + 1)) / 2;
 	if (leftoffs < 0) leftoffs = 0;
 	topoffs = (uirotheight - (3 * height + 1) * uirotcharheight / 2) / 2;
-	ui_drawbox(bitmap,leftoffs,topoffs,(width + 1) * uirotcharwidth,(3 * height + 1) * uirotcharheight / 2);
+	ui_drawbox(leftoffs,topoffs,(width + 1) * uirotcharwidth,(3 * height + 1) * uirotcharheight / 2);
 
 	buflines = count_lines_in_buffer (buf);
 	if (first > 0)
@@ -2940,123 +2745,12 @@ static void display_scroll_message (struct mame_bitmap *bitmap, int *scroll, int
 
 	dt[curr_dt].text = 0;	/* terminate array */
 
-	displaytext(bitmap,dt);
+	displaytext(dt);
 }
+#endif
 
 
-/* Display text entry for current driver from history.dat and mameinfo.dat. */
-static int displayhistory (struct mame_bitmap *bitmap, int selected)
-{
-	static int scroll = 0;
-	static char *buf = 0;
-	int maxcols,maxrows;
-	int sel;
-	int bufsize = 256 * 1024; // 256KB of history.dat buffer, enough for everything
-
-	sel = selected - 1;
-
-
-	maxcols = (uirotwidth / uirotcharwidth) - 1;
-	maxrows = (2 * uirotheight - uirotcharheight) / (3 * uirotcharheight);
-	maxcols -= 2;
-	maxrows -= 8;
-
-	if (!buf)
-	{
-		/* allocate a buffer for the text */
-		buf = malloc (bufsize);
-
-		if (buf)
-		{
-			/* try to load entry */
-			if (load_driver_history (Machine->gamedrv, buf, bufsize) == 0)
-			{
-				scroll = 0;
-				wordwrap_text_buffer (buf, maxcols);
-				strcat(buf,"\n\t");
-				strcat(buf,ui_getstring (UI_lefthilight));
-				strcat(buf," ");
-				strcat(buf,ui_getstring (UI_returntomain));
-				strcat(buf," ");
-				strcat(buf,ui_getstring (UI_righthilight));
-				strcat(buf,"\n");
-			}
-			else
-			{
-				free (buf);
-				buf = 0;
-			}
-		}
-	}
-
-	{
-		if (buf)
-			display_scroll_message (bitmap, &scroll, maxcols, maxrows, buf);
-		else
-		{
-			char msg[80];
-
-			strcpy(msg,"\t");
-			strcat(msg,ui_getstring(UI_historymissing));
-			strcat(msg,"\n\n\t");
-			strcat(msg,ui_getstring (UI_lefthilight));
-			strcat(msg," ");
-			strcat(msg,ui_getstring (UI_returntomain));
-			strcat(msg," ");
-			strcat(msg,ui_getstring (UI_righthilight));
-			ui_displaymessagewindow(bitmap,msg);
-		}
-
-		if ((scroll > 0) && input_ui_pressed_repeat(IPT_UI_UP,4))
-		{
-			if (scroll == 2) scroll = 0;	/* 1 would be the same as 0, but with arrow on top */
-			else scroll--;
-		}
-
-		if (input_ui_pressed_repeat(IPT_UI_DOWN,4))
-		{
-			if (scroll == 0) scroll = 2;	/* 1 would be the same as 0, but with arrow on top */
-			else scroll++;
-		}
-
-		if (input_ui_pressed_repeat(IPT_UI_PAN_UP, 4))
-		{
-			scroll -= maxrows - 2;
-			if (scroll < 0) scroll = 0;
-		}
-
-		if (input_ui_pressed_repeat(IPT_UI_PAN_DOWN, 4))
-		{
-			scroll += maxrows - 2;
-		}
-
-		if (input_ui_pressed(IPT_UI_SELECT))
-			sel = -1;
-
-		if (input_ui_pressed(IPT_UI_CANCEL))
-			sel = -1;
-
-		if (input_ui_pressed(IPT_UI_CONFIGURE))
-			sel = -2;
-	}
-
-	if (sel == -1 || sel == -2)
-	{
-		schedule_full_refresh();
-
-		/* force buffer to be recreated */
-		if (buf)
-		{
-			free (buf);
-			buf = 0;
-		}
-	}
-
-	return sel + 1;
-
-}
-
-int memcard_menu(struct mame_bitmap *bitmap, int selection)
+int memcard_menu(int selection)
 {
 	int sel;
 	int menutotal = 0;
@@ -3102,13 +2796,13 @@ int memcard_menu(struct mame_bitmap *bitmap, int selection)
 		}
 
 		strcat (buf2, "\n\n");
-		ui_displaymessagewindow(bitmap,buf2);
+		ui_displaymessagewindow(buf2);
 		if (input_ui_pressed(IPT_UI_SELECT))
 			mcd_action = 0;
 	}
 	else
 	{
-		ui_displaymenu(bitmap,menuitem,0,0,sel,0);
+		ui_displaymenu(menuitem,0,0,sel,0);
 
 		if (input_ui_pressed_repeat(IPT_UI_RIGHT,8))
 			mcd_number = (mcd_number + 1) % 1000;
@@ -3182,19 +2876,11 @@ int memcard_menu(struct mame_bitmap *bitmap, int selection)
 }
 
 
-#ifndef MESS
 enum { UI_SWITCH = 0,UI_DEFGROUP,UI_CODE,UI_ANALOG,UI_CALIBRATE,
-		UI_STATS,UI_GAMEINFO, UI_HISTORY,
+		UI_STATS,UI_GAMEINFO, UI_QUIT_GAME,
 		UI_CHEAT,UI_RESET,UI_MEMCARD,UI_EXIT };
-#else
-enum { UI_SWITCH = 0,UI_DEFGROUP,UI_CODE,UI_ANALOG,UI_CALIBRATE,
-		UI_GAMEINFO, UI_IMAGEINFO,UI_FILEMANAGER,UI_TAPECONTROL,
-		UI_HISTORY,UI_CHEAT,UI_RESET,UI_MEMCARD,UI_EXIT,
-		UI_CONFIGURATION, UI_CATEGORIES };
-#endif
 
-
-#define MAX_SETUPMENU_ITEMS 20
+#define MAX_SETUPMENU_ITEMS 16
 static const char *menu_item[MAX_SETUPMENU_ITEMS];
 static int menu_action[MAX_SETUPMENU_ITEMS];
 static int menu_total;
@@ -3231,7 +2917,7 @@ static int has_analog(void)
 	/* Determine if there are any analog controls */
 	num = 0;
 	for (in = Machine->input_ports; in->type != IPT_END; in++)
- 	{
+	{
 		if (port_type_is_analog(in->type) && input_port_active(in))
 			num++;
 	}
@@ -3278,39 +2964,17 @@ static void setup_menu_init(void)
 	append_menu(UI_inputgeneral, UI_DEFGROUP);
 	append_menu(UI_inputspecific, UI_CODE);
 
-	if (has_dipswitches())
-		append_menu(UI_dipswitches, UI_SWITCH);
+	if (has_dipswitches())	append_menu(UI_dipswitches, UI_SWITCH);
+	if (has_analog())		append_menu(UI_analogcontrols, UI_ANALOG);
 
-#ifdef MESS
-	if (has_configurables())
-		append_menu(UI_configuration, UI_CONFIGURATION);
-	if (has_categories())
-		append_menu(UI_categories, UI_CATEGORIES);
-#endif /* MESS */
-
-
-	if (has_analog())
-		append_menu(UI_analogcontrols, UI_ANALOG);
-
-  	/* Joystick calibration possible? */
-  	if ((osd_joystick_needs_calibration()) != 0)
+	/* Joystick calibration possible? */
+	if ((osd_joystick_needs_calibration()) != 0)
 	{
 		append_menu(UI_calibrate, UI_CALIBRATE);
 	}
 
-#ifndef MESS
 	append_menu(UI_bookkeeping, UI_STATS);
 	append_menu(UI_gameinfo, UI_GAMEINFO);
-	append_menu(UI_history, UI_HISTORY);
-#else /* MESS */
-	append_menu(UI_imageinfo, UI_IMAGEINFO);
-	append_menu(UI_filemanager, UI_FILEMANAGER);
-#if HAS_WAVE
-	if (device_find(Machine->devices, IO_CASSETTE))
-		append_menu(UI_tapecontrol, UI_TAPECONTROL);
-#endif /* HAS_WAVE */
-	append_menu(UI_history, UI_HISTORY);
-#endif /* !MESS */
 
 	if (options.cheat)
 	{
@@ -3326,12 +2990,13 @@ static void setup_menu_init(void)
 	}
 
 	append_menu(UI_resetgame, UI_RESET);
+	append_menu(UI_quit_emulator, UI_QUIT_GAME);
 	append_menu(UI_returntogame, UI_EXIT);
 	menu_item[menu_total] = 0; /* terminate array */
 }
 
-
-static int setup_menu(struct mame_bitmap *bitmap, int selected)
+extern int psp_exit;	//TMK
+static int setup_menu(int selected)
 {
 	int sel,res=-1;
 	static int menu_lastselected = 0;
@@ -3345,57 +3010,17 @@ static int setup_menu(struct mame_bitmap *bitmap, int selected)
 	{
 		switch (menu_action[sel & SEL_MASK])
 		{
-			case UI_SWITCH:
-				res = setdipswitches(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_DEFGROUP:
-				res = setdefcodesettings(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_CODE:
-				res = setcodesettings(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_ANALOG:
-				res = settraksettings(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_CALIBRATE:
-				res = calibratejoysticks(bitmap, sel >> SEL_BITS);
-				break;
-#ifndef MESS
-			case UI_STATS:
-				res = mame_stats(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_GAMEINFO:
-				res = displaygameinfo(bitmap, sel >> SEL_BITS);
-				break;
-#endif
-#ifdef MESS
-			case UI_IMAGEINFO:
-				res = displayimageinfo(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_FILEMANAGER:
-				res = filemanager(bitmap, sel >> SEL_BITS);
-				break;
-#if HAS_WAVE
-			case UI_TAPECONTROL:
-				res = tapecontrol(bitmap, sel >> SEL_BITS);
-				break;
-#endif /* HAS_WAVE */
-			case UI_CONFIGURATION:
-				res = setconfiguration(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_CATEGORIES:
-				res = setcategories(bitmap, sel >> SEL_BITS);
-				break;
-#endif /* MESS */
-			case UI_HISTORY:
-				res = displayhistory(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_CHEAT:
-				res = cheat_menu(bitmap, sel >> SEL_BITS);
-				break;
-			case UI_MEMCARD:
-				res = memcard_menu(bitmap, sel >> SEL_BITS);
-				break;
+			case UI_SWITCH:			res = setdipswitches(sel >> SEL_BITS);				break;
+			case UI_DEFGROUP:		res = setdefcodesettings(sel >> SEL_BITS);			break;
+			case UI_CODE:			res = setcodesettings(sel >> SEL_BITS);				break;
+			case UI_ANALOG:			res = settraksettings(sel >> SEL_BITS);				break;
+			case UI_CALIBRATE:		res = calibratejoysticks(sel >> SEL_BITS);			break;
+			case UI_STATS:			res = mame_stats(sel >> SEL_BITS);					break;
+			case UI_GAMEINFO:		res = displaygameinfo(sel >> SEL_BITS);				break;
+		//	case UI_QUIT_GAME:		res = displayhistory(sel >> SEL_BITS);				break;
+			case UI_CHEAT:			res = cheat_menu(sel >> SEL_BITS);					break;
+			case UI_MEMCARD:		res = memcard_menu(sel >> SEL_BITS);				break;
+			case UI_QUIT_GAME:		psp_exit=1;	break;
 		}
 
 		if (res == -1)
@@ -3410,7 +3035,7 @@ static int setup_menu(struct mame_bitmap *bitmap, int selected)
 	}
 
 
-	ui_displaymenu(bitmap,menu_item,0,0,sel,0);
+	ui_displaymenu(menu_item,0,0,sel,0);
 
 	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
 		sel = (sel + 1) % menu_total;
@@ -3438,7 +3063,7 @@ static int setup_menu(struct mame_bitmap *bitmap, int selected)
 			case UI_CONFIGURATION:
 			case UI_CATEGORIES:
 #endif /* !MESS */
-			case UI_HISTORY:
+			case UI_QUIT_GAME:
 			case UI_CHEAT:
 			case UI_MEMCARD:
 				sel |= 1 << SEL_BITS;
@@ -3474,415 +3099,301 @@ static int setup_menu(struct mame_bitmap *bitmap, int selected)
 
 
 /*********************************************************************
-
   start of On Screen Display handling
-
 *********************************************************************/
+//static void displayosd(const char *text,int percentage,int default_percentage)
+//{
+//	struct DisplayText dt[2];
+//	int avail;
+//	avail = (uirotwidth / uirotcharwidth) * 19 / 20;
+//	ui_drawbox((uirotwidth - uirotcharwidth * avail) / 2,
+//			(uirotheight - 7*uirotcharheight/2),
+//			avail * uirotcharwidth,
+//			3*uirotcharheight);
+//	avail--;
+//	drawbar((uirotwidth - uirotcharwidth * avail) / 2,
+//			(uirotheight - 3*uirotcharheight),
+//			avail * uirotcharwidth,
+//			uirotcharheight,
+//			percentage,default_percentage);
+//	dt[0].text = text;
+//	dt[0].color = UI_COLOR_NORMAL;
+//	dt[0].x = (uirotwidth - uirotcharwidth * strlen(text)) / 2;
+//	dt[0].y = (uirotheight - 2*uirotcharheight) + 2;
+//	dt[1].text = 0; /* terminate array */
+//	displaytext(dt);
+//}
 
-static void displayosd(struct mame_bitmap *bitmap,const char *text,int percentage,int default_percentage)
-{
-	struct DisplayText dt[2];
-	int avail;
+//static void onscrd_adjuster(int increment,int arg)
+//{
+//	struct InputPort *in = &Machine->input_ports[arg];
+//	char buf[80];
+//	int value;
+//	if (increment)
+//	{
+//		value = in->default_value & 0xff;
+//		value += increment;
+//		if (value > 100) value = 100;
+//		if (value < 0) value = 0;
+//		in->default_value = (in->default_value & ~0xff) | value;
+//	}
+//	value = in->default_value & 0xff;
+//	sprintf(buf,"%s %d%%",in->name,value);
+//	displayosd(buf,value,in->default_value >> 8);
+//}
 
+//static void onscrd_volume(int increment,int arg)
+//{
+//	char buf[20];
+//	int attenuation;
+//	if (increment)
+//	{
+//		attenuation = osd_get_mastervolume();
+//		attenuation += increment;
+//		if (attenuation > 0) attenuation = 0;
+//		if (attenuation < -32) attenuation = -32;
+//		osd_set_mastervolume(attenuation);
+//	}
+//	attenuation = osd_get_mastervolume();
+//	sprintf(buf,"%s %3ddB", ui_getstring (UI_volume), attenuation);
+//	displayosd(buf,100 * (attenuation + 32) / 32,100);
+//}
 
-	avail = (uirotwidth / uirotcharwidth) * 19 / 20;
+//static void onscrd_mixervol(int increment,int arg)
+//{
+//	static void *driver = 0;
+//	char buf[40];
+//	float volume;
+//	int ch;
+//	int doallchannels = 0;
+//	int proportional = 0;
+//	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))		doallchannels = 1;
+//	if (!code_pressed(KEYCODE_LCONTROL) && !code_pressed(KEYCODE_RCONTROL))	increment *= 5;
+//	if (code_pressed(KEYCODE_LALT) || code_pressed(KEYCODE_RALT))		proportional = 1;
+//	if (increment)
+//	{
+//		if (proportional)
+//		{
+//			static float old_vol[100];
+//			int num_vals = sound_get_user_gain_count();
+//			float ratio = 1.0;
+//			int overflow = 0;
+//			if (driver != Machine->drv)
+//			{
+//				driver = (void *)Machine->drv;
+//				for (ch = 0; ch < num_vals; ch++)
+//					old_vol[ch] = sound_get_user_gain(ch);
+//			}
+//			volume = sound_get_user_gain(arg);
+//			if (old_vol[arg])
+//				ratio = (volume + increment * 0.02) / old_vol[arg];
+//			for (ch = 0; ch < num_vals; ch++)
+//			{
+//				volume = ratio * old_vol[ch];
+//				if (volume < 0 || volume > 2.0)
+//					overflow = 1;
+//			}
+//			if (!overflow)
+//			{
+//				for (ch = 0; ch < num_vals; ch++)
+//				{
+//					volume = ratio * old_vol[ch];
+//					sound_set_user_gain(ch,volume);
+//				}
+//			}
+//		}
+//		else
+//		{
+//			driver = 0; /* force reset of saved volumes */
+//			volume = sound_get_user_gain(arg);
+//			volume += increment * 0.02;
+//			if (volume > 2.0) volume = 2.0;
+//			if (volume < 0) volume = 0;
+//			if (doallchannels)
+//			{
+//				int num_vals = sound_get_user_gain_count();
+//				for (ch = 0;ch < num_vals;ch++)
+//					sound_set_user_gain(ch,volume);
+//			}
+//			else
+//				sound_set_user_gain(arg,volume);
+//		}
+//	}
+//	volume = sound_get_user_gain(arg);
+//	if (proportional)		sprintf(buf,"ALL CHANNELS Relative %4.2f", volume);
+//	else if (doallchannels)	sprintf(buf,"ALL CHANNELS Volume %4.2f", volume);
+//	else		sprintf(buf,"%s Volume %4.2f",sound_get_user_gain_name(arg), volume);
+//	displayosd(buf,volume*50,sound_get_default_gain(arg)*50);
+//}
 
-	ui_drawbox(bitmap,(uirotwidth - uirotcharwidth * avail) / 2,
-			(uirotheight - 7*uirotcharheight/2),
-			avail * uirotcharwidth,
-			3*uirotcharheight);
+//static void onscrd_brightness(int increment,int arg)
+//{
+//	char buf[20];
+//	double brightness;
+//	if (increment)
+//	{
+//		//brightness = 1.0;//palette_get_global_brightness();
+//		//brightness += 0.05 * increment;
+//		//if (brightness < 0.1) brightness = 0.1;
+//		//if (brightness > 1.0) brightness = 1.0;
+//		//palette_set_global_brightness(brightness);
+//	}
+//	brightness = 1.0;//palette_get_global_brightness();
 
-	avail--;
+//	sprintf(buf,"%s %3d%%", ui_getstring (UI_brightness), (int)(/*brightness*/1.0 * 100));
+//	displayosd(buf,/*brightness*  */100,100);
+//}
 
-	drawbar(bitmap,(uirotwidth - uirotcharwidth * avail) / 2,
-			(uirotheight - 3*uirotcharheight),
-			avail * uirotcharwidth,
-			uirotcharheight,
-			percentage,default_percentage);
-
-	dt[0].text = text;
-	dt[0].color = UI_COLOR_NORMAL;
-	dt[0].x = (uirotwidth - uirotcharwidth * strlen(text)) / 2;
-	dt[0].y = (uirotheight - 2*uirotcharheight) + 2;
-	dt[1].text = 0; /* terminate array */
-	displaytext(bitmap,dt);
-}
-
-static void onscrd_adjuster(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	struct InputPort *in = &Machine->input_ports[arg];
-	char buf[80];
-	int value;
-
-	if (increment)
-	{
-		value = in->default_value & 0xff;
-		value += increment;
-		if (value > 100) value = 100;
-		if (value < 0) value = 0;
-		in->default_value = (in->default_value & ~0xff) | value;
-	}
-	value = in->default_value & 0xff;
-
-	sprintf(buf,"%s %d%%",in->name,value);
-
-	displayosd(bitmap,buf,value,in->default_value >> 8);
-}
-
-static void onscrd_volume(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[20];
-	int attenuation;
-
-	if (increment)
-	{
-		attenuation = osd_get_mastervolume();
-		attenuation += increment;
-		if (attenuation > 0) attenuation = 0;
-		if (attenuation < -32) attenuation = -32;
-		osd_set_mastervolume(attenuation);
-	}
-	attenuation = osd_get_mastervolume();
-
-	sprintf(buf,"%s %3ddB", ui_getstring (UI_volume), attenuation);
-	displayosd(bitmap,buf,100 * (attenuation + 32) / 32,100);
-}
-
-static void onscrd_mixervol(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	static void *driver = 0;
-	char buf[40];
-	float volume;
-	int ch;
-	int doallchannels = 0;
-	int proportional = 0;
-
-
-	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))
-		doallchannels = 1;
-	if (!code_pressed(KEYCODE_LCONTROL) && !code_pressed(KEYCODE_RCONTROL))
-		increment *= 5;
-	if (code_pressed(KEYCODE_LALT) || code_pressed(KEYCODE_RALT))
-		proportional = 1;
-
-	if (increment)
-	{
-		if (proportional)
-		{
-			static float old_vol[100];
-			int num_vals = sound_get_user_gain_count();
-			float ratio = 1.0;
-			int overflow = 0;
-
-			if (driver != Machine->drv)
-			{
-				driver = (void *)Machine->drv;
-				for (ch = 0; ch < num_vals; ch++)
-					old_vol[ch] = sound_get_user_gain(ch);
-			}
-
-			volume = sound_get_user_gain(arg);
-			if (old_vol[arg])
-				ratio = (volume + increment * 0.02) / old_vol[arg];
-
-			for (ch = 0; ch < num_vals; ch++)
-			{
-				volume = ratio * old_vol[ch];
-				if (volume < 0 || volume > 2.0)
-					overflow = 1;
-			}
-
-			if (!overflow)
-			{
-				for (ch = 0; ch < num_vals; ch++)
-				{
-					volume = ratio * old_vol[ch];
-					sound_set_user_gain(ch,volume);
-				}
-			}
-		}
-		else
-		{
-			driver = 0; /* force reset of saved volumes */
-
-			volume = sound_get_user_gain(arg);
-			volume += increment * 0.02;
-			if (volume > 2.0) volume = 2.0;
-			if (volume < 0) volume = 0;
-
-			if (doallchannels)
-			{
-				int num_vals = sound_get_user_gain_count();
-				for (ch = 0;ch < num_vals;ch++)
-					sound_set_user_gain(ch,volume);
-			}
-			else
-				sound_set_user_gain(arg,volume);
-		}
-	}
-	volume = sound_get_user_gain(arg);
-
-	if (proportional)
-		sprintf(buf,"%s %s %4.2f", ui_getstring (UI_allchannels), ui_getstring (UI_relative), volume);
-	else if (doallchannels)
-		sprintf(buf,"%s %s %4.2f", ui_getstring (UI_allchannels), ui_getstring (UI_volume), volume);
-	else
-		sprintf(buf,"%s %s %4.2f",sound_get_user_gain_name(arg), ui_getstring (UI_volume), volume);
-	displayosd(bitmap,buf,volume*50,sound_get_default_gain(arg)*50);
-}
-
-static void onscrd_brightness(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[20];
-	double brightness;
-
-
-	if (increment)
-	{
-		brightness = palette_get_global_brightness();
-		brightness += 0.05 * increment;
-		if (brightness < 0.1) brightness = 0.1;
-		if (brightness > 1.0) brightness = 1.0;
-		palette_set_global_brightness(brightness);
-	}
-	brightness = palette_get_global_brightness();
-
-	sprintf(buf,"%s %3d%%", ui_getstring (UI_brightness), (int)(brightness * 100));
-	displayosd(bitmap,buf,brightness*100,100);
-}
-
-static void onscrd_gamma(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[20];
-	double gamma_correction;
-
-	if (increment)
-	{
-		gamma_correction = palette_get_global_gamma();
-
-		gamma_correction += 0.05 * increment;
-		if (gamma_correction < 0.5) gamma_correction = 0.5;
-		if (gamma_correction > 2.0) gamma_correction = 2.0;
-
-		palette_set_global_gamma(gamma_correction);
-	}
-	gamma_correction = palette_get_global_gamma();
-
-	sprintf(buf,"%s %1.2f", ui_getstring (UI_gamma), gamma_correction);
-	displayosd(bitmap,buf,100*(gamma_correction-0.5)/(2.0-0.5),100*(1.0-0.5)/(2.0-0.5));
-}
-
-static void onscrd_vector_flicker(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[1000];
-	float flicker_correction;
-
-	if (!code_pressed(KEYCODE_LCONTROL) && !code_pressed(KEYCODE_RCONTROL))
-		increment *= 5;
-
-	if (increment)
-	{
-		flicker_correction = vector_get_flicker();
-
-		flicker_correction += increment;
-		if (flicker_correction < 0.0) flicker_correction = 0.0;
-		if (flicker_correction > 100.0) flicker_correction = 100.0;
-
-		vector_set_flicker(flicker_correction);
-	}
-	flicker_correction = vector_get_flicker();
-
-	sprintf(buf,"%s %1.2f", ui_getstring (UI_vectorflicker), flicker_correction);
-	displayosd(bitmap,buf,flicker_correction,0);
-}
-
-static void onscrd_vector_intensity(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[30];
-	float intensity_correction;
-
-	if (increment)
-	{
-		intensity_correction = vector_get_intensity();
-
-		intensity_correction += 0.05 * increment;
-		if (intensity_correction < 0.5) intensity_correction = 0.5;
-		if (intensity_correction > 3.0) intensity_correction = 3.0;
-
-		vector_set_intensity(intensity_correction);
-	}
-	intensity_correction = vector_get_intensity();
-
-	sprintf(buf,"%s %1.2f", ui_getstring (UI_vectorintensity), intensity_correction);
-	displayosd(bitmap,buf,100*(intensity_correction-0.5)/(3.0-0.5),100*(1.5-0.5)/(3.0-0.5));
-}
+//static void onscrd_gamma(int increment,int arg)
+//{
+//	char buf[20];
+//	double gamma_correction;
+//	if (increment)
+//	{
+//		gamma_correction = palette_get_global_gamma();
+//		gamma_correction += 0.05 * increment;
+//		if (gamma_correction < 0.5) gamma_correction = 0.5;
+//		if (gamma_correction > 2.0) gamma_correction = 2.0;
+//		palette_set_global_gamma(gamma_correction);
+//	}
+//	gamma_correction = palette_get_global_gamma();
+//	sprintf(buf,"%s %1.2f", ui_getstring (UI_gamma), /*gamma_correction*/1.0);
+//	displayosd(buf,100*(/*gamma_correction*/1.0-0.5)/(2.0-0.5),100*(1.0-0.5)/(2.0-0.5));
+//}
 
 
-static void onscrd_overclock(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	char buf[30];
-	double overclock;
-	int cpu, doallcpus = 0, oc;
+//static void onscrd_overclock(int increment,int arg)
+//{
+//	char buf[30];
+//	double overclock;
+//	int cpu, doallcpus = 0, oc;
+//
+//	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))
+//		doallcpus = 1;
+//	if (!code_pressed(KEYCODE_LCONTROL) && !code_pressed(KEYCODE_RCONTROL))
+//		increment *= 5;
+//	if( increment )
+//	{
+//		overclock = cpunum_get_clockscale(arg);
+//		overclock += 0.01 * increment;
+//		if (overclock < 0.01) overclock = 0.01;
+//		if (overclock > 2.0) overclock = 2.0;
+//		if( doallcpus )
+//			for( cpu = 0; cpu < cpu_gettotalcpu(); cpu++ )
+//				cpunum_set_clockscale(cpu, overclock);
+//		else
+//			cpunum_set_clockscale(arg, overclock);
+//	}
+//	oc = 100 * cpunum_get_clockscale(arg) + 0.5;
+//	if( doallcpus )
+//		sprintf(buf,"ALL CPUS Overclock %3d%%", oc);
+//	else
+//		sprintf(buf,"Overclock CPU%d %3d%%", arg, oc);
+//	displayosd(buf,oc/2,100/2);
+//}
 
-	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))
-		doallcpus = 1;
-	if (!code_pressed(KEYCODE_LCONTROL) && !code_pressed(KEYCODE_RCONTROL))
-		increment *= 5;
-	if( increment )
-	{
-		overclock = cpunum_get_clockscale(arg);
-		overclock += 0.01 * increment;
-		if (overclock < 0.01) overclock = 0.01;
-		if (overclock > 2.0) overclock = 2.0;
-		if( doallcpus )
-			for( cpu = 0; cpu < cpu_gettotalcpu(); cpu++ )
-				cpunum_set_clockscale(cpu, overclock);
-		else
-			cpunum_set_clockscale(arg, overclock);
-	}
+//static void onscrd_refresh(int increment,int arg)
+//{
+//	float delta = Machine->refresh_rate - Machine->drv->frames_per_second;
+//	char buf[30];
+//	increment *= 1000;
+//	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))		increment /= 10;
+//	if (code_pressed(KEYCODE_LCONTROL) || code_pressed(KEYCODE_RCONTROL))	increment /= 100;
+//	if (code_pressed(KEYCODE_LALT) || code_pressed(KEYCODE_LALT))			increment /= 1000;
+//	if (increment)
+//	{
+//		float newrate;
+//		delta += 0.001 * increment;
+//		if (delta > 10)			delta = 10;
+//		if (delta < -10)		delta = -10;
+//		newrate = Machine->drv->frames_per_second;
+//		if (delta != 0)
+//			newrate = (floor(newrate * 1000) / 1000) + delta;
+//		set_refresh_rate(newrate);
+//	}
+//	sprintf(buf,"%s %.3f", ui_getstring (UI_refresh_rate), Machine->refresh_rate);
+//	displayosd(buf,(10 + delta) * 5,100/2);
+//}
 
-	oc = 100 * cpunum_get_clockscale(arg) + 0.5;
-
-	if( doallcpus )
-		sprintf(buf,"%s %s %3d%%", ui_getstring (UI_allcpus), ui_getstring (UI_overclock), oc);
-	else
-		sprintf(buf,"%s %s%d %3d%%", ui_getstring (UI_overclock), ui_getstring (UI_cpu), arg, oc);
-	displayosd(bitmap,buf,oc/2,100/2);
-}
-
-static void onscrd_refresh(struct mame_bitmap *bitmap,int increment,int arg)
-{
-	float delta = Machine->refresh_rate - Machine->drv->frames_per_second;
-	char buf[30];
-
-	increment *= 1000;
-	if (code_pressed(KEYCODE_LSHIFT) || code_pressed(KEYCODE_RSHIFT))
-		increment /= 10;
-	if (code_pressed(KEYCODE_LCONTROL) || code_pressed(KEYCODE_RCONTROL))
-		increment /= 100;
-	if (code_pressed(KEYCODE_LALT) || code_pressed(KEYCODE_LALT))
-		increment /= 1000;
-	if (increment)
-	{
-		float newrate;
-		delta += 0.001 * increment;
-		if (delta > 10)
-			delta = 10;
-		if (delta < -10)
-			delta = -10;
-
-		newrate = Machine->drv->frames_per_second;
-		if (delta != 0)
-			newrate = (floor(newrate * 1000) / 1000) + delta;
-		set_refresh_rate(newrate);
-	}
-
-	sprintf(buf,"%s %.3f", ui_getstring (UI_refresh_rate), Machine->refresh_rate);
-	displayosd(bitmap,buf,(10 + delta) * 5,100/2);
-}
-
-#define MAX_OSD_ITEMS 50
-static void (*onscrd_fnc[MAX_OSD_ITEMS])(struct mame_bitmap *bitmap,int increment,int arg);
-static int onscrd_arg[MAX_OSD_ITEMS];
-static int onscrd_total_items;
+//#define MAX_OSD_ITEMS 16
+//static void (*onscrd_fnc[MAX_OSD_ITEMS])(int increment,int arg);
+//static int onscrd_arg[MAX_OSD_ITEMS];
+//static int onscrd_total_items;
 
 static void onscrd_init(void)
 {
-	struct InputPort *in;
-	int item,ch;
+//	struct InputPort *in;
+//	int item,ch;
 
-	item = 0;
+//	item = 0;
 
-	if (Machine->sample_rate)
-	{
-		int num_vals = sound_get_user_gain_count();
-		onscrd_fnc[item] = onscrd_volume;
-		onscrd_arg[item] = 0;
-		item++;
+//	if (Machine->sample_rate)
+//	{
+//		int num_vals = sound_get_user_gain_count();
+//	//	onscrd_fnc[item] = onscrd_volume;
+//	//	onscrd_arg[item] = 0;
+//	//	item++;
 
-		for (ch = 0;ch < num_vals;ch++)
-		{
-			onscrd_fnc[item] = onscrd_mixervol;
-			onscrd_arg[item] = ch;
-			item++;
-		}
-	}
+//		for (ch = 0;ch < num_vals;ch++)
+//		{
+//			onscrd_fnc[item] = onscrd_mixervol;
+//			onscrd_arg[item] = ch;
+//			item++;
+//		}
+//	}
 
-	for (in = Machine->input_ports; in && in->type != IPT_END; in++)
-		if ((in->type & 0xff) == IPT_ADJUSTER)
-		{
-			onscrd_fnc[item] = onscrd_adjuster;
-			onscrd_arg[item] = in - Machine->input_ports;
-			item++;
-		}
+//	for (in = Machine->input_ports; in && in->type != IPT_END; in++)
+//		if ((in->type & 0xff) == IPT_ADJUSTER)
+//		{
+//			onscrd_fnc[item] = onscrd_adjuster;
+//			onscrd_arg[item] = in - Machine->input_ports;
+//			item++;
+//		}
 
-	if (options.cheat)
-	{
-		for (ch = 0;ch < cpu_gettotalcpu();ch++)
-		{
-			onscrd_fnc[item] = onscrd_overclock;
-			onscrd_arg[item] = ch;
-			item++;
-		}
-		onscrd_fnc[item] = onscrd_refresh;
-		onscrd_arg[item] = ch;
-		item++;
-	}
+//	if (options.cheat)
+//	{
+//		for (ch = 0;ch < cpu_gettotalcpu();ch++)
+//		{
+//			onscrd_fnc[item] = onscrd_overclock;
+//			onscrd_arg[item] = ch;
+//			item++;
+//		}
+//		onscrd_fnc[item] = onscrd_refresh;
+//		onscrd_arg[item] = ch;
+//		item++;
+//	}
 
-	onscrd_fnc[item] = onscrd_brightness;
-	onscrd_arg[item] = 0;
-	item++;
+	//onscrd_fnc[item] = onscrd_brightness;
+	//onscrd_arg[item] = 0;
+	//item++;
 
-	onscrd_fnc[item] = onscrd_gamma;
-	onscrd_arg[item] = 0;
-	item++;
+	//onscrd_fnc[item] = onscrd_gamma;
+	//onscrd_arg[item] = 0;
+	//item++;
 
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-	{
-		onscrd_fnc[item] = onscrd_vector_flicker;
-		onscrd_arg[item] = 0;
-		item++;
-
-		onscrd_fnc[item] = onscrd_vector_intensity;
-		onscrd_arg[item] = 0;
-		item++;
-	}
-
-	onscrd_total_items = item;
+//	onscrd_total_items = item;
 }
 
-static int on_screen_display(struct mame_bitmap *bitmap, int selected)
+static int on_screen_display(int selected)
 {
-	int increment,sel;
-	static int lastselected = 0;
-
-
-	if (selected == -1)
-		sel = lastselected;
-	else sel = selected - 1;
-
-	increment = 0;
-	if (input_ui_pressed_repeat(IPT_UI_LEFT,8))
-		increment = -1;
-	if (input_ui_pressed_repeat(IPT_UI_RIGHT,8))
-		increment = 1;
-	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))
-		sel = (sel + 1) % onscrd_total_items;
-	if (input_ui_pressed_repeat(IPT_UI_UP,8))
-		sel = (sel + onscrd_total_items - 1) % onscrd_total_items;
-
-	(*onscrd_fnc[sel])(bitmap,increment,onscrd_arg[sel]);
-
-	lastselected = sel;
-
-	if (input_ui_pressed(IPT_UI_ON_SCREEN_DISPLAY))
-	{
-		sel = -1;
-
-		schedule_full_refresh();
-	}
-
-	return sel + 1;
+//	int increment,sel;
+//	static int lastselected = 0;
+//	if (selected == -1)		sel = lastselected;
+//	else sel = selected - 1;
+//	increment = 0;
+//	if (input_ui_pressed_repeat(IPT_UI_LEFT,8))		increment = -1;
+//	if (input_ui_pressed_repeat(IPT_UI_RIGHT,8))	increment = 1;
+//	if (input_ui_pressed_repeat(IPT_UI_DOWN,8))		sel = (sel + 1) % onscrd_total_items;
+//	if (input_ui_pressed_repeat(IPT_UI_UP,8))		sel = (sel + onscrd_total_items - 1) % onscrd_total_items;
+//	(*onscrd_fnc[sel])(increment,onscrd_arg[sel]);
+//	lastselected = sel;
+//	if (input_ui_pressed(IPT_UI_ON_SCREEN_DISPLAY))
+//	{
+//		sel = -1;
+//		schedule_full_refresh();
+//	}
+//	return sel + 1;
+	return 0;
 }
 
 /*********************************************************************
@@ -3892,7 +3403,7 @@ static int on_screen_display(struct mame_bitmap *bitmap, int selected)
 *********************************************************************/
 
 
-static void displaymessage(struct mame_bitmap *bitmap,const char *text)
+static void displaymessage(const char *text)
 {
 	struct DisplayText dt[2];
 	int avail;
@@ -3900,13 +3411,13 @@ static void displaymessage(struct mame_bitmap *bitmap,const char *text)
 
 	if (uirotwidth < uirotcharwidth * strlen(text))
 	{
-		ui_displaymessagewindow(bitmap,text);
+		ui_displaymessagewindow(text);
 		return;
 	}
 
 	avail = strlen(text)+2;
 
-	ui_drawbox(bitmap,(uirotwidth - uirotcharwidth * avail) / 2,
+	ui_drawbox((uirotwidth - uirotcharwidth * avail) / 2,
 			uirotheight - 3*uirotcharheight,
 			avail * uirotcharwidth,
 			2*uirotcharheight);
@@ -3916,7 +3427,7 @@ static void displaymessage(struct mame_bitmap *bitmap,const char *text)
 	dt[0].x = (uirotwidth - uirotcharwidth * strlen(text)) / 2;
 	dt[0].y = uirotheight - 5*uirotcharheight/2;
 	dt[1].text = 0; /* terminate array */
-	displaytext(bitmap,dt);
+	displaytext(dt);
 }
 
 
@@ -3941,7 +3452,7 @@ void CLIB_DECL usrintf_showmessage_secs(int seconds, const char *text,...)
 	messagecounter = seconds * Machine->refresh_rate;
 }
 
-void do_loadsave(struct mame_bitmap *bitmap, int request_loadsave)
+void do_loadsave(int request_loadsave)
 {
 	int file = 0;
 
@@ -3952,9 +3463,9 @@ void do_loadsave(struct mame_bitmap *bitmap, int request_loadsave)
 		input_code_t code;
 
 		if (request_loadsave == LOADSAVE_SAVE)
-			displaymessage(bitmap, "Select position to save to");
+			displaymessage("Select position to save to");
 		else
-			displaymessage(bitmap, "Select position to load from");
+			displaymessage("Select position to load from");
 
 		update_video_and_audio();
 		reset_partial_updates();
@@ -4040,14 +3551,14 @@ int ui_show_profiler_get(void)
 	return show_profiler;
 }
 
-void ui_display_fps(struct mame_bitmap *bitmap)
+void ui_display_fps(void)
 {
 	const char *text, *end;
 	char textbuf[256];
 	int done = 0;
 	int x, y = 0;
 	/* remember which area we cover so that we can
-       schedule a full refresh if it gets smaller */
+	   schedule a full refresh if it gets smaller */
 	int len_hash = 0;
 	static int old_len_hash = -1;
 
@@ -4081,13 +3592,13 @@ void ui_display_fps(struct mame_bitmap *bitmap)
 
 		/* render */
 		x = uirotwidth - strlen(textbuf) * uirotcharwidth;
-		ui_text(bitmap, textbuf, x, y);
+		ui_text(textbuf, x, y);
 		y += uirotcharheight;
 		len_hash += (y / uirotcharheight) * x;
 	}
 
 	if ((old_len_hash != -1) &&
-	    (old_len_hash != len_hash))
+		(old_len_hash != len_hash))
 	{
 		schedule_full_refresh();
 		ui_markdirty(&uirawbounds);
@@ -4106,23 +3617,23 @@ void ui_display_fps(struct mame_bitmap *bitmap)
 
 
 
-int handle_user_interface(struct mame_bitmap *bitmap)
+
+int handle_user_interface(void)
 {
 #ifdef MESS
 	extern int mess_pause_for_ui;
 #endif
 
 	/* if the user pressed F12, save the screen to a file */
-	if (input_ui_pressed(IPT_UI_SNAPSHOT))
-		save_screen_snapshot(bitmap);
+//	if (input_ui_pressed(IPT_UI_SNAPSHOT))	save_screen_snapshot(Machine->scrbitmap);
 
 	/* This call is for the cheat, it must be called once a frame */
-	if (options.cheat) DoCheat(bitmap);
+	if (options.cheat) DoCheat();
 
 	/* if the user pressed ESC, stop the emulation */
 	/* but don't quit if the setup menu is on screen */
-	if (setup_selected == 0 && input_ui_pressed(IPT_UI_CANCEL))
-		return 1;
+//TMK	if (setup_selected == 0 && input_ui_pressed(IPT_UI_CANCEL))
+//		return 1;
 
 	if (setup_selected == 0 && input_ui_pressed(IPT_UI_CONFIGURE))
 	{
@@ -4133,7 +3644,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 			schedule_full_refresh();
 		}
 	}
-	if (setup_selected != 0) setup_selected = setup_menu(bitmap, setup_selected);
+	if (setup_selected != 0) setup_selected = setup_menu(setup_selected);
 
 #ifdef MAME_DEBUG
 	if (!mame_debug)
@@ -4147,17 +3658,17 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 				schedule_full_refresh();
 			}
 		}
-	if (osd_selected != 0) osd_selected = on_screen_display(bitmap, osd_selected);
+	if (osd_selected != 0) osd_selected = on_screen_display(osd_selected);
 
 	/* if the user pressed F3, reset the emulation */
 	if (input_ui_pressed(IPT_UI_RESET_MACHINE))
 		machine_reset();
 
 	if (input_ui_pressed(IPT_UI_SAVE_STATE))
-		do_loadsave(bitmap, LOADSAVE_SAVE);
+		do_loadsave(LOADSAVE_SAVE);
 
 	if (input_ui_pressed(IPT_UI_LOAD_STATE))
-		do_loadsave(bitmap, LOADSAVE_LOAD);
+		do_loadsave(LOADSAVE_LOAD);
 
 #ifndef MESS
 	if (single_step || input_ui_pressed(IPT_UI_PAUSE)) /* pause the game */
@@ -4169,7 +3680,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 	if (single_step || input_ui_pressed(IPT_UI_PAUSE) || mess_pause_for_ui) /* pause the game */
 	{
 #endif
-/*      osd_selected = 0;      disable on screen display, since we are going   */
+/*		osd_selected = 0;	   disable on screen display, since we are going   */
 							/* to change parameters affected by it */
 
 		if (single_step == 0)
@@ -4187,21 +3698,21 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 			profiler_mark(PROFILER_END);
 
 			if (input_ui_pressed(IPT_UI_SNAPSHOT))
-				save_screen_snapshot(bitmap);
+				save_screen_snapshot(Machine->scrbitmap);
 
 
 			if (input_ui_pressed(IPT_UI_SAVE_STATE))
-				do_loadsave(bitmap, LOADSAVE_SAVE);
+				do_loadsave(LOADSAVE_SAVE);
 
 			if (input_ui_pressed(IPT_UI_LOAD_STATE))
-				do_loadsave(bitmap, LOADSAVE_LOAD);
+				do_loadsave(LOADSAVE_LOAD);
 
 			/* if the user pressed F4, show the character set */
 			if (input_ui_pressed(IPT_UI_SHOW_GFX))
-				showcharset(bitmap);
+				showcharset();
 
-			if (setup_selected == 0 && input_ui_pressed(IPT_UI_CANCEL))
-				return 1;
+//TMK			if (setup_selected == 0 && input_ui_pressed(IPT_UI_CANCEL))
+//				return 1;
 
 			if (setup_selected == 0 && input_ui_pressed(IPT_UI_CONFIGURE))
 			{
@@ -4212,7 +3723,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 					schedule_full_refresh();
 				}
 			}
-			if (setup_selected != 0) setup_selected = setup_menu(bitmap, setup_selected);
+			if (setup_selected != 0) setup_selected = setup_menu(setup_selected);
 
 #ifdef MAME_DEBUG
 			if (!mame_debug)
@@ -4226,14 +3737,14 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 						schedule_full_refresh();
 					}
 				}
-			if (osd_selected != 0) osd_selected = on_screen_display(bitmap, osd_selected);
+			if (osd_selected != 0) osd_selected = on_screen_display(osd_selected);
 
-			if (options.cheat) DisplayWatches(bitmap);
+			if (options.cheat) DisplayWatches();
 
 			/* show popup message if any */
 			if (messagecounter > 0)
 			{
-				displaymessage(bitmap, messagetext);
+				displaymessage(messagetext);
 
 				if (--messagecounter == 0)
 					schedule_full_refresh();
@@ -4269,7 +3780,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 	/* show popup message if any */
 	if (messagecounter > 0)
 	{
-		displaymessage(bitmap, messagetext);
+		displaymessage(messagetext);
 
 		if (--messagecounter == 0)
 			schedule_full_refresh();
@@ -4281,7 +3792,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 		ui_show_profiler_set(!ui_show_profiler_get());
 	}
 
-	if (show_profiler) profiler_show(bitmap);
+	if (show_profiler) profiler_show();
 
 
 	/* show FPS display? */
@@ -4296,9 +3807,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 	if (input_ui_pressed(IPT_UI_SHOW_GFX))
 	{
 		osd_sound_enable(0);
-
-		showcharset(bitmap);
-
+		showcharset();
 		osd_sound_enable(1);
 	}
 
@@ -4309,8 +3818,7 @@ int handle_user_interface(struct mame_bitmap *bitmap)
 	}
 
 	/* add the FPS counter */
-	ui_display_fps(bitmap);
-
+	ui_display_fps();
 	return 0;
 }
 

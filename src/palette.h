@@ -118,12 +118,13 @@ typedef UINT32 rgb_t;
 extern UINT32 direct_rgb_components[3];
 extern UINT16 *palette_shadow_table;
 
-extern data8_t *paletteram;
-extern data8_t *paletteram_2;	/* use when palette RAM is split in two parts */
-extern data16_t *paletteram16;
-extern data16_t *paletteram16_2;
-extern data32_t *paletteram32;
-
+extern UINT8 *paletteram;
+extern UINT8 *paletteram_2;	/* use when palette RAM is split in two parts */
+extern UINT16 *paletteram16;
+extern UINT16 *paletteram16_2;
+#if (0==PSP_NO_CPU32)
+extern UINT32 *paletteram32;
+#endif //(0==PSP_NO_CPU32)
 
 
 /*-------------------------------------------------
@@ -140,9 +141,9 @@ void palette_set_color(pen_t pen, UINT8 r, UINT8 g, UINT8 b);
 void palette_get_color(pen_t pen, UINT8 *r, UINT8 *g, UINT8 *b);
 void palette_set_colors(pen_t color_base, const UINT8 *colors, int color_count);
 
-void palette_set_brightness(pen_t pen, double bright);
-void palette_set_shadow_factor(double factor);
-void palette_set_highlight_factor(double factor);
+void palette_set_brightness(pen_t pen, float bright);
+void palette_set_shadow_factor(float factor);
+void palette_set_highlight_factor(float factor);
 
 /*
     Shadows(Highlights) Quick Reference
@@ -164,17 +165,17 @@ void palette_set_highlight_factor(double factor);
         drawgfx( ..., cliprect, TRANSPARENCY_PEN_TABLE, transparent_color )
 */
 void palette_set_shadow_mode(int mode);
-void palette_set_shadow_factor32(double factor);
-void palette_set_highlight_factor32(double factor);
+void palette_set_shadow_factor32(float factor);
+void palette_set_highlight_factor32(float factor);
 void palette_set_shadow_dRGB32(int mode, int dr, int dg, int db, int noclip);
 void palette_set_highlight_method(int method); //0=default, 1=multiplication with flooding, 2=addition
 
-void palette_set_global_gamma(double _gamma);
-double palette_get_global_gamma(void);
+//void palette_set_global_gamma(float _gamma);
+//float palette_get_global_gamma(void);
 
-void palette_set_global_brightness(double brightness);
-void palette_set_global_brightness_adjust(double adjustment);
-double palette_get_global_brightness(void);
+//void palette_set_global_brightness(float brightness);
+//void palette_set_global_brightness_adjust(float adjustment);
+//float palette_get_global_brightness(void);
 
 pen_t get_black_pen(void);
 
@@ -186,8 +187,9 @@ READ8_HANDLER( paletteram_r );
 READ8_HANDLER( paletteram_2_r );
 READ16_HANDLER( paletteram16_word_r );
 READ16_HANDLER( paletteram16_2_word_r );
+#if (0==PSP_NO_CPU32)
 READ32_HANDLER( paletteram32_r );
-
+#endif //(0==PSP_NO_CPU32)
 WRITE8_HANDLER( paletteram_BBGGGRRR_w );
 WRITE8_HANDLER( paletteram_RRRGGGBB_w );
 WRITE8_HANDLER( paletteram_BBBGGGRR_w );

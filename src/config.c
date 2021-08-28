@@ -9,7 +9,7 @@
 #include "driver.h"
 #include "config.h"
 #include "common.h"
-#include "expat.h"
+//#include "expat.h"
 
 
 #define DEBUG_CONFIG		0
@@ -85,13 +85,13 @@ struct config_data
 };
 
 
-struct config_parse
-{
-	XML_Char				tag[1024];			/* combined tags */
-	XML_Char				data[1024];			/* accumulated data on the current tag */
-	int						datalen;			/* accumulated data length */
-	int						seq_index;			/* current index in the sequence array */
-};
+//struct config_parse
+//{
+//	XML_Char				tag[1024];			/* combined tags */
+//	XML_Char				data[1024];			/* accumulated data on the current tag */
+//	int						datalen;			/* accumulated data length */
+//	int						seq_index;			/* current index in the sequence array */
+//};
 
 
 struct config_file
@@ -99,7 +99,7 @@ struct config_file
 	mame_file *				file;				/* handle to the file */
 	int						filetype;			/* what type of config file is this? */
 	struct config_data		data;				/* the accumulated data */
-	struct config_parse		parse;				/* parsing info */
+	//struct config_parse		parse;				/* parsing info */
 };
 
 
@@ -112,7 +112,7 @@ struct config_file
 
 static struct config_file curfile;
 
-static const char *seqtypestrings[] = { "standard", "decrement", "increment" };
+//static const char *seqtypestrings[] = { "standard", "decrement", "increment" };
 
 
 
@@ -342,233 +342,6 @@ INLINE input_code_t get_default_code(int type)
 
 
 
-/*************************************
- *
- *  XML loading callbacks
- *
- *************************************/
-
-static void config_element_start(void *data, const XML_Char *name, const XML_Char **attributes)
-{
-	int attr;
-
-	/* increase the depth and stash the tag */
-	if (strlen(curfile.parse.tag) + strlen(name) + 1 < sizeof(curfile.parse.tag))
-	{
-		strcat(curfile.parse.tag, "/");
-		strcat(curfile.parse.tag, name);
-	}
-	curfile.parse.datalen = 0;
-
-	/* look for top-level mameconfig tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig"))
-	{
-		for (attr = 0; attributes[attr]; attr += 2)
-		{
-			if (!stricmp(attributes[attr], "version"))
-				sscanf(attributes[attr + 1], "%d", &curfile.data.version);
-		}
-	}
-
-	/* look for second-level system tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system"))
-	{
-		for (attr = 0; attributes[attr]; attr += 2)
-			if (!stricmp(attributes[attr], "name"))
-			{
-				switch (curfile.filetype)
-				{
-					case FILE_TYPE_GAME:
-						curfile.data.ignore_game = (strcmp(attributes[attr + 1], Machine->gamedrv->name) != 0);
-						break;
-
-					case FILE_TYPE_DEFAULT:
-						curfile.data.ignore_game = (strcmp(attributes[attr + 1], "default") != 0);
-						break;
-
-					case FILE_TYPE_CONTROLLER:
-					{
-						const char *srcfile = strrchr(Machine->gamedrv->source_file, '/');
-						if (!srcfile) srcfile = strrchr(Machine->gamedrv->source_file, '\\');
-						if (!srcfile) srcfile = strrchr(Machine->gamedrv->source_file, ':');
-						if (!srcfile) srcfile = Machine->gamedrv->source_file;
-						else srcfile++;
-
-						curfile.data.ignore_game =
-							(strcmp(attributes[attr + 1], "default") != 0 &&
-							 strcmp(attributes[attr + 1], Machine->gamedrv->name) != 0 &&
-							 strcmp(attributes[attr + 1], srcfile) != 0 &&
-							 (Machine->gamedrv->clone_of == NULL || strcmp(attributes[attr + 1], Machine->gamedrv->clone_of->name) != 0) &&
-							 (Machine->gamedrv->clone_of == NULL || Machine->gamedrv->clone_of->clone_of == NULL || strcmp(attributes[attr + 1], Machine->gamedrv->clone_of->clone_of->name) != 0));
-
-						if (DEBUG_CONFIG && !curfile.data.ignore_game)
-							printf("Entry: %s -- processing\n", attributes[attr + 1]);
-						break;
-					}
-				}
-				curfile.data.loaded_count += !curfile.data.ignore_game;
-			}
-	}
-
-	/* if we don't match the current game, punt now */
-	if (curfile.data.ignore_game)
-		return;
-
-	/* look for second-level port tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system/input/port"))
-	{
-		struct config_port *port = malloc(sizeof(*port));
-		curfile.parse.seq_index = -1;
-		if (port != NULL)
-		{
-			int seqnum;
-			memset(port, 0, sizeof(*port));
-
-			port->next = curfile.data.port;
-			curfile.data.port = port;
-			for (attr = 0; attributes[attr]; attr += 2)
-			{
-				if (!stricmp(attributes[attr], "type"))
-					curfile.data.port->type = token_to_port_type(attributes[attr + 1], &curfile.data.port->player);
-				else if (!stricmp(attributes[attr], "mask"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->mask);
-				else if (!stricmp(attributes[attr], "defvalue"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->defvalue);
-				else if (!stricmp(attributes[attr], "value"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->value);
-				else if (!stricmp(attributes[attr], "keydelta"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->keydelta);
-				else if (!stricmp(attributes[attr], "centerdelta"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->centerdelta);
-				else if (!stricmp(attributes[attr], "sensitivity"))
-					sscanf(attributes[attr + 1], "%d", &curfile.data.port->sensitivity);
-				else if (!stricmp(attributes[attr], "reverse"))
-				{
-					if (!stricmp(attributes[attr + 1], "yes"))
-						curfile.data.port->reverse = 1;
-					else
-						curfile.data.port->reverse = 0;
-				}
-			}
-
-			for (seqnum = 0; seqnum < 3; seqnum++)
-			{
-				seq_set_1(&port->defseq[seqnum], get_default_code(curfile.data.port->type));
-				seq_set_1(&port->newseq[seqnum], get_default_code(curfile.data.port->type));
-			}
-		}
-	}
-
-	/* look for second-level remap tag (we never write it, so it's only value for controller files) */
-	if (curfile.filetype == FILE_TYPE_CONTROLLER && !stricmp(curfile.parse.tag, "/mameconfig/system/input/remap"))
-	{
-		input_code_t origcode = CODE_NONE, newcode = CODE_NONE;
-		for (attr = 0; attributes[attr]; attr += 2)
-		{
-			if (!stricmp(attributes[attr], "origcode"))
-				origcode = token_to_code(attributes[attr + 1]);
-			else if (!stricmp(attributes[attr], "newcode"))
-				newcode = token_to_code(attributes[attr + 1]);
-		}
-		if (origcode != CODE_NONE && origcode < __code_max && newcode != CODE_NONE)
-			curfile.data.remap[origcode] = newcode;
-	}
-
-	/* look for third-level defseq or newseq tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system/input/port/defseq") || !stricmp(curfile.parse.tag, "/mameconfig/system/input/port/newseq"))
-	{
-		curfile.parse.seq_index = -1;
-		for (attr = 0; attributes[attr]; attr += 2)
-			if (!stricmp(attributes[attr], "type"))
-			{
-				int typenum;
-				for (typenum = 0; typenum < 3; typenum++)
-					if (!stricmp(attributes[attr + 1], seqtypestrings[typenum]))
-					{
-						curfile.parse.seq_index = typenum;
-						break;
-					}
-			}
-	}
-
-	/* look for second-level coins tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system/counters/coins"))
-	{
-		int indx = -1, count;
-		for (attr = 0; attributes[attr]; attr += 2)
-		{
-			if (!stricmp(attributes[attr], "index"))
-				sscanf(attributes[attr + 1], "%d", &indx);
-			else if (!stricmp(attributes[attr], "number") && indx >= 0 && indx < COIN_COUNTERS && sscanf(attributes[attr + 1], "%d", &count) == 1)
-				curfile.data.counters.coins[indx] = count;
-		}
-	}
-
-	/* look for second-level tickets tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system/counters/tickets"))
-	{
-		int count;
-		for (attr = 0; attributes[attr]; attr += 2)
-			if (!stricmp(attributes[attr], "number") && sscanf(attributes[attr + 1], "%d", &count) == 1)
-				curfile.data.counters.tickets = count;
-	}
-
-	/* look for second-level default tag */
-	if (!stricmp(curfile.parse.tag, "/mameconfig/system/mixer/channel"))
-	{
-		int indx = -1;
-		float value;
-		for (attr = 0; attributes[attr]; attr += 2)
-		{
-			if (!stricmp(attributes[attr], "index"))
-				sscanf(attributes[attr + 1], "%d", &indx);
-			else if (!stricmp(attributes[attr], "defvol") && indx >= 0 && indx < MAX_MIXER_CHANNELS && sscanf(attributes[attr + 1], "%f", &value) == 1)
-				curfile.data.mixer.deflevel[indx] = value;
-			else if (!stricmp(attributes[attr], "newvol") && indx >= 0 && indx < MAX_MIXER_CHANNELS && sscanf(attributes[attr + 1], "%f", &value) == 1)
-				curfile.data.mixer.newlevel[indx] = value;
-		}
-	}
-}
-
-
-static void config_element_end(void *data, const XML_Char *name)
-{
-	XML_Char *p;
-
-	/* only process if we match the current game */
-	if (!curfile.data.ignore_game)
-	{
-		/* set the defseq sequence */
-		if (!stricmp(curfile.parse.tag, "/mameconfig/system/input/port/defseq") && curfile.parse.seq_index != -1)
-		{
-			if (string_to_seq(curfile.parse.data, &curfile.data.port->defseq[curfile.parse.seq_index]) == 0)
-				seq_set_1(&curfile.data.port->defseq[curfile.parse.seq_index], get_default_code(curfile.data.port->type));
-			seq_copy(&curfile.data.port->newseq[curfile.parse.seq_index], &curfile.data.port->defseq[curfile.parse.seq_index]);
-		}
-
-		/* set the newseq sequence */
-		if (!stricmp(curfile.parse.tag, "/mameconfig/system/input/port/newseq") && curfile.parse.seq_index != -1)
-			if (string_to_seq(curfile.parse.data, &curfile.data.port->newseq[curfile.parse.seq_index]) == 0)
-				seq_set_1(&curfile.data.port->newseq[curfile.parse.seq_index], get_default_code(curfile.data.port->type));
-	}
-
-	/* remove the last tag */
-	p = strrchr(curfile.parse.tag, '/');
-	if (p) *p = 0;
-}
-
-
-static void config_data(void *data, const XML_Char *s, int len)
-{
-	/* accumulate data and NULL-terminate */
-	if (curfile.parse.datalen + len > sizeof(curfile.parse.data) - 1)
-		len = sizeof(curfile.parse.data) - 1 - curfile.parse.datalen;
-	memcpy(&curfile.parse.data[curfile.parse.datalen], s, len);
-	curfile.parse.datalen += len;
-	curfile.parse.data[curfile.parse.datalen] = 0;
-}
-
-
 
 /*************************************
  *
@@ -578,74 +351,6 @@ static void config_data(void *data, const XML_Char *s, int len)
 
 static int config_load_xml(void)
 {
-	struct config_port *port, *next;
-	XML_Parser parser;
-	int done, mixernum, remapnum;
-	int first = 1;
-
-	/* initialize the defaults */
-	for (mixernum = 0; mixernum < MAX_MIXER_CHANNELS; mixernum++)
-	{
-		curfile.data.mixer.deflevel[mixernum] = 1.0;
-		curfile.data.mixer.newlevel[mixernum] = 1.0;
-	}
-	for (remapnum = 0; remapnum < __code_max; remapnum++)
-		curfile.data.remap[remapnum] = remapnum;
-
-	/* reset our parse data */
-	curfile.parse.tag[0] = 0;
-	curfile.parse.seq_index = -1;
-
-	/* create the XML parser */
-	parser = XML_ParserCreate(NULL);
-	if (!parser)
-		goto error;
-
-	/* configure the parser */
-	XML_SetElementHandler(parser, config_element_start, config_element_end);
-	XML_SetCharacterDataHandler(parser, config_data);
-
-	/* loop through the file and parse it */
-	do
-	{
-		char tempbuf[TEMP_BUFFER_SIZE];
-
-		/* read as much as we can */
-		int bytes = mame_fread(curfile.file, tempbuf, sizeof(tempbuf));
-		done = mame_feof(curfile.file);
-
-		/* if this is the first read, make sure we aren't sucking up an old binary file */
-		if (first && !memcmp(tempbuf, "MAMECFG", 7))
-			goto error;
-		first = 0;
-
-		/* parse the data */
-		if (XML_Parse(parser, tempbuf, bytes, done) == XML_STATUS_ERROR)
-			goto error;
-
-	} while (!done);
-
-	/* error if this isn't a valid game match */
-	if (curfile.data.loaded_count == 0)
-		goto error;
-
-	/* reverse the port list */
-	port = curfile.data.port;
-	curfile.data.port = NULL;
-	for ( ; port != NULL; port = next)
-	{
-		next = port->next;
-		port->next = curfile.data.port;
-		curfile.data.port = port;
-	}
-
-	/* free the parser */
-	XML_ParserFree(parser);
-	return 1;
-
-error:
-	if (parser)
-		XML_ParserFree(parser);
 	return 0;
 }
 
@@ -656,118 +361,8 @@ error:
  *  XML file save
  *
  *************************************/
-
-static void config_print_seq(int is_default, int type, int porttype, const input_seq_t *seq)
-{
-	char seqbuffer[256];
-
-	/* skip if empty */
-	if (is_default && seq_get_1(seq) == get_default_code(porttype))
-		return;
-
-	/* write the outer tag */
-	mame_fprintf(curfile.file, "\t\t\t\t<%s type=\"%s\">", is_default ? "defseq" : "newseq", seqtypestrings[type]);
-	if (seq_get_1(seq) == CODE_NONE)
-		strcpy(seqbuffer, "NONE");
-	else
-		seq_to_string(seq, seqbuffer, sizeof(seqbuffer));
-	mame_fprintf(curfile.file, "%s", seqbuffer);
-	mame_fprintf(curfile.file, "</%s>\n", is_default ? "defseq" : "newseq");
-}
-
-
 static int config_save_xml(void)
 {
-	struct config_port *port;
-	int i, doit;
-
-	/* start with the version */
-	mame_fprintf(curfile.file, "<mameconfig version=\"%d\">\n", CONFIG_VERSION);
-
-	/* print out the system */
-	mame_fprintf(curfile.file, "\t<system name=\"%s\">\n\n", (curfile.filetype == FILE_TYPE_DEFAULT) ? "default" : Machine->gamedrv->name);
-
-	/* first write the input section */
-	mame_fprintf(curfile.file, "\t\t<input>\n");
-	for (port = curfile.data.port; port != NULL; port = port->next)
-	{
-		int is_analog = port_type_is_analog(port->type);
-
-		/* write the port information and attributes */
-		mame_fprintf(curfile.file, "\t\t\t<port type=\"%s\"", port_type_to_token(port->type, port->player));
-		if (curfile.filetype != FILE_TYPE_DEFAULT)
-		{
-			mame_fprintf(curfile.file, " mask=\"%d\" defvalue=\"%d\" value=\"%d\"", port->mask, port->defvalue & port->mask, port->value & port->mask);
-			if (is_analog)
-				mame_fprintf(curfile.file, " keydelta=\"%d\" centerdelta=\"%d\" sensitivity=\"%d\" reverse=\"%s\"", port->keydelta, port->centerdelta, port->sensitivity, port->reverse ? "yes" : "no");
-		}
-		mame_fprintf(curfile.file, ">\n");
-
-		/* write the default and current sequences */
-		if (!is_analog)
-		{
-			config_print_seq(1, 0, port->type, &port->defseq[0]);
-			if (seq_cmp(&port->defseq[0], &port->newseq[0]) != 0)
-				config_print_seq(0, 0, port->type, &port->newseq[0]);
-		}
-		else
-		{
-			config_print_seq(1, 0, port->type, &port->defseq[0]);
-			config_print_seq(1, 1, port->type, &port->defseq[1]);
-			config_print_seq(1, 2, port->type, &port->defseq[2]);
-			if (seq_cmp(&port->defseq[0], &port->newseq[0]) != 0)
-				config_print_seq(0, 0, port->type, &port->newseq[0]);
-			if (seq_cmp(&port->defseq[1], &port->newseq[1]) != 0)
-				config_print_seq(0, 1, port->type, &port->newseq[1]);
-			if (seq_cmp(&port->defseq[2], &port->newseq[2]) != 0)
-				config_print_seq(0, 2, port->type, &port->newseq[2]);
-		}
-
-		/* close the tag */
-		mame_fprintf(curfile.file, "\t\t\t</port>\n");
-	}
-	mame_fprintf(curfile.file, "\t\t</input>\n\n");
-
-	/* if we are just writing default ports, leave it at that */
-	if (curfile.filetype != FILE_TYPE_DEFAULT)
-	{
-		/* next write the counters section */
-		doit = (curfile.data.counters.tickets != 0);
-		for (i = 0; i < COIN_COUNTERS; i++)
-			if (curfile.data.counters.coins[i] != 0)
-				doit = 1;
-		if (doit)
-		{
-			mame_fprintf(curfile.file, "\t\t<counters>\n");
-			for (i = 0; i < COIN_COUNTERS; i++)
-				if (curfile.data.counters.coins[i] != 0)
-					mame_fprintf(curfile.file, "\t\t\t<coins index=\"%d\" number=\"%d\" />\n", i, curfile.data.counters.coins[i]);
-			if (curfile.data.counters.tickets != 0)
-				mame_fprintf(curfile.file, "\t\t\t<tickets number=\"%d\" />\n", curfile.data.counters.tickets);
-			mame_fprintf(curfile.file, "\t\t</counters>\n\n");
-		}
-
-		/* finally, write the mixer section */
-		doit = 0;
-		for (i = 0; i < MAX_MIXER_CHANNELS; i++)
-			if (curfile.data.mixer.newlevel[i] != curfile.data.mixer.deflevel[i])
-				doit = 1;
-		if (doit)
-		{
-			mame_fprintf(curfile.file, "\t\t<mixer>\n");
-			for (i = 0; i < MAX_MIXER_CHANNELS; i++)
-				if (curfile.data.mixer.newlevel[i] != curfile.data.mixer.deflevel[i])
-					mame_fprintf(curfile.file, "\t\t\t<channel index=\"%d\" defvol=\"%f\" newvol=\"%f\" />\n", i, curfile.data.mixer.deflevel[i], curfile.data.mixer.newlevel[i]);
-			mame_fprintf(curfile.file, "\t\t</mixer>\n\n");
-		}
-	}
-
-#ifdef MESS
-	mess_config_save_xml(curfile.filetype, curfile.file);
-#endif
-
-	mame_fprintf(curfile.file, "\t</system>\n");
-	mame_fprintf(curfile.file, "</mameconfig>\n");
 	return 1;
 }
 

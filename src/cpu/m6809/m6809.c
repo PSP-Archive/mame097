@@ -1,72 +1,70 @@
 /*** m6809: Portable 6809 emulator ******************************************
+	Copyright (C) John Butler 1997
 
-    Copyright (C) John Butler 1997
+	References:
+		6809 Simulator V09, By L.C. Benschop, Eidnhoven The Netherlands.
 
-    References:
+		m6809: Portable 6809 emulator, DS (6809 code in MAME, derived from
+			the 6809 Simulator V09)
 
-        6809 Simulator V09, By L.C. Benschop, Eidnhoven The Netherlands.
+		6809 Microcomputer Programming & Interfacing with Experiments"
+			by Andrew C. Staugaard, Jr.; Howard W. Sams & Co., Inc.
 
-        m6809: Portable 6809 emulator, DS (6809 code in MAME, derived from
-            the 6809 Simulator V09)
+	System dependencies:	UINT16 must be 16 bit unsigned int
+							UINT8 must be 8 bit unsigned int
+							UINT32 must be more than 16 bits
+							arrays up to 65536 bytes must be supported
+							machine must be twos complement
 
-        6809 Microcomputer Programming & Interfacing with Experiments"
-            by Andrew C. Staugaard, Jr.; Howard W. Sams & Co., Inc.
-
-    System dependencies:    UINT16 must be 16 bit unsigned int
-                            UINT8 must be 8 bit unsigned int
-                            UINT32 must be more than 16 bits
-                            arrays up to 65536 bytes must be supported
-                            machine must be twos complement
-
-    History:
+	History:
 991026 HJB:
-    Fixed missing calls to cpu_changepc() for the TFR and EXG ocpodes.
-    Replaced m6809_slapstic checks by a macro (CHANGE_PC). ESB still
-    needs the tweaks.
+	Fixed missing calls to cpu_changepc() for the TFR and EXG ocpodes.
+	Replaced m6809_slapstic checks by a macro (CHANGE_PC). ESB still
+	needs the tweaks.
 
 991024 HJB:
-    Tried to improve speed: Using bit7 of cycles1/2 as flag for multi
-    byte opcodes is gone, those opcodes now call fetch_effective_address().
-    Got rid of the slow/fast flags for stack (S and U) memory accesses.
-    Minor changes to use 32 bit values as arguments to memory functions
-    and added defines for that purpose (e.g. X = 16bit XD = 32bit).
+	Tried to improve speed: Using bit7 of cycles1/2 as flag for multi
+	byte opcodes is gone, those opcodes now call fetch_effective_address().
+	Got rid of the slow/fast flags for stack (S and U) memory accesses.
+	Minor changes to use 32 bit values as arguments to memory functions
+	and added defines for that purpose (e.g. X = 16bit XD = 32bit).
 
 990312 HJB:
-    Added bugfixes according to Aaron's findings.
-    Reset only sets CC_II and CC_IF, DP to zero and PC from reset vector.
+	Added bugfixes according to Aaron's findings.
+	Reset only sets CC_II and CC_IF, DP to zero and PC from reset vector.
 990311 HJB:
-    Added _info functions. Now uses static m6808_Regs struct instead
-    of single statics. Changed the 16 bit registers to use the generic
-    PAIR union. Registers defined using macros. Split the core into
-    four execution loops for M6802, M6803, M6808 and HD63701.
-    TST, TSTA and TSTB opcodes reset carry flag.
-    Modified the read/write stack handlers to push LSB first then MSB
-    and pull MSB first then LSB.
+	Added _info functions. Now uses static m6808_Regs struct instead
+	of single statics. Changed the 16 bit registers to use the generic
+	PAIR union. Registers defined using macros. Split the core into
+	four execution loops for M6802, M6803, M6808 and HD63701.
+	TST, TSTA and TSTB opcodes reset carry flag.
+	Modified the read/write stack handlers to push LSB first then MSB
+	and pull MSB first then LSB.
 
 990228 HJB:
-    Changed the interrupt handling again. Now interrupts are taken
-    either right at the moment the lines are asserted or whenever
-    an interrupt is enabled and the corresponding line is still
-    asserted. That way the pending_interrupts checks are not
-    needed anymore. However, the CWAI and SYNC flags still need
-    some flags, so I changed the name to 'int_state'.
-    This core also has the code for the old interrupt system removed.
+	Changed the interrupt handling again. Now interrupts are taken
+	either right at the moment the lines are asserted or whenever
+	an interrupt is enabled and the corresponding line is still
+	asserted. That way the pending_interrupts checks are not
+	needed anymore. However, the CWAI and SYNC flags still need
+	some flags, so I changed the name to 'int_state'.
+	This core also has the code for the old interrupt system removed.
 
 990225 HJB:
-    Cleaned up the code here and there, added some comments.
-    Slightly changed the SAR opcodes (similiar to other CPU cores).
-    Added symbolic names for the flag bits.
-    Changed the way CWAI/Interrupt() handle CPU state saving.
-    A new flag M6809_STATE in pending_interrupts is used to determine
-    if a state save is needed on interrupt entry or already done by CWAI.
-    Added M6809_IRQ_LINE and M6809_FIRQ_LINE defines to m6809.h
-    Moved the internal interrupt_pending flags from m6809.h to m6809.c
-    Changed CWAI cycles2[0x3c] to be 2 (plus all or at least 19 if
-    CWAI actually pushes the entire state).
-    Implemented undocumented TFR/EXG for undefined source and mixed 8/16
-    bit transfers (they should transfer/exchange the constant $ff).
-    Removed unused jmp/jsr _slap functions from 6809ops.c,
-    m6809_slapstick check moved into the opcode functions.
+	Cleaned up the code here and there, added some comments.
+	Slightly changed the SAR opcodes (similiar to other CPU cores).
+	Added symbolic names for the flag bits.
+	Changed the way CWAI/Interrupt() handle CPU state saving.
+	A new flag M6809_STATE in pending_interrupts is used to determine
+	if a state save is needed on interrupt entry or already done by CWAI.
+	Added M6809_IRQ_LINE and M6809_FIRQ_LINE defines to m6809.h
+	Moved the internal interrupt_pending flags from m6809.h to m6809.c
+	Changed CWAI cycles2[0x3c] to be 2 (plus all or at least 19 if
+	CWAI actually pushes the entire state).
+	Implemented undocumented TFR/EXG for undefined source and mixed 8/16
+	bit transfers (they should transfer/exchange the constant $ff).
+	Removed unused jmp/jsr _slap functions from 6809ops.c,
+	m6809_slapstick check moved into the opcode functions.
 
 *****************************************************************************/
 
@@ -74,13 +72,16 @@
 #include <stdlib.h>
 #include "cpuintrf.h"
 #include "state.h"
-#include "mamedbg.h"
+#include "mame.h"//#include "mamedbg.h"
 #include "m6809.h"
 
+/* chat small */
+#define BIG_SWITCH	0
+
 /* Enable big switch statement for the main opcodes */
-#ifndef BIG_SWITCH
-#define BIG_SWITCH  1
-#endif
+//#ifndef BIG_SWITCH
+//#define BIG_SWITCH  1
+//#endif
 
 #define VERBOSE 0
 
@@ -116,30 +117,30 @@ typedef struct
 	PAIR	dp; 		/* Direct Page register (page in MSB) */
 	PAIR	u, s;		/* Stack pointers */
 	PAIR	x, y;		/* Index registers */
-    UINT8   cc;
+	UINT8	cc;
 	UINT8	ireg;		/* First opcode */
 	UINT8	irq_state[2];
-    int     extra_cycles; /* cycles used up by interrupts */
-    int     (*irq_callback)(int irqline);
-    UINT8   int_state;  /* SYNC and CWAI flags */
-    UINT8   nmi_state;
+	int 	extra_cycles; /* cycles used up by interrupts */
+	int 	(*irq_callback)(int irqline);
+	UINT8	int_state;	/* SYNC and CWAI flags */
+	UINT8	nmi_state;
 } m6809_Regs;
 
 /* flag bits in the cc register */
-#define CC_C    0x01        /* Carry */
-#define CC_V    0x02        /* Overflow */
-#define CC_Z    0x04        /* Zero */
-#define CC_N    0x08        /* Negative */
-#define CC_II   0x10        /* Inhibit IRQ */
-#define CC_H    0x20        /* Half (auxiliary) carry */
-#define CC_IF   0x40        /* Inhibit FIRQ */
-#define CC_E    0x80        /* entire state pushed */
+#define CC_C	0x01		/* Carry */
+#define CC_V	0x02		/* Overflow */
+#define CC_Z	0x04		/* Zero */
+#define CC_N	0x08		/* Negative */
+#define CC_II	0x10		/* Inhibit IRQ */
+#define CC_H	0x20		/* Half (auxiliary) carry */
+#define CC_IF	0x40		/* Inhibit FIRQ */
+#define CC_E	0x80		/* entire state pushed */
 
 /* 6809 registers */
 static m6809_Regs m6809;
 int m6809_slapstic = 0;
 
-#define pPPC    m6809.ppc
+#define pPPC	m6809.ppc
 #define pPC 	m6809.pc
 #define pU		m6809.u
 #define pS		m6809.s
@@ -147,8 +148,8 @@ int m6809_slapstic = 0;
 #define pY		m6809.y
 #define pD		m6809.d
 
-#define	PPC		m6809.ppc.w.l
-#define PC  	m6809.pc.w.l
+#define PPC 	m6809.ppc.w.l
+#define PC		m6809.pc.w.l
 #define PCD 	m6809.pc.d
 #define U		m6809.u.w.l
 #define UD		m6809.u.d
@@ -158,14 +159,14 @@ int m6809_slapstic = 0;
 #define XD		m6809.x.d
 #define Y		m6809.y.w.l
 #define YD		m6809.y.d
-#define D   	m6809.d.w.l
-#define A   	m6809.d.b.h
+#define D		m6809.d.w.l
+#define A		m6809.d.b.h
 #define B		m6809.d.b.l
 #define DP		m6809.dp.b.h
 #define DPD 	m6809.dp.d
-#define CC  	m6809.cc
+#define CC		m6809.cc
 
-static PAIR ea;         /* effective address */
+static PAIR ea; 		/* effective address */
 #define EA	ea.w.l
 #define EAD ea.d
 
@@ -175,7 +176,7 @@ static PAIR ea;         /* effective address */
 	if( m6809_slapstic )		\
 		cpu_setOPbase16(PCD);	\
 	else						\
-		change_pc(PCD);		\
+		change_pc(PCD); 	\
 	}
 #endif
 
@@ -195,10 +196,10 @@ static PAIR ea;         /* effective address */
 		{																\
 			m6809.int_state &= ~M6809_CWAI;  /* clear CWAI */			\
 			m6809.extra_cycles += 7;		 /* subtract +7 cycles */	\
-        }                                                               \
+		}																\
 		else															\
 		{																\
-			CC &= ~CC_E;				/* save 'short' state */        \
+			CC &= ~CC_E;				/* save 'short' state */		\
 			PUSHWORD(pPC);												\
 			PUSHBYTE(CC);												\
 			m6809.extra_cycles += 10;	/* subtract +10 cycles */		\
@@ -260,7 +261,7 @@ static int m6809_ICount;
 #define PULUBYTE(b) b = RM(UD); U++
 #define PULUWORD(w) w = RM(UD)<<8; U++; w |= RM(UD); U++
 
-#define CLR_HNZVC   CC&=~(CC_H|CC_N|CC_Z|CC_V|CC_C)
+#define CLR_HNZVC	CC&=~(CC_H|CC_N|CC_Z|CC_V|CC_C)
 #define CLR_NZV 	CC&=~(CC_N|CC_Z|CC_V)
 #define CLR_NZ		CC&=~(CC_N|CC_Z)
 #define CLR_HNZC	CC&=~(CC_H|CC_N|CC_Z|CC_C)
@@ -324,7 +325,7 @@ CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N
 
 /* combos */
 #define SET_NZ8(a)			{SET_N8(a);SET_Z(a);}
-#define SET_NZ16(a)			{SET_N16(a);SET_Z(a);}
+#define SET_NZ16(a) 		{SET_N16(a);SET_Z(a);}
 #define SET_FLAGS8(a,b,r)	{SET_N8(r);SET_Z8(r);SET_V8(a,b,r);SET_C8(r);}
 #define SET_FLAGS16(a,b,r)	{SET_N16(r);SET_Z16(r);SET_V16(a,b,r);SET_C16(r);}
 
@@ -366,12 +367,12 @@ CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N
 	}									\
 }
 
-#define LBRANCH(f) {                    \
+#define LBRANCH(f) {					\
 	PAIR t; 							\
 	IMMWORD(t); 						\
 	if( f ) 							\
 	{									\
-		m6809_ICount -= 1;				\
+		m6809_ICount--; 				\
 		PC += t.w.l;					\
 		CHANGE_PC;						\
 	}									\
@@ -385,7 +386,7 @@ CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N,CC_N
 /* timings for 1-byte opcodes */
 static UINT8 cycles1[] =
 {
-	/*   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+	/*	 0	1  2  3  4	5  6  7  8	9  A  B  C	D  E  F */
   /*0*/  6, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 0, 6, 6, 3, 6,
   /*1*/  0, 0, 2, 4, 0, 0, 5, 9, 0, 2, 3, 0, 3, 2, 8, 6,
   /*2*/  3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -435,27 +436,27 @@ static void m6809_set_context(void *src)
 		m6809 = *(m6809_Regs*)src;
 	CHANGE_PC;
 
-    CHECK_IRQ_LINES;
+	CHECK_IRQ_LINES;
 }
 
 
 /****************************************************************************/
-/* Reset registers to their initial values                                  */
+/* Reset registers to their initial values									*/
 /****************************************************************************/
 static void m6809_init(void)
 {
 	int cpu = cpu_getactivecpu();
-	state_save_register_UINT16("m6809", cpu, "PC", &PC, 1);
-	state_save_register_UINT16("m6809", cpu, "U", &U, 1);
-	state_save_register_UINT16("m6809", cpu, "S", &S, 1);
-	state_save_register_UINT16("m6809", cpu, "X", &X, 1);
-	state_save_register_UINT16("m6809", cpu, "Y", &Y, 1);
-	state_save_register_UINT8("m6809", cpu, "DP", &DP, 1);
-	state_save_register_UINT8("m6809", cpu, "CC", &CC, 1);
-	state_save_register_UINT8("m6809", cpu, "INT", &m6809.int_state, 1);
-	state_save_register_UINT8("m6809", cpu, "NMI", &m6809.nmi_state, 1);
-	state_save_register_UINT8("m6809", cpu, "IRQ", &m6809.irq_state[0], 1);
-	state_save_register_UINT8("m6809", cpu, "FIRQ", &m6809.irq_state[1], 1);
+	state_save_register_UINT16("m6809", cpu,  "PC", &PC, 1);
+	state_save_register_UINT16("m6809", cpu,   "U", &U, 1);
+	state_save_register_UINT16("m6809", cpu,   "S", &S, 1);
+	state_save_register_UINT16("m6809", cpu,   "X", &X, 1);
+	state_save_register_UINT16("m6809", cpu,   "Y", &Y, 1);
+	state_save_register_UINT8( "m6809", cpu,  "DP", &DP, 1);
+	state_save_register_UINT8( "m6809", cpu,  "CC", &CC, 1);
+	state_save_register_UINT8( "m6809", cpu, "INT", &m6809.int_state, 1);
+	state_save_register_UINT8( "m6809", cpu, "NMI", &m6809.nmi_state, 1);
+	state_save_register_UINT8( "m6809", cpu, "IRQ", &m6809.irq_state[0], 1);
+	state_save_register_UINT8( "m6809", cpu,"FIRQ", &m6809.irq_state[1], 1);
 }
 
 static void m6809_reset(void *param)
@@ -467,8 +468,8 @@ static void m6809_reset(void *param)
 
 	DPD = 0;			/* Reset direct page register */
 
-    CC |= CC_II;        /* IRQ disabled */
-    CC |= CC_IF;        /* FIRQ disabled */
+	CC |= CC_II;		/* IRQ disabled */
+	CC |= CC_IF;		/* FIRQ disabled */
 
 	PCD = RM16(0xfffe);
 	CHANGE_PC;
@@ -493,15 +494,15 @@ static void set_irq_line(int irqline, int state)
 		if( state == CLEAR_LINE ) return;
 
 		/* if the stack was not yet initialized */
-	    if( !(m6809.int_state & M6809_LDS) ) return;
+		if( !(m6809.int_state & M6809_LDS) ) return;
 
-	    m6809.int_state &= ~M6809_SYNC;
+		m6809.int_state &= ~M6809_SYNC;
 		/* HJB 990225: state already saved by CWAI? */
 		if( m6809.int_state & M6809_CWAI )
 		{
 			m6809.int_state &= ~M6809_CWAI;
 			m6809.extra_cycles += 7;	/* subtract +7 cycles next time */
-	    }
+		}
 		else
 		{
 			CC |= CC_E; 				/* save entire state */
@@ -521,7 +522,7 @@ static void set_irq_line(int irqline, int state)
 	}
 	else if (irqline < 2)
 	{
-	    LOG(("M6809#%d set_irq_line %d, %d\n", cpu_getactivecpu(), irqline, state));
+		LOG(("M6809#%d set_irq_line %d, %d\n", cpu_getactivecpu(), irqline, state));
 		m6809.irq_state[irqline] = state;
 		if (state == CLEAR_LINE) return;
 		CHECK_IRQ_LINES;
@@ -531,7 +532,7 @@ static void set_irq_line(int irqline, int state)
 static offs_t m6809_dasm(char *buffer, offs_t pc)
 {
 #ifdef MAME_DEBUG
-    return Dasm6809(buffer,pc);
+	return Dasm6809(buffer,pc);
 #else
 	sprintf( buffer, "$%02X", cpu_readop(pc) );
 	return 1;
@@ -547,7 +548,7 @@ static offs_t m6809_dasm(char *buffer, offs_t pc)
 /* execute instructions on this CPU until icount expires */
 static int m6809_execute(int cycles)	/* NS 970908 */
 {
-    m6809_ICount = cycles - m6809.extra_cycles;
+	m6809_ICount = cycles - m6809.extra_cycles;
 	m6809.extra_cycles = 0;
 
 	if (m6809.int_state & (M6809_CWAI | M6809_SYNC))
@@ -565,7 +566,7 @@ static int m6809_execute(int cycles)	/* NS 970908 */
 			m6809.ireg = ROP(PCD);
 			PC++;
 #if BIG_SWITCH
-            switch( m6809.ireg )
+			switch( m6809.ireg )
 			{
 			case 0x00: neg_di();   m6809_ICount-= 6; break;
 			case 0x01: illegal();  m6809_ICount-= 2; break;
@@ -825,17 +826,17 @@ static int m6809_execute(int cycles)	/* NS 970908 */
 			case 0xff: stu_ex();   m6809_ICount-= 6; break;
 			}
 #else
-            (*m6809_main[m6809.ireg])();
-            m6809_ICount -= cycles1[m6809.ireg];
+			(*m6809_main[m6809.ireg])();
+			m6809_ICount -= cycles1[m6809.ireg];
 #endif
 
 		} while( m6809_ICount > 0 );
 
-        m6809_ICount -= m6809.extra_cycles;
+		m6809_ICount -= m6809.extra_cycles;
 		m6809.extra_cycles = 0;
-    }
+	}
 
-    return cycles - m6809_ICount;   /* NS 970908 */
+	return cycles - m6809_ICount;	/* NS 970908 */
 }
 
 INLINE void fetch_effective_address( void )
@@ -845,155 +846,156 @@ INLINE void fetch_effective_address( void )
 
 	switch(postbyte)
 	{
-	case 0x00: EA=X;												m6809_ICount-=1;   break;
-	case 0x01: EA=X+1;												m6809_ICount-=1;   break;
-	case 0x02: EA=X+2;												m6809_ICount-=1;   break;
-	case 0x03: EA=X+3;												m6809_ICount-=1;   break;
-	case 0x04: EA=X+4;												m6809_ICount-=1;   break;
-	case 0x05: EA=X+5;												m6809_ICount-=1;   break;
-	case 0x06: EA=X+6;												m6809_ICount-=1;   break;
-	case 0x07: EA=X+7;												m6809_ICount-=1;   break;
-	case 0x08: EA=X+8;												m6809_ICount-=1;   break;
-	case 0x09: EA=X+9;												m6809_ICount-=1;   break;
-	case 0x0a: EA=X+10; 											m6809_ICount-=1;   break;
-	case 0x0b: EA=X+11; 											m6809_ICount-=1;   break;
-	case 0x0c: EA=X+12; 											m6809_ICount-=1;   break;
-	case 0x0d: EA=X+13; 											m6809_ICount-=1;   break;
-	case 0x0e: EA=X+14; 											m6809_ICount-=1;   break;
-	case 0x0f: EA=X+15; 											m6809_ICount-=1;   break;
+	case 0x00: EA=X;		m6809_ICount--;   break;
+	case 0x01: EA=X+1;		m6809_ICount--;   break;
+	case 0x02: EA=X+2;		m6809_ICount--;   break;
+	case 0x03: EA=X+3;		m6809_ICount--;   break;
+	case 0x04: EA=X+4;		m6809_ICount--;   break;
+	case 0x05: EA=X+5;		m6809_ICount--;   break;
+	case 0x06: EA=X+6;		m6809_ICount--;   break;
+	case 0x07: EA=X+7;		m6809_ICount--;   break;
+	case 0x08: EA=X+8;		m6809_ICount--;   break;
+	case 0x09: EA=X+9;		m6809_ICount--;   break;
+	case 0x0a: EA=X+10; 	m6809_ICount--;   break;
+	case 0x0b: EA=X+11; 	m6809_ICount--;   break;
+	case 0x0c: EA=X+12; 	m6809_ICount--;   break;
+	case 0x0d: EA=X+13; 	m6809_ICount--;   break;
+	case 0x0e: EA=X+14; 	m6809_ICount--;   break;
+	case 0x0f: EA=X+15; 	m6809_ICount--;   break;
 
-	case 0x10: EA=X-16; 											m6809_ICount-=1;   break;
-	case 0x11: EA=X-15; 											m6809_ICount-=1;   break;
-	case 0x12: EA=X-14; 											m6809_ICount-=1;   break;
-	case 0x13: EA=X-13; 											m6809_ICount-=1;   break;
-	case 0x14: EA=X-12; 											m6809_ICount-=1;   break;
-	case 0x15: EA=X-11; 											m6809_ICount-=1;   break;
-	case 0x16: EA=X-10; 											m6809_ICount-=1;   break;
-	case 0x17: EA=X-9;												m6809_ICount-=1;   break;
-	case 0x18: EA=X-8;												m6809_ICount-=1;   break;
-	case 0x19: EA=X-7;												m6809_ICount-=1;   break;
-	case 0x1a: EA=X-6;												m6809_ICount-=1;   break;
-	case 0x1b: EA=X-5;												m6809_ICount-=1;   break;
-	case 0x1c: EA=X-4;												m6809_ICount-=1;   break;
-	case 0x1d: EA=X-3;												m6809_ICount-=1;   break;
-	case 0x1e: EA=X-2;												m6809_ICount-=1;   break;
-	case 0x1f: EA=X-1;												m6809_ICount-=1;   break;
+	case 0x10: EA=X-16; 	m6809_ICount--;   break;
+	case 0x11: EA=X-15; 	m6809_ICount--;   break;
+	case 0x12: EA=X-14; 	m6809_ICount--;   break;
+	case 0x13: EA=X-13; 	m6809_ICount--;   break;
+	case 0x14: EA=X-12; 	m6809_ICount--;   break;
+	case 0x15: EA=X-11; 	m6809_ICount--;   break;
+	case 0x16: EA=X-10; 	m6809_ICount--;   break;
+	case 0x17: EA=X-9;		m6809_ICount--;   break;
+	case 0x18: EA=X-8;		m6809_ICount--;   break;
+	case 0x19: EA=X-7;		m6809_ICount--;   break;
+	case 0x1a: EA=X-6;		m6809_ICount--;   break;
+	case 0x1b: EA=X-5;		m6809_ICount--;   break;
+	case 0x1c: EA=X-4;		m6809_ICount--;   break;
+	case 0x1d: EA=X-3;		m6809_ICount--;   break;
+	case 0x1e: EA=X-2;		m6809_ICount--;   break;
+	case 0x1f: EA=X-1;		m6809_ICount--;   break;
 
-	case 0x20: EA=Y;												m6809_ICount-=1;   break;
-	case 0x21: EA=Y+1;												m6809_ICount-=1;   break;
-	case 0x22: EA=Y+2;												m6809_ICount-=1;   break;
-	case 0x23: EA=Y+3;												m6809_ICount-=1;   break;
-	case 0x24: EA=Y+4;												m6809_ICount-=1;   break;
-	case 0x25: EA=Y+5;												m6809_ICount-=1;   break;
-	case 0x26: EA=Y+6;												m6809_ICount-=1;   break;
-	case 0x27: EA=Y+7;												m6809_ICount-=1;   break;
-	case 0x28: EA=Y+8;												m6809_ICount-=1;   break;
-	case 0x29: EA=Y+9;												m6809_ICount-=1;   break;
-	case 0x2a: EA=Y+10; 											m6809_ICount-=1;   break;
-	case 0x2b: EA=Y+11; 											m6809_ICount-=1;   break;
-	case 0x2c: EA=Y+12; 											m6809_ICount-=1;   break;
-	case 0x2d: EA=Y+13; 											m6809_ICount-=1;   break;
-	case 0x2e: EA=Y+14; 											m6809_ICount-=1;   break;
-	case 0x2f: EA=Y+15; 											m6809_ICount-=1;   break;
+	case 0x20: EA=Y;		m6809_ICount--;   break;
+	case 0x21: EA=Y+1;		m6809_ICount--;   break;
+	case 0x22: EA=Y+2;		m6809_ICount--;   break;
+	case 0x23: EA=Y+3;		m6809_ICount--;   break;
+	case 0x24: EA=Y+4;		m6809_ICount--;   break;
+	case 0x25: EA=Y+5;		m6809_ICount--;   break;
+	case 0x26: EA=Y+6;		m6809_ICount--;   break;
+	case 0x27: EA=Y+7;		m6809_ICount--;   break;
+	case 0x28: EA=Y+8;		m6809_ICount--;   break;
+	case 0x29: EA=Y+9;		m6809_ICount--;   break;
+	case 0x2a: EA=Y+10; 	m6809_ICount--;   break;
+	case 0x2b: EA=Y+11; 	m6809_ICount--;   break;
+	case 0x2c: EA=Y+12; 	m6809_ICount--;   break;
+	case 0x2d: EA=Y+13; 	m6809_ICount--;   break;
+	case 0x2e: EA=Y+14; 	m6809_ICount--;   break;
+	case 0x2f: EA=Y+15; 	m6809_ICount--;   break;
 
-	case 0x30: EA=Y-16; 											m6809_ICount-=1;   break;
-	case 0x31: EA=Y-15; 											m6809_ICount-=1;   break;
-	case 0x32: EA=Y-14; 											m6809_ICount-=1;   break;
-	case 0x33: EA=Y-13; 											m6809_ICount-=1;   break;
-	case 0x34: EA=Y-12; 											m6809_ICount-=1;   break;
-	case 0x35: EA=Y-11; 											m6809_ICount-=1;   break;
-	case 0x36: EA=Y-10; 											m6809_ICount-=1;   break;
-	case 0x37: EA=Y-9;												m6809_ICount-=1;   break;
-	case 0x38: EA=Y-8;												m6809_ICount-=1;   break;
-	case 0x39: EA=Y-7;												m6809_ICount-=1;   break;
-	case 0x3a: EA=Y-6;												m6809_ICount-=1;   break;
-	case 0x3b: EA=Y-5;												m6809_ICount-=1;   break;
-	case 0x3c: EA=Y-4;												m6809_ICount-=1;   break;
-	case 0x3d: EA=Y-3;												m6809_ICount-=1;   break;
-	case 0x3e: EA=Y-2;												m6809_ICount-=1;   break;
-	case 0x3f: EA=Y-1;												m6809_ICount-=1;   break;
+	case 0x30: EA=Y-16; 	m6809_ICount--;   break;
+	case 0x31: EA=Y-15; 	m6809_ICount--;   break;
+	case 0x32: EA=Y-14; 	m6809_ICount--;   break;
+	case 0x33: EA=Y-13; 	m6809_ICount--;   break;
+	case 0x34: EA=Y-12; 	m6809_ICount--;   break;
+	case 0x35: EA=Y-11; 	m6809_ICount--;   break;
+	case 0x36: EA=Y-10; 	m6809_ICount--;   break;
+	case 0x37: EA=Y-9;		m6809_ICount--;   break;
+	case 0x38: EA=Y-8;		m6809_ICount--;   break;
+	case 0x39: EA=Y-7;		m6809_ICount--;   break;
+	case 0x3a: EA=Y-6;		m6809_ICount--;   break;
+	case 0x3b: EA=Y-5;		m6809_ICount--;   break;
+	case 0x3c: EA=Y-4;		m6809_ICount--;   break;
+	case 0x3d: EA=Y-3;		m6809_ICount--;   break;
+	case 0x3e: EA=Y-2;		m6809_ICount--;   break;
+	case 0x3f: EA=Y-1;		m6809_ICount--;   break;
 
-	case 0x40: EA=U;												m6809_ICount-=1;   break;
-	case 0x41: EA=U+1;												m6809_ICount-=1;   break;
-	case 0x42: EA=U+2;												m6809_ICount-=1;   break;
-	case 0x43: EA=U+3;												m6809_ICount-=1;   break;
-	case 0x44: EA=U+4;												m6809_ICount-=1;   break;
-	case 0x45: EA=U+5;												m6809_ICount-=1;   break;
-	case 0x46: EA=U+6;												m6809_ICount-=1;   break;
-	case 0x47: EA=U+7;												m6809_ICount-=1;   break;
-	case 0x48: EA=U+8;												m6809_ICount-=1;   break;
-	case 0x49: EA=U+9;												m6809_ICount-=1;   break;
-	case 0x4a: EA=U+10; 											m6809_ICount-=1;   break;
-	case 0x4b: EA=U+11; 											m6809_ICount-=1;   break;
-	case 0x4c: EA=U+12; 											m6809_ICount-=1;   break;
-	case 0x4d: EA=U+13; 											m6809_ICount-=1;   break;
-	case 0x4e: EA=U+14; 											m6809_ICount-=1;   break;
-	case 0x4f: EA=U+15; 											m6809_ICount-=1;   break;
+	case 0x40: EA=U;		m6809_ICount--;   break;
+	case 0x41: EA=U+1;		m6809_ICount--;   break;
+	case 0x42: EA=U+2;		m6809_ICount--;   break;
+	case 0x43: EA=U+3;		m6809_ICount--;   break;
+	case 0x44: EA=U+4;		m6809_ICount--;   break;
+	case 0x45: EA=U+5;		m6809_ICount--;   break;
+	case 0x46: EA=U+6;		m6809_ICount--;   break;
+	case 0x47: EA=U+7;		m6809_ICount--;   break;
+	case 0x48: EA=U+8;		m6809_ICount--;   break;
+	case 0x49: EA=U+9;		m6809_ICount--;   break;
+	case 0x4a: EA=U+10; 	m6809_ICount--;   break;
+	case 0x4b: EA=U+11; 	m6809_ICount--;   break;
+	case 0x4c: EA=U+12; 	m6809_ICount--;   break;
+	case 0x4d: EA=U+13; 	m6809_ICount--;   break;
+	case 0x4e: EA=U+14; 	m6809_ICount--;   break;
+	case 0x4f: EA=U+15; 	m6809_ICount--;   break;
 
-	case 0x50: EA=U-16; 											m6809_ICount-=1;   break;
-	case 0x51: EA=U-15; 											m6809_ICount-=1;   break;
-	case 0x52: EA=U-14; 											m6809_ICount-=1;   break;
-	case 0x53: EA=U-13; 											m6809_ICount-=1;   break;
-	case 0x54: EA=U-12; 											m6809_ICount-=1;   break;
-	case 0x55: EA=U-11; 											m6809_ICount-=1;   break;
-	case 0x56: EA=U-10; 											m6809_ICount-=1;   break;
-	case 0x57: EA=U-9;												m6809_ICount-=1;   break;
-	case 0x58: EA=U-8;												m6809_ICount-=1;   break;
-	case 0x59: EA=U-7;												m6809_ICount-=1;   break;
-	case 0x5a: EA=U-6;												m6809_ICount-=1;   break;
-	case 0x5b: EA=U-5;												m6809_ICount-=1;   break;
-	case 0x5c: EA=U-4;												m6809_ICount-=1;   break;
-	case 0x5d: EA=U-3;												m6809_ICount-=1;   break;
-	case 0x5e: EA=U-2;												m6809_ICount-=1;   break;
-	case 0x5f: EA=U-1;												m6809_ICount-=1;   break;
+	case 0x50: EA=U-16; 	m6809_ICount--;   break;
+	case 0x51: EA=U-15; 	m6809_ICount--;   break;
+	case 0x52: EA=U-14; 	m6809_ICount--;   break;
+	case 0x53: EA=U-13; 	m6809_ICount--;   break;
+	case 0x54: EA=U-12; 	m6809_ICount--;   break;
+	case 0x55: EA=U-11; 	m6809_ICount--;   break;
+	case 0x56: EA=U-10; 	m6809_ICount--;   break;
+	case 0x57: EA=U-9;		m6809_ICount--;   break;
+	case 0x58: EA=U-8;		m6809_ICount--;   break;
+	case 0x59: EA=U-7;		m6809_ICount--;   break;
+	case 0x5a: EA=U-6;		m6809_ICount--;   break;
+	case 0x5b: EA=U-5;		m6809_ICount--;   break;
+	case 0x5c: EA=U-4;		m6809_ICount--;   break;
+	case 0x5d: EA=U-3;		m6809_ICount--;   break;
+	case 0x5e: EA=U-2;		m6809_ICount--;   break;
+	case 0x5f: EA=U-1;		m6809_ICount--;   break;
 
-	case 0x60: EA=S;												m6809_ICount-=1;   break;
-	case 0x61: EA=S+1;												m6809_ICount-=1;   break;
-	case 0x62: EA=S+2;												m6809_ICount-=1;   break;
-	case 0x63: EA=S+3;												m6809_ICount-=1;   break;
-	case 0x64: EA=S+4;												m6809_ICount-=1;   break;
-	case 0x65: EA=S+5;												m6809_ICount-=1;   break;
-	case 0x66: EA=S+6;												m6809_ICount-=1;   break;
-	case 0x67: EA=S+7;												m6809_ICount-=1;   break;
-	case 0x68: EA=S+8;												m6809_ICount-=1;   break;
-	case 0x69: EA=S+9;												m6809_ICount-=1;   break;
-	case 0x6a: EA=S+10; 											m6809_ICount-=1;   break;
-	case 0x6b: EA=S+11; 											m6809_ICount-=1;   break;
-	case 0x6c: EA=S+12; 											m6809_ICount-=1;   break;
-	case 0x6d: EA=S+13; 											m6809_ICount-=1;   break;
-	case 0x6e: EA=S+14; 											m6809_ICount-=1;   break;
-	case 0x6f: EA=S+15; 											m6809_ICount-=1;   break;
+	case 0x60: EA=S;		m6809_ICount--;   break;
+	case 0x61: EA=S+1;		m6809_ICount--;   break;
+	case 0x62: EA=S+2;		m6809_ICount--;   break;
+	case 0x63: EA=S+3;		m6809_ICount--;   break;
+	case 0x64: EA=S+4;		m6809_ICount--;   break;
+	case 0x65: EA=S+5;		m6809_ICount--;   break;
+	case 0x66: EA=S+6;		m6809_ICount--;   break;
+	case 0x67: EA=S+7;		m6809_ICount--;   break;
+	case 0x68: EA=S+8;		m6809_ICount--;   break;
+	case 0x69: EA=S+9;		m6809_ICount--;   break;
+	case 0x6a: EA=S+10; 	m6809_ICount--;   break;
+	case 0x6b: EA=S+11; 	m6809_ICount--;   break;
+	case 0x6c: EA=S+12; 	m6809_ICount--;   break;
+	case 0x6d: EA=S+13; 	m6809_ICount--;   break;
+	case 0x6e: EA=S+14; 	m6809_ICount--;   break;
+	case 0x6f: EA=S+15; 	m6809_ICount--;   break;
 
-	case 0x70: EA=S-16; 											m6809_ICount-=1;   break;
-	case 0x71: EA=S-15; 											m6809_ICount-=1;   break;
-	case 0x72: EA=S-14; 											m6809_ICount-=1;   break;
-	case 0x73: EA=S-13; 											m6809_ICount-=1;   break;
-	case 0x74: EA=S-12; 											m6809_ICount-=1;   break;
-	case 0x75: EA=S-11; 											m6809_ICount-=1;   break;
-	case 0x76: EA=S-10; 											m6809_ICount-=1;   break;
-	case 0x77: EA=S-9;												m6809_ICount-=1;   break;
-	case 0x78: EA=S-8;												m6809_ICount-=1;   break;
-	case 0x79: EA=S-7;												m6809_ICount-=1;   break;
-	case 0x7a: EA=S-6;												m6809_ICount-=1;   break;
-	case 0x7b: EA=S-5;												m6809_ICount-=1;   break;
-	case 0x7c: EA=S-4;												m6809_ICount-=1;   break;
-	case 0x7d: EA=S-3;												m6809_ICount-=1;   break;
-	case 0x7e: EA=S-2;												m6809_ICount-=1;   break;
-	case 0x7f: EA=S-1;												m6809_ICount-=1;   break;
+	case 0x70: EA=S-16; 	m6809_ICount--;   break;
+	case 0x71: EA=S-15; 	m6809_ICount--;   break;
+	case 0x72: EA=S-14; 	m6809_ICount--;   break;
+	case 0x73: EA=S-13; 	m6809_ICount--;   break;
+	case 0x74: EA=S-12; 	m6809_ICount--;   break;
+	case 0x75: EA=S-11; 	m6809_ICount--;   break;
+	case 0x76: EA=S-10; 	m6809_ICount--;   break;
+	case 0x77: EA=S-9;		m6809_ICount--;   break;
+	case 0x78: EA=S-8;		m6809_ICount--;   break;
+	case 0x79: EA=S-7;		m6809_ICount--;   break;
+	case 0x7a: EA=S-6;		m6809_ICount--;   break;
+	case 0x7b: EA=S-5;		m6809_ICount--;   break;
+	case 0x7c: EA=S-4;		m6809_ICount--;   break;
+	case 0x7d: EA=S-3;		m6809_ICount--;   break;
+	case 0x7e: EA=S-2;		m6809_ICount--;   break;
+	case 0x7f: EA=S-1;		m6809_ICount--;   break;
+
 
 	case 0x80: EA=X;	X++;										m6809_ICount-=2;   break;
 	case 0x81: EA=X;	X+=2;										m6809_ICount-=3;   break;
 	case 0x82: X--; 	EA=X;										m6809_ICount-=2;   break;
 	case 0x83: X-=2;	EA=X;										m6809_ICount-=3;   break;
 	case 0x84: EA=X;																   break;
-	case 0x85: EA=X+SIGNED(B);										m6809_ICount-=1;   break;
-	case 0x86: EA=X+SIGNED(A);										m6809_ICount-=1;   break;
+	case 0x85: EA=X+SIGNED(B);										m6809_ICount--;   break;
+	case 0x86: EA=X+SIGNED(A);										m6809_ICount--;   break;
 	case 0x87: EA=0;																   break; /*   ILLEGAL*/
-	case 0x88: IMMBYTE(EA); 	EA=X+SIGNED(EA);					m6809_ICount-=1;   break; /* this is a hack to make Vectrex work. It should be m6809_ICount-=1. Dunno where the cycle was lost :( */
+	case 0x88: IMMBYTE(EA); 	EA=X+SIGNED(EA);					m6809_ICount--;   break; /* this is a hack to make Vectrex work. It should be m6809_ICount-=1. Dunno where the cycle was lost :( */
 	case 0x89: IMMWORD(ea); 	EA+=X;								m6809_ICount-=4;   break;
 	case 0x8a: EA=0;																   break; /*   ILLEGAL*/
 	case 0x8b: EA=X+D;												m6809_ICount-=4;   break;
-	case 0x8c: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0x8c: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount--;   break;
 	case 0x8d: IMMWORD(ea); 	EA+=PC; 							m6809_ICount-=5;   break;
 	case 0x8e: EA=0;																   break; /*   ILLEGAL*/
 	case 0x8f: IMMWORD(ea); 										m6809_ICount-=5;   break;
@@ -1020,14 +1022,14 @@ INLINE void fetch_effective_address( void )
 	case 0xa2: Y--; 	EA=Y;										m6809_ICount-=2;   break;
 	case 0xa3: Y-=2;	EA=Y;										m6809_ICount-=3;   break;
 	case 0xa4: EA=Y;																   break;
-	case 0xa5: EA=Y+SIGNED(B);										m6809_ICount-=1;   break;
-	case 0xa6: EA=Y+SIGNED(A);										m6809_ICount-=1;   break;
+	case 0xa5: EA=Y+SIGNED(B);										m6809_ICount--;   break;
+	case 0xa6: EA=Y+SIGNED(A);										m6809_ICount--;   break;
 	case 0xa7: EA=0;																   break; /*   ILLEGAL*/
-	case 0xa8: IMMBYTE(EA); 	EA=Y+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xa8: IMMBYTE(EA); 	EA=Y+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xa9: IMMWORD(ea); 	EA+=Y;								m6809_ICount-=4;   break;
 	case 0xaa: EA=0;																   break; /*   ILLEGAL*/
 	case 0xab: EA=Y+D;												m6809_ICount-=4;   break;
-	case 0xac: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xac: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xad: IMMWORD(ea); 	EA+=PC; 							m6809_ICount-=5;   break;
 	case 0xae: EA=0;																   break; /*   ILLEGAL*/
 	case 0xaf: IMMWORD(ea); 										m6809_ICount-=5;   break;
@@ -1054,14 +1056,14 @@ INLINE void fetch_effective_address( void )
 	case 0xc2: U--; 			EA=U;								m6809_ICount-=2;   break;
 	case 0xc3: U-=2;			EA=U;								m6809_ICount-=3;   break;
 	case 0xc4: EA=U;																   break;
-	case 0xc5: EA=U+SIGNED(B);										m6809_ICount-=1;   break;
-	case 0xc6: EA=U+SIGNED(A);										m6809_ICount-=1;   break;
+	case 0xc5: EA=U+SIGNED(B);										m6809_ICount--;   break;
+	case 0xc6: EA=U+SIGNED(A);										m6809_ICount--;   break;
 	case 0xc7: EA=0;																   break; /*ILLEGAL*/
-	case 0xc8: IMMBYTE(EA); 	EA=U+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xc8: IMMBYTE(EA); 	EA=U+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xc9: IMMWORD(ea); 	EA+=U;								m6809_ICount-=4;   break;
 	case 0xca: EA=0;																   break; /*ILLEGAL*/
 	case 0xcb: EA=U+D;												m6809_ICount-=4;   break;
-	case 0xcc: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xcc: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xcd: IMMWORD(ea); 	EA+=PC; 							m6809_ICount-=5;   break;
 	case 0xce: EA=0;																   break; /*ILLEGAL*/
 	case 0xcf: IMMWORD(ea); 										m6809_ICount-=5;   break;
@@ -1088,14 +1090,14 @@ INLINE void fetch_effective_address( void )
 	case 0xe2: S--; 	EA=S;										m6809_ICount-=2;   break;
 	case 0xe3: S-=2;	EA=S;										m6809_ICount-=3;   break;
 	case 0xe4: EA=S;																   break;
-	case 0xe5: EA=S+SIGNED(B);										m6809_ICount-=1;   break;
-	case 0xe6: EA=S+SIGNED(A);										m6809_ICount-=1;   break;
+	case 0xe5: EA=S+SIGNED(B);										m6809_ICount--;   break;
+	case 0xe6: EA=S+SIGNED(A);										m6809_ICount--;   break;
 	case 0xe7: EA=0;																   break; /*ILLEGAL*/
-	case 0xe8: IMMBYTE(EA); 	EA=S+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xe8: IMMBYTE(EA); 	EA=S+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xe9: IMMWORD(ea); 	EA+=S;								m6809_ICount-=4;   break;
 	case 0xea: EA=0;																   break; /*ILLEGAL*/
 	case 0xeb: EA=S+D;												m6809_ICount-=4;   break;
-	case 0xec: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount-=1;   break;
+	case 0xec: IMMBYTE(EA); 	EA=PC+SIGNED(EA);					m6809_ICount--;   break;
 	case 0xed: IMMWORD(ea); 	EA+=PC; 							m6809_ICount-=5;   break;
 	case 0xee: EA=0;																   break;  /*ILLEGAL*/
 	case 0xef: IMMWORD(ea); 										m6809_ICount-=5;   break;
@@ -1120,7 +1122,6 @@ INLINE void fetch_effective_address( void )
 }
 
 
-
 /**************************************************************************
  * Generic set_info
  **************************************************************************/
@@ -1131,7 +1132,7 @@ static void m6809_set_info(UINT32 state, union cpuinfo *info)
 	{
 		/* --- the following bits of info are set as 64-bit signed integers --- */
 		case CPUINFO_INT_INPUT_STATE + M6809_IRQ_LINE:	set_irq_line(M6809_IRQ_LINE, info->i);	break;
-		case CPUINFO_INT_INPUT_STATE + M6809_FIRQ_LINE:	set_irq_line(M6809_FIRQ_LINE, info->i); break;
+		case CPUINFO_INT_INPUT_STATE + M6809_FIRQ_LINE: set_irq_line(M6809_FIRQ_LINE, info->i); break;
 		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:	set_irq_line(INPUT_LINE_NMI, info->i);	break;
 
 		case CPUINFO_INT_PC:
@@ -1147,7 +1148,7 @@ static void m6809_set_info(UINT32 state, union cpuinfo *info)
 		case CPUINFO_INT_REGISTER + M6809_DP:			DP = info->i;							break;
 
 		/* --- the following bits of info are set as pointers to data or functions --- */
-		case CPUINFO_PTR_IRQ_CALLBACK:					m6809.irq_callback = info->irqcallback;			break;
+		case CPUINFO_PTR_IRQ_CALLBACK:					m6809.irq_callback = info->irqcallback; 		break;
 	}
 }
 
@@ -1166,24 +1167,24 @@ void m6809_get_info(UINT32 state, union cpuinfo *info)
 		case CPUINFO_INT_INPUT_LINES:					info->i = 2;							break;
 		case CPUINFO_INT_DEFAULT_IRQ_VECTOR:			info->i = 0;							break;
 		case CPUINFO_INT_ENDIANNESS:					info->i = CPU_IS_BE;					break;
-		case CPUINFO_INT_CLOCK_DIVIDER:					info->i = 1;							break;
-		case CPUINFO_INT_MIN_INSTRUCTION_BYTES:			info->i = 1;							break;
-		case CPUINFO_INT_MAX_INSTRUCTION_BYTES:			info->i = 4;							break;
+		case CPUINFO_INT_CLOCK_DIVIDER: 				info->i = 1;							break;
+		case CPUINFO_INT_MIN_INSTRUCTION_BYTES: 		info->i = 1;							break;
+		case CPUINFO_INT_MAX_INSTRUCTION_BYTES: 		info->i = 4;							break;
 		case CPUINFO_INT_MIN_CYCLES:					info->i = 2;							break;
 		case CPUINFO_INT_MAX_CYCLES:					info->i = 19;							break;
 
-		case CPUINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 8;					break;
+		case CPUINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM: info->i = 8;					break;
 		case CPUINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM: info->i = 16;					break;
 		case CPUINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM: info->i = 0;					break;
 		case CPUINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-		case CPUINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA: 	info->i = 0;					break;
-		case CPUINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA: 	info->i = 0;					break;
+		case CPUINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
+		case CPUINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA:	info->i = 0;					break;
 		case CPUINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;					break;
-		case CPUINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO: 		info->i = 0;					break;
-		case CPUINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO: 		info->i = 0;					break;
+		case CPUINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;					break;
+		case CPUINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:		info->i = 0;					break;
 
 		case CPUINFO_INT_INPUT_STATE + M6809_IRQ_LINE:	info->i = m6809.irq_state[M6809_IRQ_LINE]; break;
-		case CPUINFO_INT_INPUT_STATE + M6809_FIRQ_LINE:	info->i = m6809.irq_state[M6809_FIRQ_LINE]; break;
+		case CPUINFO_INT_INPUT_STATE + M6809_FIRQ_LINE: info->i = m6809.irq_state[M6809_FIRQ_LINE]; break;
 		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:	info->i = m6809.nmi_state;			break;
 
 		case CPUINFO_INT_PREVIOUSPC:					info->i = PPC;						break;
@@ -1201,38 +1202,38 @@ void m6809_get_info(UINT32 state, union cpuinfo *info)
 		case CPUINFO_INT_REGISTER + M6809_DP:			info->i = DP;							break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
-		case CPUINFO_PTR_SET_INFO:						info->setinfo = m6809_set_info;				break;
+		case CPUINFO_PTR_SET_INFO:						info->setinfo = m6809_set_info; 			break;
 		case CPUINFO_PTR_GET_CONTEXT:					info->getcontext = m6809_get_context;			break;
 		case CPUINFO_PTR_SET_CONTEXT:					info->setcontext = m6809_set_context;			break;
 		case CPUINFO_PTR_INIT:							info->init = m6809_init;					break;
-		case CPUINFO_PTR_RESET:							info->reset = m6809_reset;					break;
+		case CPUINFO_PTR_RESET: 						info->reset = m6809_reset;					break;
 		case CPUINFO_PTR_EXIT:							info->exit = m6809_exit;					break;
 		case CPUINFO_PTR_EXECUTE:						info->execute = m6809_execute;				break;
 		case CPUINFO_PTR_BURN:							info->burn = NULL;						break;
-		case CPUINFO_PTR_DISASSEMBLE:					info->disassemble = m6809_dasm;					break;
-		case CPUINFO_PTR_IRQ_CALLBACK:					info->irqcallback = m6809.irq_callback;			break;
+		case CPUINFO_PTR_DISASSEMBLE:					info->disassemble = m6809_dasm; 				break;
+		case CPUINFO_PTR_IRQ_CALLBACK:					info->irqcallback = m6809.irq_callback; 		break;
 		case CPUINFO_PTR_INSTRUCTION_COUNTER:			info->icount = &m6809_ICount;				break;
-		case CPUINFO_PTR_REGISTER_LAYOUT:				info->p = m6809_reg_layout;				break;
-		case CPUINFO_PTR_WINDOW_LAYOUT:					info->p = m6809_win_layout;				break;
+		case CPUINFO_PTR_REGISTER_LAYOUT:				info->p = m6809_reg_layout; 			break;
+		case CPUINFO_PTR_WINDOW_LAYOUT: 				info->p = m6809_win_layout; 			break;
 
 		/* --- the following bits of info are returned as NULL-terminated strings --- */
 		case CPUINFO_STR_NAME:							strcpy(info->s = cpuintrf_temp_str(), "M6809"); break;
 		case CPUINFO_STR_CORE_FAMILY:					strcpy(info->s = cpuintrf_temp_str(), "Motorola 6809"); break;
 		case CPUINFO_STR_CORE_VERSION:					strcpy(info->s = cpuintrf_temp_str(), "1.1"); break;
-		case CPUINFO_STR_CORE_FILE:						strcpy(info->s = cpuintrf_temp_str(), __FILE__); break;
+		case CPUINFO_STR_CORE_FILE: 					strcpy(info->s = cpuintrf_temp_str(), __FILE__); break;
 		case CPUINFO_STR_CORE_CREDITS:					strcpy(info->s = cpuintrf_temp_str(), "Copyright (C) John Butler 1997"); break;
 
 		case CPUINFO_STR_FLAGS:
 			sprintf(info->s = cpuintrf_temp_str(), "%c%c%c%c%c%c%c%c",
 				m6809.cc & 0x80 ? 'E':'.',
 				m6809.cc & 0x40 ? 'F':'.',
-                m6809.cc & 0x20 ? 'H':'.',
-                m6809.cc & 0x10 ? 'I':'.',
-                m6809.cc & 0x08 ? 'N':'.',
-                m6809.cc & 0x04 ? 'Z':'.',
-                m6809.cc & 0x02 ? 'V':'.',
-                m6809.cc & 0x01 ? 'C':'.');
-            break;
+				m6809.cc & 0x20 ? 'H':'.',
+				m6809.cc & 0x10 ? 'I':'.',
+				m6809.cc & 0x08 ? 'N':'.',
+				m6809.cc & 0x04 ? 'Z':'.',
+				m6809.cc & 0x02 ? 'V':'.',
+				m6809.cc & 0x01 ? 'C':'.');
+			break;
 
 		case CPUINFO_STR_REGISTER + M6809_PC:			sprintf(info->s = cpuintrf_temp_str(), "PC:%04X", m6809.pc.w.l); break;
 		case CPUINFO_STR_REGISTER + M6809_S:			sprintf(info->s = cpuintrf_temp_str(), "S:%04X", m6809.s.w.l); break;
@@ -1250,13 +1251,13 @@ void m6809_get_info(UINT32 state, union cpuinfo *info)
 /**************************************************************************
  * CPU-specific set_info
  **************************************************************************/
-
+#if (HAS_M6809E)
 void m6809e_get_info(UINT32 state, union cpuinfo *info)
 {
 	switch (state)
 	{
 		/* --- the following bits of info are returned as 64-bit signed integers --- */
-		case CPUINFO_INT_CLOCK_DIVIDER:					info->i = 4;							break;
+		case CPUINFO_INT_CLOCK_DIVIDER: 				info->i = 4;							break;
 
 		/* --- the following bits of info are returned as NULL-terminated strings --- */
 		case CPUINFO_STR_NAME:							strcpy(info->s = cpuintrf_temp_str(), "M6809E"); break;
@@ -1266,3 +1267,4 @@ void m6809e_get_info(UINT32 state, union cpuinfo *info)
 			break;
 	}
 }
+#endif

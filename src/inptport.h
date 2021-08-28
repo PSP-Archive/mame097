@@ -29,7 +29,8 @@ extern "C" {
  *************************************/
 
 #define MAX_INPUT_PORTS		30
-#define MAX_PLAYERS			8
+#define MAX_PLAYERS			2
+//8
 
 #define IP_ACTIVE_HIGH		0x00000000
 #define IP_ACTIVE_LOW		0xffffffff
@@ -59,12 +60,12 @@ enum
 	IPG_UI = 0,
 	IPG_PLAYER1,
 	IPG_PLAYER2,
-	IPG_PLAYER3,
-	IPG_PLAYER4,
-	IPG_PLAYER5,
-	IPG_PLAYER6,
-	IPG_PLAYER7,
-	IPG_PLAYER8,
+//	IPG_PLAYER3,
+//	IPG_PLAYER4,
+//	IPG_PLAYER5,
+//	IPG_PLAYER6,
+//	IPG_PLAYER7,
+//	IPG_PLAYER8,
 	IPG_OTHER,
 	IPG_TOTAL_GROUPS,
 	IPG_INVALID
@@ -245,22 +246,22 @@ enum
 	IPT_UI_TOGGLE_CROSSHAIR,
 
 	/* additional OSD-specified UI port types (up to 16) */
-	IPT_OSD_1,
-	IPT_OSD_2,
-	IPT_OSD_3,
-	IPT_OSD_4,
-	IPT_OSD_5,
-	IPT_OSD_6,
-	IPT_OSD_7,
-	IPT_OSD_8,
-	IPT_OSD_9,
-	IPT_OSD_10,
-	IPT_OSD_11,
-	IPT_OSD_12,
-	IPT_OSD_13,
-	IPT_OSD_14,
-	IPT_OSD_15,
-	IPT_OSD_16,
+//	IPT_OSD_1,
+//	IPT_OSD_2,
+//	IPT_OSD_3,
+//	IPT_OSD_4,
+//	IPT_OSD_5,
+//	IPT_OSD_6,
+//	IPT_OSD_7,
+//	IPT_OSD_8,
+//	IPT_OSD_9,
+//	IPT_OSD_10,
+//	IPT_OSD_11,
+//	IPT_OSD_12,
+//	IPT_OSD_13,
+//	IPT_OSD_14,
+//	IPT_OSD_15,
+//	IPT_OSD_16,
 
 	/* other meaning not mapped to standard defaults */
 	IPT_OTHER,
@@ -331,20 +332,20 @@ enum
 	STR_Tilt,
 	STR_Version,
 	STR_Region,
-	STR_International,
+//	STR_International,
 	STR_Japan,
 	STR_USA,
-	STR_Europe,
-	STR_Asia,
-	STR_World,
-	STR_Hispanic,
+//	STR_Europe,
+//	STR_Asia,
+//	STR_World,
+//	STR_Hispanic,
 	STR_Language,
 	STR_English,
 	STR_Japanese,
-	STR_German,
-	STR_French,
-	STR_Italian,
-	STR_Spanish,
+//	STR_German,
+//	STR_French,
+//	STR_Italian,
+//	STR_Spanish,
 	STR_Very_Easy,
 	STR_Easiest,
 	STR_Easier,
@@ -670,7 +671,9 @@ int port_type_to_group(int type, int player);
 int port_tag_to_index(const char *tag);
 read8_handler port_tag_to_handler8(const char *tag);
 read16_handler port_tag_to_handler16(const char *tag);
+#if (0==PSP_NO_CPU32)
 read32_handler port_tag_to_handler32(const char *tag);
+#endif //(0==PSP_NO_CPU32)
 const char *input_port_name(const struct InputPort *in);
 input_seq_t *input_port_seq(struct InputPort *in, int seqtype);
 input_seq_t *input_port_default_seq(int type, int player, int seqtype);
@@ -752,6 +755,7 @@ READ16_HANDLER( input_port_27_word_r );
 READ16_HANDLER( input_port_28_word_r );
 READ16_HANDLER( input_port_29_word_r );
 
+#if (0==PSP_NO_CPU32)
 READ32_HANDLER( input_port_0_dword_r );
 READ32_HANDLER( input_port_1_dword_r );
 READ32_HANDLER( input_port_2_dword_r );
@@ -782,7 +786,7 @@ READ32_HANDLER( input_port_26_dword_r );
 READ32_HANDLER( input_port_27_dword_r );
 READ32_HANDLER( input_port_28_dword_r );
 READ32_HANDLER( input_port_29_dword_r );
-
+#endif //(0==PSP_NO_CPU32)
 
 #ifdef __cplusplus
 }

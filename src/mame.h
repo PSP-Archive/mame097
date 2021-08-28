@@ -26,7 +26,7 @@
 extern char build_version[];
 extern int gbPriorityBitmapIsDirty;
 
-
+#define CALL_MAME_DEBUG ;
 
 /***************************************************************************
 
@@ -34,10 +34,12 @@ extern int gbPriorityBitmapIsDirty;
 
 ***************************************************************************/
 
-#define MAX_GFX_ELEMENTS 32
-#define MAX_MEMORY_REGIONS 32
+//#define MAX_GFX_ELEMENTS 32
+//#define MAX_MEMORY_REGIONS 32
 
-#ifndef MESS
+#define MAX_GFX_ELEMENTS   16
+#define MAX_MEMORY_REGIONS 16
+
 #define APPNAME					"MAME"
 #define APPLONGNAME				"M.A.M.E."
 #define CAPGAMENOUN				"GAME"
@@ -45,17 +47,6 @@ extern int gbPriorityBitmapIsDirty;
 #define GAMENOUN				"game"
 #define GAMESNOUN				"games"
 #define HISTORYNAME				"History"
-#else
-#define APPNAME					"MESS"
-#define APPLONGNAME				"M.E.S.S."
-#define CAPGAMENOUN				"SYSTEM"
-#define CAPSTARTGAMENOUN		"System"
-#define GAMENOUN				"system"
-#define GAMESNOUN				"systems"
-#define HISTORYNAME				"System Info"
-#endif
-
-
 
 /***************************************************************************
 
@@ -149,22 +140,14 @@ struct RunningMachine
 
 
 	/* ----- debugger-related information ----- */
-
 	/* bitmap where the debugger is rendered */
-	struct mame_bitmap *	debug_bitmap;
-
+//	struct mame_bitmap *	debug_bitmap;
 	/* pen array for the debugger, analagous to the pens above */
-	pen_t *					debug_pens;
-
+//	pen_t *					debug_pens;
 	/* colortable mapped through the pens, as for the game */
-	pen_t *					debug_remapped_colortable;
-
+//	pen_t *					debug_remapped_colortable;
 	/* font used by the debugger */
-	struct GfxElement *		debugger_font;
-
-#ifdef MESS
-	struct IODevice *devices;
-#endif /* MESS */
+//	struct GfxElement *		debugger_font;
 };
 
 
@@ -175,81 +158,64 @@ struct RunningMachine
 
 ***************************************************************************/
 
-#define ARTWORK_USE_ALL			(~0)
-#define ARTWORK_USE_NONE		(0)
-#define ARTWORK_USE_BACKDROPS	0x01
-#define ARTWORK_USE_OVERLAYS	0x02
-#define ARTWORK_USE_BEZELS		0x04
+//#define ARTWORK_USE_ALL			(~0)
+//#define ARTWORK_USE_NONE		(0)
+//#define ARTWORK_USE_BACKDROPS	0x01
+//#define ARTWORK_USE_OVERLAYS	0x02
+//#define ARTWORK_USE_BEZELS		0x04
 
-
-#ifdef MESS
-/*
- * This is a filename and it's associated peripheral type
- * The types are defined in device.h (IO_...)
- */
-struct ImageFile
-{
-	const char *name;
-	iodevice_t type;
-};
-#endif /* MESS */
 
 /* The host platform should fill these fields with the preferences specified in the GUI */
 /* or on the commandline. */
 struct GameOptions
 {
-	mame_file *	record;			/* handle to file to record input to */
-	mame_file *	playback;		/* handle to file to playback input from */
-	mame_file *	language_file;	/* handle to file for localization */
-
-	int		mame_debug;		/* 1 to enable debugging */
-	int		cheat;			/* 1 to enable cheating */
 	int 	gui_host;		/* 1 to tweak some UI-related things for better GUI integration */
-	int 	skip_disclaimer;	/* 1 to skip the disclaimer screen at startup */
-	int 	skip_gameinfo;		/* 1 to skip the game info screen at startup */
-	int 	skip_warnings;		/* 1 to skip the warnings screen at startup */
-	int 	skip_validitychecks;		/* 1 to skip the validity checks at startup */
 
 	int		samplerate;		/* sound sample playback rate, in Hz */
 	int		use_samples;	/* 1 to enable external .wav samples */
-	int		use_filter;		/* 1 to enable FIR filter on final mixer output */
+//	int		use_filter;		/* 1 to enable FIR filter on final mixer output */
 
-	float	brightness;		/* brightness of the display */
-	float	pause_bright;		/* additional brightness when in pause */
-	float	gamma;			/* gamma correction of the display */
-	int		vector_width;	/* requested width for vector games; 0 means default (640) */
-	int		vector_height;	/* requested height for vector games; 0 means default (480) */
 	int		ui_orientation;	/* orientation of the UI relative to the video */
 
-	int		beam;			/* vector beam width */
-	float	vector_flicker;	/* vector beam flicker effect control */
-	float	vector_intensity;/* vector beam intensity */
-	int		translucency;	/* 1 to enable translucency on vectors */
-	int 	antialias;		/* 1 to enable antialiasing on vectors */
-
-	int		use_artwork;	/* bitfield indicating which artwork pieces to use */
-	int		artwork_res;	/* 1 for 1x game scaling, 2 for 2x */
-	int		artwork_crop;	/* 1 to crop artwork to the game screen */
 
 	const char * savegame;	/* string representing a savegame to load; if one length then interpreted as a character */
-	int     crc_only;       /* specify if only CRC should be used as checksum */
+//	int     crc_only;       /* specify if only CRC should be used as checksum */
 	char *	bios;			/* specify system bios (if used), 0 is default */
 
-	int		debug_width;	/* requested width of debugger bitmap */
-	int		debug_height;	/* requested height of debugger bitmap */
-	int		debug_depth;	/* requested depth of debugger bitmap */
+	mame_file *	record;			/* handle to file to record input to */
+	mame_file *	playback;		/* handle to file to playback input from */
+//	mame_file *	language_file;	/* handle to file for localization */
 
 	const char *controller;	/* controller-specific cfg to load */
 
-	#ifdef MESS
-	UINT32 ram;
-	struct ImageFile image_files[32];
-	int		image_count;
-	int disable_normal_ui;
+//	int		mame_debug;		/* 1 to enable debugging */
+	UINT8	cheat;			/* 1 to enable cheating */
+	UINT8 	skip_disclaimer;	/* 1 to skip the disclaimer screen at startup */
+	UINT8 	skip_gameinfo;		/* 1 to skip the game info screen at startup */
+	UINT8 	skip_warnings;		/* 1 to skip the warnings screen at startup */
+	UINT8 	skip_validitychecks;		/* 1 to skip the validity checks at startup */
 
-	int		min_width;		/* minimum width for the display */
-	int		min_height;		/* minimum height for the display */
-#endif /* MESS */
+
+//	float	brightness;		/* brightness of the display */
+//	float	pause_bright;	/* additional brightness when in pause */
+//	float	gamma;			/* gamma correction of the display */
+//	int		vector_width;	/* requested width for vector games; 0 means default (640) */
+//	int		vector_height;	/* requested height for vector games; 0 means default (480) */
+
+//	int		beam;			/* vector beam width */
+//	float	vector_flicker;	/* vector beam flicker effect control */
+//	float	vector_intensity;/* vector beam intensity */
+//	int		translucency;	/* 1 to enable translucency on vectors */
+//	int 	antialias;		/* 1 to enable antialiasing on vectors */
+
+//	int		use_artwork;	/* bitfield indicating which artwork pieces to use */
+//	int		artwork_res;	/* 1 for 1x game scaling, 2 for 2x */
+//	int		artwork_crop;	/* 1 to crop artwork to the game screen */
+
+//	int		debug_width;	/* requested width of debugger bitmap */
+//	int		debug_height;	/* requested height of debugger bitmap */
+//	int		debug_depth;	/* requested depth of debugger bitmap */
+
 };
 
 
@@ -289,16 +255,16 @@ struct mame_display
 	UINT32 *				game_palette_dirty;		/* points to game's dirty palette bitfield */
 	struct rectangle 		game_visible_area;		/* the game's visible area */
 	float					game_refresh_rate;		/* refresh rate */
-	void *					vector_dirty_pixels;	/* points to X,Y pairs of dirty vector pixels */
+//	void *					vector_dirty_pixels;	/* points to X,Y pairs of dirty vector pixels */
 
 	/* debugger bitmap and display information */
-	struct mame_bitmap *	debug_bitmap;			/* points to debugger's bitmap */
-	const rgb_t *			debug_palette;			/* points to debugger's palette */
-	UINT32					debug_palette_entries;	/* number of palette entries in debugger's palette */
-	UINT8					debug_focus;			/* set to 1 if debugger has focus */
+//	struct mame_bitmap *	debug_bitmap;			/* points to debugger's bitmap */
+//	const rgb_t *			debug_palette;			/* points to debugger's palette */
+//	UINT32					debug_palette_entries;	/* number of palette entries in debugger's palette */
+//	UINT8					debug_focus;			/* set to 1 if debugger has focus */
 
 	/* other misc information */
-	UINT8					led_state;				/* bitfield of current LED states */
+//	UINT8					led_state;				/* bitfield of current LED states */
 };
 
 
@@ -311,9 +277,9 @@ struct mame_display
 
 struct performance_info
 {
-	double					game_speed_percent;		/* % of full speed */
-	double					frames_per_second;		/* actual rendered fps */
-	int						vector_updates_last_second; /* # of vector updates last second */
+	float					game_speed_percent;		/* % of full speed */
+	float					frames_per_second;		/* actual rendered fps */
+//	int						vector_updates_last_second; /* # of vector updates last second */
 	int						partial_updates_this_frame; /* # of partial updates last frame */
 };
 

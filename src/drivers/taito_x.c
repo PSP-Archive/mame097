@@ -313,7 +313,7 @@ static int banknum = -1;
 
 static void reset_sound_region(void)
 {
-	cpu_setbank( 2, memory_region(REGION_CPU2) + (banknum * 0x4000) + 0x10000 );
+	memory_set_bankptr( 2, memory_region(REGION_CPU2) + (banknum * 0x4000) + 0x10000 );
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
@@ -1056,7 +1056,7 @@ static struct YM2151interface ym2151_interface =
 static MACHINE_DRIVER_START( superman )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz? */
 	MDRV_CPU_PROGRAM_MAP(superman_readmem,superman_writemem)
 	MDRV_CPU_VBLANK_INT(irq6_line_hold,1)
 
@@ -1093,7 +1093,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( daisenpu )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz? */
 	MDRV_CPU_PROGRAM_MAP(daisenpu_readmem,daisenpu_writemem)
 	MDRV_CPU_VBLANK_INT(irq2_line_hold,1)
 
@@ -1127,7 +1127,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( gigandes )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz? */
 	MDRV_CPU_PROGRAM_MAP(gigandes_readmem,gigandes_writemem)
 	MDRV_CPU_VBLANK_INT(irq2_line_hold,1)
 
@@ -1164,7 +1164,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( ballbros )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz? */
 	MDRV_CPU_PROGRAM_MAP(ballbros_readmem,ballbros_writemem)
 	MDRV_CPU_VBLANK_INT(irq2_line_hold,1)
 

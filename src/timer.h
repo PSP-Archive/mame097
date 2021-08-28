@@ -19,8 +19,10 @@ extern "C" {
     mame_time definitions
 -------------------------------------------------*/
 
-#define MAX_SUBSECONDS				((subseconds_t)1000000000 * (subseconds_t)1000000000)
-#define MAX_SECONDS					((seconds_t)1000000000)
+//#define MAX_SUBSECONDS				((subseconds_t)1000000000 * (subseconds_t)1000000000)
+//#define MAX_SECONDS					((seconds_t)1000000000)
+  #define MAX_SUBSECONDS				((subseconds_t)1000000 * (subseconds_t)1000000)
+  #define MAX_SECONDS					((seconds_t)1000000)
 
 #define SUBSECONDS_TO_DOUBLE(x)		((double)(x) * (1.0 / (double)MAX_SUBSECONDS))
 #define DOUBLE_TO_SUBSECONDS(x)		((subseconds_t)((x) * (double)MAX_SUBSECONDS))
@@ -56,7 +58,7 @@ extern double sec_to_cycles[];
 #define TIME_IN_SEC(s)        ((double)(s))
 #define TIME_IN_MSEC(ms)      ((double)(ms) * (1.0 / 1000.0))
 #define TIME_IN_USEC(us)      ((double)(us) * (1.0 / 1000000.0))
-#define TIME_IN_NSEC(us)      ((double)(us) * (1.0 / 1000000000.0))
+//#define TIME_IN_NSEC(us)      ((double)(us) * (1.0 / 1000000000.0))
 
 // c must be greater then 1000pF to use this function
 // r is in Ohms.  c is in Farads.

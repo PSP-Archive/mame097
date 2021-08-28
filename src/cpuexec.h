@@ -110,9 +110,11 @@ READ8_HANDLER( watchdog_reset_r );
 WRITE16_HANDLER( watchdog_reset16_w );
 READ16_HANDLER( watchdog_reset16_r );
 
+#if (0==PSP_NO_CPU32)
 /* 32-bit watchdog read/write handlers */
 WRITE32_HANDLER( watchdog_reset32_w );
 READ32_HANDLER( watchdog_reset32_r );
+#endif //(0==PSP_NO_CPU32)
 
 /* watchdog enabled when TRUE */
 /* timer is set to reset state when going from disable to enable */

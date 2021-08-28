@@ -16,7 +16,7 @@ TC0080VCO seems bugged, various sigsevs after games have been reset.
 
 sizeof() s in the TC0110PCR section are probably unnecessary?
 
-                ---
+				---
 
 PC080SN
 -------
@@ -28,10 +28,10 @@ it had a variant with added rowscroll capability.)
 Standard memory layout (two 64x64 tilemaps with 8x8 tiles)
 
 0000-3fff BG
-4000-41ff BG rowscroll      (only verified to exist on Topspeed)
+4000-41ff BG rowscroll		(only verified to exist on Topspeed)
 4200-7fff unknown/unused?
-8000-bfff FG    (FG/BG layer order fixed per game; Topspeed has BG on top)
-c000-c1ff FG rowscroll      (only verified to exist on Topspeed)
+8000-bfff FG	(FG/BG layer order fixed per game; Topspeed has BG on top)
+c000-c1ff FG rowscroll		(only verified to exist on Topspeed)
 c200-ffff unknown/unused?
 
 Double width memory layout (two 128x64 tilemaps with 8x8 tiles)
@@ -53,68 +53,68 @@ Control registers
 002-003 FG scroll X
 
 +0x50000 control word (written infrequently, only 2 bits used)
-       ---------------x flip screen
-       ----------x----- 0x20 poked here in Topspeed init, followed
-                        by zero (Darius does the same).
+	   ---------------x flip screen
+	   ----------x----- 0x20 poked here in Topspeed init, followed
+						by zero (Darius does the same).
 
 
 
 PC090OJ
 -------
 
-        Information from Raine (todo: reformat)
+		Information from Raine (todo: reformat)
 
-        OBJECT RAM
-        ----------
+		OBJECT RAM
+		----------
 
-        - 8 bytes/sprite
-        - 256 sprites (0x800 bytes)
-        - First sprite has *highest* priority
+		- 8 bytes/sprite
+		- 256 sprites (0x800 bytes)
+		- First sprite has *highest* priority
 
-        -----+--------+-------------------------
-        Byte | Bit(s) | Use
-        -----+76543210+-------------------------
-          0  |.x......| Flip Y Axis
-          0  |x.......| Flip X Axis
-          1  |....xxxx| Colour Bank
-          2  |.......x| Sprite Y
-          3  |xxxxxxxx| Sprite Y
-          4  |...xxxxx| Sprite Tile
-          5  |xxxxxxxx| Sprite Tile
-          6  |.......x| Sprite X
-          7  |xxxxxxxx| Sprite X
-        -----+--------+-------------------------
+		-----+--------+-------------------------
+		Byte | Bit(s) | Use
+		-----+76543210+-------------------------
+		  0  |.x......| Flip Y Axis
+		  0  |x.......| Flip X Axis
+		  1  |....xxxx| Colour Bank
+		  2  |.......x| Sprite Y
+		  3  |xxxxxxxx| Sprite Y
+		  4  |...xxxxx| Sprite Tile
+		  5  |xxxxxxxx| Sprite Tile
+		  6  |.......x| Sprite X
+		  7  |xxxxxxxx| Sprite X
+		-----+--------+-------------------------
 
-        SPRITE CONTROL
-        --------------
+		SPRITE CONTROL
+		--------------
 
-        - Maze of Flott [603D MASK] 201C 200B 200F
-        - Earth Joker 001C
-        - Cadash 0011 0013 0010 0000
+		- Maze of Flott [603D MASK] 201C 200B 200F
+		- Earth Joker 001C
+		- Cadash 0011 0013 0010 0000
 
-        -----+--------+-------------------------
-        Byte | Bit(s) | Use
-        -----+76543210+-------------------------
-          0  |.......x| ?
-          0  |......x.| Write Acknowledge?
-          0  |..xxxx..| Colour Bank Offset
-          0  |xx......| Unused
-          1  |...xxxxx| Unused
-          1  |..x.....| BG1:Sprite Priority
-          1  |.x......| Priority?
-          1  |x.......| Unused
-        -----+--------+-------------------------
+		-----+--------+-------------------------
+		Byte | Bit(s) | Use
+		-----+76543210+-------------------------
+		  0  |.......x| ?
+		  0  |......x.| Write Acknowledge?
+		  0  |..xxxx..| Colour Bank Offset
+		  0  |xx......| Unused
+		  1  |...xxxxx| Unused
+		  1  |..x.....| BG1:Sprite Priority
+		  1  |.x......| Priority?
+		  1  |x.......| Unused
+		-----+--------+-------------------------
 
-        OLD SPRITE CONTROL (RASTAN TYPE)
-        --------------------------------
+		OLD SPRITE CONTROL (RASTAN TYPE)
+		--------------------------------
 
-        -----+--------+-------------------------
-        Byte | Bit(s) | Use
-        -----+76543210+-------------------------
-          1  |.......x| BG1:Sprite Priority?
-          1  |......x.| Write Acknowledge?
-          1  |xxx.....| Colour Bank Offset
-        -----+--------+-------------------------
+		-----+--------+-------------------------
+		Byte | Bit(s) | Use
+		-----+76543210+-------------------------
+		  1  |.......x| BG1:Sprite Priority?
+		  1  |......x.| Write Acknowledge?
+		  1  |xxx.....| Colour Bank Offset
+		-----+--------+-------------------------
 
 
 
@@ -128,17 +128,17 @@ for both tilemaps and motion objects.
 There are two 64x64 tilemaps with 16x16 tiles; the optional
 front tilemap is 64x64 with 8x8 tiles.
 
-00000-00fff gfx data for FG0        (lo 2 bits per pixel)
-01000-01fff FG0 (64x64)             (two tilenums per word, no color bits)
-02000-0bfff chain ram               (sprite tile mapping/colors)
+00000-00fff gfx data for FG0		(lo 2 bits per pixel)
+01000-01fff FG0 (64x64) 			(two tilenums per word, no color bits)
+02000-0bfff chain ram				(sprite tile mapping/colors)
 0c000-0dfff BG0 tile numbers (64x64)
 0e000-0ffff BG1 tile numbers (64x64)
-10000-10fff gfx data for FG0        (hi bit per pixel: Ainferno proves not 4bpp)
+10000-10fff gfx data for FG0		(hi bit per pixel: Ainferno proves not 4bpp)
 11000-11fff unknown / unused ?
-12000-1bfff chain ram               (sprite tile mapping/colors)
+12000-1bfff chain ram				(sprite tile mapping/colors)
 1c000-1dfff BG0 color / flip bits (64x64)
 1e000-1ffff BG1 color / flip bits (64x64)
-20000-203ff BG0 rowscroll           (see Dleague title screen *)
+20000-203ff BG0 rowscroll			(see Dleague title screen *)
 20400-207ff spriteram
 20800-2080f control registers
 
@@ -159,8 +159,8 @@ pitcher bowls, and I think it's a coding error. Log it and see.]
 Control registers
 
 000-001 ----xx---------- screen invert
-        ------xx-------- unknown (always set)
-        ---------------- any others ???
+		------xx-------- unknown (always set)
+		---------------- any others ???
 
 002-003 BG0 scroll X  (0x3ff is the tilemap span)
 004-005 BG1 scroll X
@@ -170,7 +170,7 @@ Control registers
 00c-00d BG0 zoom (hi byte=X, lo byte=Y *)
 00e-00f BG1 zoom (hi byte=X, lo byte=Y *)
 
-[* X zoom normal=0x3f   Y zoom normal=0x7f]
+[* X zoom normal=0x3f	Y zoom normal=0x7f]
 
 All we know is that as y zoom gets bigger the magnification grows:
 this seems to be the only zoom feature actually used in the games.
@@ -217,17 +217,17 @@ Control registers
 008-009 BG1 scroll Y
 00a-00b FG0 scroll Y
 00c-00d ---------------x BG0 disable
-        --------------x- BG1 disable
-        -------------x-- FG0 disable
-        ------------x--- change priority order from BG0-BG1-FG0 to BG1-BG0-FG0
-        -----------x---- double width tilemaps + different memory map
-                              (cameltru and all the multi-screen games)
-        ----------x----- unknown (set in most of the TaitoZ games and Cadash)
+		--------------x- BG1 disable
+		-------------x-- FG0 disable
+		------------x--- change priority order from BG0-BG1-FG0 to BG1-BG0-FG0
+		-----------x---- double width tilemaps + different memory map
+							  (cameltru and all the multi-screen games)
+		----------x----- unknown (set in most of the TaitoZ games and Cadash)
 00e-00f ---------------x flip screen
-        ----------x----- this TC0100SCN is subsidiary [= not the main one]
-                              (Multi-screen games only. Could it mean: "write
-                               through what is written into main TC0100SCN" ?)
-        --x------------- unknown (thunderfox)
+		----------x----- this TC0100SCN is subsidiary [= not the main one]
+							  (Multi-screen games only. Could it mean: "write
+							   through what is written into main TC0100SCN" ?)
+		--x------------- unknown (thunderfox)
 
 
 Colscroll [standard layout]
@@ -334,26 +334,26 @@ one has priority, but I'm not sure of that either.
 It seems the chip accepts three inputs from three different sources, and
 each one of them can declare to have four different priority levels.
 
-000 Top two bits indicate special blend mode (see taito_f2.c).  Other bits unused?
+000 Top two bits indicate special blend mode (see taito_f2.c).	Other bits unused?
 001 in games with a roz layer, this is the roz palette bank (bottom 6 bits
-    affect roz color, top 2 bits affect priority)
+	affect roz color, top 2 bits affect priority)
 002 unknown
 003 unknown
 
-004 ----xxxx \       priority level 0 (usually FG1 if present)
-    xxxx---- | Input priority level 1 (usually FG0)
-005 ----xxxx |   #1  priority level 2 (usually BG0)
-    xxxx---- /       priority level 3 (usually BG1)
+004 ----xxxx \		 priority level 0 (usually FG1 if present)
+	xxxx---- | Input priority level 1 (usually FG0)
+005 ----xxxx |	 #1  priority level 2 (usually BG0)
+	xxxx---- /		 priority level 3 (usually BG1)
 
-006 ----xxxx \       priority level 0 (usually sprites with top color bits 00)
-    xxxx---- | Input priority level 1 (usually sprites with top color bits 01)
-007 ----xxxx |   #2  priority level 2 (usually sprites with top color bits 10)
-    xxxx---- /       priority level 3 (usually sprites with top color bits 11)
+006 ----xxxx \		 priority level 0 (usually sprites with top color bits 00)
+	xxxx---- | Input priority level 1 (usually sprites with top color bits 01)
+007 ----xxxx |	 #2  priority level 2 (usually sprites with top color bits 10)
+	xxxx---- /		 priority level 3 (usually sprites with top color bits 11)
 
-008 ----xxxx \       priority level 0 (e.g. roz layer if top bits of register 001 are 00)
-    xxxx---- | Input priority level 1 (e.g. roz layer if top bits of register 001 are 01)
-009 ----xxxx |   #3  priority level 2 (e.g. roz layer if top bits of register 001 are 10)
-    xxxx---- /       priority level 3 (e.g. roz layer if top bits of register 001 are 11)
+008 ----xxxx \		 priority level 0 (e.g. roz layer if top bits of register 001 are 00)
+	xxxx---- | Input priority level 1 (e.g. roz layer if top bits of register 001 are 01)
+009 ----xxxx |	 #3  priority level 2 (e.g. roz layer if top bits of register 001 are 10)
+	xxxx---- /		 priority level 3 (e.g. roz layer if top bits of register 001 are 11)
 
 00a unused
 00b unused
@@ -431,13 +431,13 @@ unknown.]
 
 Bg layers tile word layout
 
-+0x00   %yx..bbbb cccccccc      b=control bits(?) c=color .=unused(?)
-+0x02   tilenum
++0x00	%yx..bbbb cccccccc		b=control bits(?) c=color .=unused(?)
++0x02	tilenum
 [y=yflip x=xflip b=unknown seen in Metalb]
 
 Control registers
 
-000-001 BG0 x scroll    (layer priority order is definable)
+000-001 BG0 x scroll	(layer priority order is definable)
 002-003 BG1 x scroll
 004-005 BG2 x scroll
 006-007 BG3 x scroll
@@ -445,45 +445,45 @@ Control registers
 00a-00b BG1 y scroll
 00c-00d BG2 y scroll
 00e-00f BG3 y scroll
-010-011 BG0 zoom        (high byte = X zoom, low byte = Y zoom,
-012-013 BG1 zoom         compression is allowed on Y axis only)
+010-011 BG0 zoom		(high byte = X zoom, low byte = Y zoom,
+012-013 BG1 zoom		 compression is allowed on Y axis only)
 014-015 BG2 zoom
 016-017 BG3 zoom
 018-019 Text layer x scroll
 01a-01b Text layer y scroll
 01c-01d Unused (not written)
 01e-01f Layer Control register
-        x-------    Double width tilemaps (4 bg tilemaps become 64x32, and the
-                    memory layout changes). Slapshot changes this on the fly.
-        -x------    Flip screen
-        --x-----    unknown
+		x-------	Double width tilemaps (4 bg tilemaps become 64x32, and the
+					memory layout changes). Slapshot changes this on the fly.
+		-x------	Flip screen
+		--x-----	unknown
 
-                Set in Metalb init by whether a byte in prg ROM $7fffe is zero.
-                Subsequently Metalb changes it for some screen layer layouts.
-                Footchmp clears it, Hthero sets it [then both leave it alone].
-                Deadconx code at $10e2 is interesting, with possible values of:
-                0x0, 0x20, 0x40, 0x60 poked in (via ram buffer) to control reg,
-                dependent on byte in prg ROM $7fffd and whether screen is flipped.
+				Set in Metalb init by whether a byte in prg ROM $7fffe is zero.
+				Subsequently Metalb changes it for some screen layer layouts.
+				Footchmp clears it, Hthero sets it [then both leave it alone].
+				Deadconx code at $10e2 is interesting, with possible values of:
+				0x0, 0x20, 0x40, 0x60 poked in (via ram buffer) to control reg,
+				dependent on byte in prg ROM $7fffd and whether screen is flipped.
 
-        ---xxx--    BG layer priority order
+		---xxx--	BG layer priority order
 
-        ...000..    0  1  2  3
-        ...001..    1  2  3  0  (no evidence of this)
-        ...010..    2  3  0  1  (no evidence of this)
-        ...011..    3  0  1  2
-        ...100..    3  2  1  0
-        ...101..    2  1  0  3  [Gunbustr attract and Metalb (c) screen]
-        ...110..    1  0  3  2  (no evidence of this)
-        ...111..    0  3  2  1
+		...000..	0  1  2  3
+		...001..	1  2  3  0	(no evidence of this)
+		...010..	2  3  0  1	(no evidence of this)
+		...011..	3  0  1  2
+		...100..	3  2  1  0
+		...101..	2  1  0  3	[Gunbustr attract and Metalb (c) screen]
+		...110..	1  0  3  2	(no evidence of this)
+		...111..	0  3  2  1
 
-        ------x-    BG3 row zoom enable
-        -------x    BG2 row zoom enable
+		------x-	BG3 row zoom enable
+		-------x	BG2 row zoom enable
 
-020-021 BG0 dx  (provides extra precision to x-scroll, only changed with xscroll)
+020-021 BG0 dx	(provides extra precision to x-scroll, only changed with xscroll)
 022-023 BG1 dx
 024-025 BG2 dx
 026-027 BG3 dx
-028-029 BG0 dy  (provides extra precision to y-scroll, only changed with yscroll)
+028-029 BG0 dy	(provides extra precision to y-scroll, only changed with yscroll)
 02a-02b BG1 dy
 02c-02d BG2 dy
 02e-02f BG3 dy
@@ -544,11 +544,132 @@ Newer version of the I/O chip ?
 
 ***************************************************************************/
 
+
+
 #include "driver.h"
 #include "state.h"
 #include "taitoic.h"
 
 #define TOPSPEED_ROAD_COLORS
+
+
+#if (1==darius1)
+	/* taito darius 1 */
+	#define have_PC080SN 1
+#else
+	#define have_PC080SN 0
+#endif //
+
+
+#if (1==taitoAX)
+	/* taito asuka */
+	#define have_PC090OJ 1
+#else
+	#define have_PC090OJ 0
+#endif //
+
+
+#if (1==taitoF1)
+	/* metal black */
+	#define have_TC0480SCP 1
+//#elif (1==taitoF2)
+//	#define have_TC0480SCP 0
+//#elif (1==taitoZ)
+//	/*less*/
+//	#define have_TC0480SCP 0
+#else
+	#define have_TC0480SCP 0
+#endif //
+
+
+#if (1==taitoZ)
+	/* taito Z system */
+	#define have_TC0150ROD 1
+#else
+	#define have_TC0150ROD 0
+#endif //
+
+
+
+#if (1==taitoF1)
+	/* taito F1 system */
+	#define have_TC0100SCN 1
+#elif (1==taitoF2)
+	/* taito F2 system */
+	#define have_TC0100SCN 1
+#elif (1==taitoZ)
+	/* taito Z system */
+	#define have_TC0100SCN 1
+#elif (1==taitoAX)
+	/* taito asuka */
+	#define have_TC0100SCN 1
+#else
+	#define have_TC0100SCN 0
+#endif //
+
+/* palette ram */
+#if (1==taitoF1)
+	/* taito F1 system */
+	#define have_TC0110PCR 1
+#elif (1==taitoF2)
+	/* taito F2 system */
+	#define have_TC0110PCR 1
+#elif (1==taitoZ)
+	/* taito Z system */
+	#define have_TC0110PCR 1
+#elif (1==taitoAX)
+	/* taito asuka */
+	#define have_TC0110PCR 1
+#else
+	#define have_TC0110PCR 0
+#endif //
+
+
+#define have_TC0280GRD 0
+
+#if (1==taitoF1)
+	/* taito F2 system */
+	#define have_TC0360PRI 1
+	/* metal black */
+#elif (1==taitoF2)
+	/* taito F2 system */
+	#define have_TC0360PRI 1
+#else
+	#define have_TC0360PRI 0
+#endif //
+
+
+#define have_TC0430GRW 0
+#define have_TC0080VCO 0
+
+
+
+#if (1==taitoZ)
+	/* taito Z system */
+	#define have_TC0220IOC 1
+#elif (1==taitoAX)
+	/* taito asuka */
+	#define have_TC0220IOC 1
+#elif (1==taitoF2)
+	/* taito F2 system */
+	#define have_TC0220IOC 1
+#else
+	#define have_TC0220IOC 0
+#endif //
+
+#if (1==taitoF1)
+	/* taito F1 system */
+	#define have_TC0510NIO 1
+	/* metal black */
+#elif (1==taitoF2)
+	/* taito F2 system */
+	#define have_TC0510NIO 1
+	/* gunfront */
+#else
+	#define have_TC0510NIO 0
+#endif //
+
+#define have_TC0640FIO 0
 
 
 /* These scanline drawing routines lifted from Taito F3: optimise / merge ? */
@@ -560,13 +681,13 @@ Newer version of the I/O chip ?
 	int xadv = 1;															\
 	if (orientation)														\
 	{																		\
-		int dy = (type *)bitmap->line[1] - (type *)bitmap->line[0];			\
-		int tx = x, ty = y;													\
-		if ((orientation) & ORIENTATION_FLIP_X)								\
+		int dy = (type *)bitmap->line[1] - (type *)bitmap->line[0]; 		\
+		int tx = x, ty = y; 												\
+		if ((orientation) & ORIENTATION_FLIP_X) 							\
 			tx = bitmap->width - 1 - tx;									\
-		if ((orientation) & ORIENTATION_FLIP_Y)								\
+		if ((orientation) & ORIENTATION_FLIP_Y) 							\
 			ty = bitmap->height - 1 - ty;									\
-		/* can't lookup line because it may be negative! */					\
+		/* can't lookup line because it may be negative! */ 				\
 		dsti = (type *)((type *)bitmapi->line[0] + dy * ty) + tx;			\
 		dstp = (UINT8 *)((UINT8 *)bitmapp->line[0] + dy * ty / sizeof(type)) + tx;	\
 	}
@@ -621,6 +742,7 @@ static int has_write_handler(int cpunum, write16_handler handler)
 	return 0;
 }
 
+#if (1==have_TC0100SCN)
 int number_of_TC0100SCN(void)
 {
 	int has_chip[3] = {0,0,0};
@@ -648,8 +770,9 @@ int number_of_TC0100SCN(void)
 
 	return (has_chip[0] + has_chip[1] + has_chip[2]);
 }
+#endif //(1==have_TC0100SCN)
 
-
+#if (1==have_TC0110PCR)
 int has_TC0110PCR(void)
 {
 	return	has_write_handler(0, TC0110PCR_word_w) ||
@@ -667,53 +790,58 @@ int has_third_TC0110PCR(void)
 {
 	return	has_write_handler(0, TC0110PCR_step1_word_2_w);
 }
+#endif //(1==have_TC0110PCR)
 
-
+#if (1==have_TC0150ROD)
 int has_TC0150ROD(void)
 {
 	return	has_write_handler(0, TC0150ROD_word_w) ||
 			has_write_handler(1, TC0150ROD_word_w) ||
 			has_write_handler(2, TC0150ROD_word_w);
 }
+#endif //(1==have_TC0150ROD)
 
-
+#if (1==have_TC0280GRD)
 int has_TC0280GRD(void)
 {
 	return	has_write_handler(0, TC0280GRD_word_w);
 }
+#endif //(1==have_TC0280GRD)
 
-
+#if (1==have_TC0360PRI)
 int has_TC0360PRI(void)
 {
 	return	has_write_handler(0, TC0360PRI_halfword_w) ||
 			has_write_handler(0, TC0360PRI_halfword_swap_w);
 }
+#endif //(1==have_TC0360PRI)
 
 
+#if (1==have_TC0430GRW)
 int has_TC0430GRW(void)
 {
 	return	has_write_handler(0, TC0430GRW_word_w);
 }
+#endif //(1==have_TC0430GRW)
 
-
+#if (1==have_TC0480SCP)
 int has_TC0480SCP(void)
 {
 	return	has_write_handler(0, TC0480SCP_word_w);
 }
-
+#endif //(1==have_TC0480SCP)
 
 
 /***************************************************************************/
-
-
+#if (1==have_PC080SN)
 
 #define PC080SN_RAM_SIZE 0x10000
 #define PC080SN_MAX_CHIPS 2
 static int PC080SN_chips;
 
-static data16_t PC080SN_ctrl[PC080SN_MAX_CHIPS][8];
+static UINT16 PC080SN_ctrl[PC080SN_MAX_CHIPS][8];
 
-static data16_t *PC080SN_ram[PC080SN_MAX_CHIPS],
+static UINT16 *PC080SN_ram[PC080SN_MAX_CHIPS],
 				*PC080SN_bg_ram[PC080SN_MAX_CHIPS][2],
 				*PC080SN_bgscroll_ram[PC080SN_MAX_CHIPS][2];
 
@@ -724,7 +852,7 @@ static struct tilemap *PC080SN_tilemap[PC080SN_MAX_CHIPS][2];
 static int PC080SN_bg_gfx[PC080SN_MAX_CHIPS];
 static int PC080SN_yinvert,PC080SN_dblwidth;
 
-INLINE void common_get_PC080SN_bg_tile_info(data16_t *ram,int gfxnum,int tile_index)
+INLINE void common_get_PC080SN_bg_tile_info(UINT16 *ram,int gfxnum,int tile_index)
 {
 	UINT16 code,attr;
 
@@ -746,7 +874,7 @@ INLINE void common_get_PC080SN_bg_tile_info(data16_t *ram,int gfxnum,int tile_in
 			TILE_FLIPYX((attr & 0xc000) >> 14))
 }
 
-INLINE void common_get_PC080SN_fg_tile_info(data16_t *ram,int gfxnum,int tile_index)
+INLINE void common_get_PC080SN_fg_tile_info(UINT16 *ram,int gfxnum,int tile_index)
 {
 	UINT16 code,attr;
 
@@ -860,8 +988,8 @@ int PC080SN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int y_invert
 				!PC080SN_tilemap[i][1])
 			return 1;
 
-		PC080SN_bg_ram[i][0]       = PC080SN_ram[i] + 0x0000 /2;
-		PC080SN_bg_ram[i][1]       = PC080SN_ram[i] + 0x8000 /2;
+		PC080SN_bg_ram[i][0]	   = PC080SN_ram[i] + 0x0000 /2;
+		PC080SN_bg_ram[i][1]	   = PC080SN_ram[i] + 0x8000 /2;
 		PC080SN_bgscroll_ram[i][0] = PC080SN_ram[i] + 0x4000 /2;
 		PC080SN_bgscroll_ram[i][1] = PC080SN_ram[i] + 0xc000 /2;
 		memset(PC080SN_ram[i],0,PC080SN_RAM_SIZE);
@@ -911,7 +1039,7 @@ READ16_HANDLER( PC080SN_word_1_r )
 	return PC080SN_ram[1][offset];
 }
 
-static void PC080SN_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void PC080SN_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	int oldword = PC080SN_ram[chip][offset];
 
@@ -945,7 +1073,7 @@ WRITE16_HANDLER( PC080SN_word_1_w )
 	PC080SN_word_w(1,offset,data,mem_mask);
 }
 
-static void PC080SN_xscroll_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void PC080SN_xscroll_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	COMBINE_DATA(&PC080SN_ctrl[chip][offset]);
 
@@ -963,7 +1091,7 @@ static void PC080SN_xscroll_word_w(int chip,offs_t offset,data16_t data,UINT32 m
 	}
 }
 
-static void PC080SN_yscroll_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void PC080SN_yscroll_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	COMBINE_DATA(&PC080SN_ctrl[chip][offset+2]);
 
@@ -983,7 +1111,7 @@ static void PC080SN_yscroll_word_w(int chip,offs_t offset,data16_t data,UINT32 m
 	}
 }
 
-static void PC080SN_ctrl_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void PC080SN_ctrl_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	COMBINE_DATA(&PC080SN_ctrl[chip][offset+4]);
 
@@ -1094,13 +1222,13 @@ UINT16 topspeed_get_road_pixel_color(UINT16 pixel,UINT16 color)
 	{
 		pixel += 10;	/* Tunnel colors */
 		road_body_color += 10;
-		off_road_color  += 10;
+		off_road_color	+= 10;
 	}
 	else
 	{
 		/* Unsure which way round these bits go */
 		if (color &0x10)	road_body_color += 5;
-		if (color &0x02)	off_road_color  += 5;
+		if (color &0x02)	off_road_color	+= 5;
 	}
 
 	switch (pixel_type)
@@ -1135,7 +1263,7 @@ UINT16 topspeed_get_road_pixel_color(UINT16 pixel,UINT16 color)
 
 
 static void topspeed_custom_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,
-							UINT32 priority,data16_t *color_ctrl_ram)
+							UINT32 priority,UINT16 *color_ctrl_ram)
 {
 	UINT16 *dst16,*src16;
 	UINT8 *tsrc;
@@ -1149,18 +1277,18 @@ static void topspeed_custom_draw(struct mame_bitmap *bitmap,const struct rectang
 	int i,y,y_index,src_y_index,row_index;
 
 	int flip = 0;
-	int machine_flip = 0;	/* for  ROT 180 ? */
+	int machine_flip = 0;	/* for	ROT 180 ? */
 
 	int min_x = cliprect->min_x;
 	int max_x = cliprect->max_x;
 	int min_y = cliprect->min_y;
 	int max_y = cliprect->max_y;
 	int screen_width = max_x - min_x + 1;
-	int width_mask = 0x1ff;	/* underlying tilemap */
+	int width_mask = 0x1ff; /* underlying tilemap */
 
 	if (!flip)
 	{
-		sx =       PC080SN_bgscrollx[chip][layer] + 16 - PC080SN_xoffs;
+		sx =	   PC080SN_bgscrollx[chip][layer] + 16 - PC080SN_xoffs;
 		y_index =  PC080SN_bgscrolly[chip][layer] + min_y - PC080SN_yoffs;
 	}
 	else	// never used
@@ -1230,17 +1358,16 @@ void PC080SN_tilemap_draw(struct mame_bitmap *bitmap,const struct rectangle *cli
 	tilemap_draw(bitmap,cliprect,PC080SN_tilemap[chip][layer],flags,priority);
 }
 
-void PC080SN_tilemap_draw_special(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,UINT32 priority,data16_t *ram)
+void PC080SN_tilemap_draw_special(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,UINT32 priority,UINT16 *ram)
 {
 	topspeed_custom_draw(bitmap,cliprect,chip,layer,flags,priority,ram);
 }
 
-
-
-
+#endif //(1==have_PC080SN)
 
 /***************************************************************************/
-
+#if (1==have_PC090OJ)
+/* taito asuka */
 
 #define PC090OJ_RAM_SIZE 0x4000
 #define PC090OJ_ACTIVE_RAM_SIZE 0x800
@@ -1255,10 +1382,10 @@ void PC080SN_tilemap_draw_special(struct mame_bitmap *bitmap,const struct rectan
 
 */
 
-static data16_t PC090OJ_ctrl,PC090OJ_buffer,PC090OJ_gfxnum;
+static UINT16 PC090OJ_ctrl,PC090OJ_buffer,PC090OJ_gfxnum;
 UINT16 PC090OJ_sprite_ctrl;
 
-static data16_t *PC090OJ_ram,*PC090OJ_ram_buffered;
+static UINT16 *PC090OJ_ram,*PC090OJ_ram_buffered;
 
 static int PC090OJ_xoffs,PC090OJ_yoffs;
 
@@ -1287,7 +1414,7 @@ int PC090OJ_vh_start(int gfxnum,int x_offset,int y_offset,int use_buffer)
 	state_save_register_UINT16("PC090OJb", 0, "memory", PC090OJ_ram_buffered, PC090OJ_RAM_SIZE/2);
 	state_save_register_UINT16("PC090OJc", 0, "register", &PC090OJ_ctrl, 1);
 
-//  state_save_register_func_postload(PC090OJ_restore);
+//	state_save_register_func_postload(PC090OJ_restore);
 
 	return 0;
 }
@@ -1297,7 +1424,7 @@ READ16_HANDLER( PC090OJ_word_0_r )	// in case we find a game using 2...
 	return PC090OJ_ram[offset];
 }
 
-static void PC090OJ_word_w(offs_t offset,data16_t data,UINT32 mem_mask)
+static void PC090OJ_word_w(offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	COMBINE_DATA(&PC090OJ_ram[offset]);
 
@@ -1316,7 +1443,7 @@ static void PC090OJ_word_w(offs_t offset,data16_t data,UINT32 mem_mask)
 	}
 }
 
-WRITE16_HANDLER( PC090OJ_word_0_w )	// in case we find a game using 2...
+WRITE16_HANDLER( PC090OJ_word_0_w ) // in case we find a game using 2...
 {
 	PC090OJ_word_w(offset,data,mem_mask);
 }
@@ -1364,8 +1491,8 @@ void PC090OJ_draw_sprites(struct mame_bitmap *bitmap, const struct rectangle *cl
 		color = (data & 0x000f) | sprite_colbank;
 
 		code = PC090OJ_ram_buffered[offs+2] & 0x1fff;
-		x = PC090OJ_ram_buffered[offs+3] & 0x1ff;   /* mask verified with Rainbowe board */
-		y = PC090OJ_ram_buffered[offs+1] & 0x1ff;   /* mask verified with Rainbowe board */
+		x = PC090OJ_ram_buffered[offs+3] & 0x1ff;	/* mask verified with Rainbowe board */
+		y = PC090OJ_ram_buffered[offs+1] & 0x1ff;	/* mask verified with Rainbowe board */
 
 		/* treat coords as signed */
 		if (x>0x140) x -= 0x200;
@@ -1391,18 +1518,18 @@ void PC090OJ_draw_sprites(struct mame_bitmap *bitmap, const struct rectangle *cl
 				priority ? 0xfc : 0xf0);
 	}
 }
-
-
-
+#endif //(1==have_PC090OJ)
 
 /******************************************************************************/
+#if (1==have_TC0080VCO)
 
+/* taito air only */
 
 #define TC0080VCO_RAM_SIZE 0x21000
 #define TC0080VCO_CHAR_RAM_SIZE 0x2000
 #define TC0080VCO_TOTAL_CHARS 256
 
-static data16_t *TC0080VCO_ram,
+static UINT16 *TC0080VCO_ram,
 				*TC0080VCO_bg0_ram_0, *TC0080VCO_bg0_ram_1,
 				*TC0080VCO_bg1_ram_0, *TC0080VCO_bg1_ram_1,
 				*TC0080VCO_tx_ram_0,  *TC0080VCO_tx_ram_1,
@@ -1410,10 +1537,10 @@ static data16_t *TC0080VCO_ram,
 
 /* This sprite related stuff still needs to be accessed in
    vidhrdw/taito_h */
-data16_t *TC0080VCO_chain_ram_0, *TC0080VCO_chain_ram_1,
+UINT16 *TC0080VCO_chain_ram_0, *TC0080VCO_chain_ram_1,
 				*TC0080VCO_spriteram, *TC0080VCO_scroll_ram;
 
-static data16_t TC0080VCO_bg0_scrollx,TC0080VCO_bg0_scrolly,
+static UINT16 TC0080VCO_bg0_scrollx,TC0080VCO_bg0_scrolly,
 		TC0080VCO_bg1_scrollx,TC0080VCO_bg1_scrolly;
 
 static struct tilemap *TC0080VCO_tilemap[3];
@@ -1430,8 +1557,8 @@ int TC0080VCO_flipscreen = 0,TC0080VCO_has_tx;
 #if 0
 static int TC0080VCO_zoomy_conv_table[] =
 {
-/*      These are hand-tuned values...      */
-/*    +0   +1   +2   +3   +4   +5   +6   +7    +8   +9   +a   +b   +c   +d   +e   +f */
+/*		These are hand-tuned values...		*/
+/*	  +0   +1	+2	 +3   +4   +5	+6	 +7    +8	+9	 +a   +b   +c	+d	 +e   +f */
 	0x00,0x01,0x01,0x02,0x02,0x03,0x04,0x05, 0x06,0x06,0x07,0x08,0x09,0x0a,0x0a,0x0b,	/* 0x00 */
 	0x0b,0x0c,0x0c,0x0d,0x0e,0x0e,0x0f,0x10, 0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x16,
 	0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e, 0x1f,0x20,0x21,0x22,0x24,0x25,0x26,0x27,
@@ -1514,11 +1641,11 @@ static struct GfxLayout TC0080VCO_charlayout =
 	256,	/* 256 chars */
 
 // can't be 4bpp as it becomes opaque in Ainferno...
-//  4,      /* 4 bits per pixel */
+//	4,		/* 4 bits per pixel */
 //#ifdef LSB_FIRST
-//  { 0x10000*8 + 8, 0x10000*8, 8, 0 },
+//	{ 0x10000*8 + 8, 0x10000*8, 8, 0 },
 //#else
-//  { 0x10000*8, 0x10000*8 + 8, 0, 8 },
+//	{ 0x10000*8, 0x10000*8 + 8, 0, 8 },
 //#endif
 
 	3,		/* 3 bits per pixel */
@@ -1535,21 +1662,21 @@ static struct GfxLayout TC0080VCO_charlayout =
 
 void TC0080VCO_set_layer_ptrs(void)
 {
-	TC0080VCO_char_ram      = TC0080VCO_ram + 0x00000/2;	/* continues at +0x10000 */
-	TC0080VCO_tx_ram_0      = TC0080VCO_ram + 0x01000/2;
-	TC0080VCO_chain_ram_0   = TC0080VCO_ram + 0x00000/2;	/* only used from +0x2000 */
+	TC0080VCO_char_ram		= TC0080VCO_ram + 0x00000/2;	/* continues at +0x10000 */
+	TC0080VCO_tx_ram_0		= TC0080VCO_ram + 0x01000/2;
+	TC0080VCO_chain_ram_0	= TC0080VCO_ram + 0x00000/2;	/* only used from +0x2000 */
 
-	TC0080VCO_bg0_ram_0     = TC0080VCO_ram + 0x0c000/2;
-	TC0080VCO_bg1_ram_0     = TC0080VCO_ram + 0x0e000/2;
+	TC0080VCO_bg0_ram_0 	= TC0080VCO_ram + 0x0c000/2;
+	TC0080VCO_bg1_ram_0 	= TC0080VCO_ram + 0x0e000/2;
 
-	TC0080VCO_tx_ram_1      = TC0080VCO_ram + 0x11000/2;
-	TC0080VCO_chain_ram_1   = TC0080VCO_ram + 0x10000/2;	/* only used from +0x12000 */
+	TC0080VCO_tx_ram_1		= TC0080VCO_ram + 0x11000/2;
+	TC0080VCO_chain_ram_1	= TC0080VCO_ram + 0x10000/2;	/* only used from +0x12000 */
 
-	TC0080VCO_bg0_ram_1     = TC0080VCO_ram + 0x1c000/2;
-	TC0080VCO_bg1_ram_1     = TC0080VCO_ram + 0x1e000/2;
-	TC0080VCO_bgscroll_ram  = TC0080VCO_ram + 0x20000/2;
-	TC0080VCO_spriteram     = TC0080VCO_ram + 0x20400/2;
-	TC0080VCO_scroll_ram    = TC0080VCO_ram + 0x20800/2;
+	TC0080VCO_bg0_ram_1 	= TC0080VCO_ram + 0x1c000/2;
+	TC0080VCO_bg1_ram_1 	= TC0080VCO_ram + 0x1e000/2;
+	TC0080VCO_bgscroll_ram	= TC0080VCO_ram + 0x20000/2;
+	TC0080VCO_spriteram 	= TC0080VCO_ram + 0x20400/2;
+	TC0080VCO_scroll_ram	= TC0080VCO_ram + 0x20800/2;
 }
 
 void TC0080VCO_dirty_chars(void)
@@ -1587,7 +1714,7 @@ int TC0080VCO_vh_start(int gfxnum,int has_fg0,int bg_xoffs,int bg_yoffs,int bg_f
 	TC0080VCO_bg_xoffs = bg_xoffs;	/* usually 1 */
 	TC0080VCO_bg_yoffs = bg_yoffs;	/* usually 1 */
 	TC0080VCO_bg_flip_yoffs = bg_flip_yoffs;	/* usually -2 */
-	TC0080VCO_has_tx = has_fg0;	/* for debugging only */
+	TC0080VCO_has_tx = has_fg0; /* for debugging only */
 
 	TC0080VCO_tilemap[0] = tilemap_create(TC0080VCO_get_bg0_tile_info_0,tilemap_scan_rows,TILEMAP_TRANSPARENT,16,16,64,64);
 	TC0080VCO_tilemap[1] = tilemap_create(TC0080VCO_get_bg1_tile_info_0,tilemap_scan_rows,TILEMAP_TRANSPARENT,16,16,64,64);
@@ -1625,7 +1752,7 @@ int TC0080VCO_vh_start(int gfxnum,int has_fg0,int bg_xoffs,int bg_yoffs,int bg_f
 		TC0080VCO_dirty_chars();
 		state_save_register_func_postload(TC0080VCO_dirty_chars);
 
-	 	/* find first empty slot to decode gfx */
+		/* find first empty slot to decode gfx */
 		for (gfx_index = 0; gfx_index < MAX_GFX_ELEMENTS; gfx_index++)
 			if (Machine->gfx[gfx_index] == 0)
 				break;
@@ -1639,7 +1766,7 @@ int TC0080VCO_vh_start(int gfxnum,int has_fg0,int bg_xoffs,int bg_yoffs,int bg_f
 
 		/* set the color information */
 		Machine->gfx[gfx_index]->colortable = Machine->remapped_colortable;
-		Machine->gfx[gfx_index]->total_colors = 64;	// is this correct ?
+		Machine->gfx[gfx_index]->total_colors = 64; // is this correct ?
 		TC0080VCO_tx_gfx = gfx_index;
 
 		tilemap_set_scrolldx(TC0080VCO_tilemap[2],0,0);
@@ -1713,7 +1840,7 @@ WRITE16_HANDLER( TC0080VCO_word_w )
 			}
 #endif
 		}
-		else if (offset < 0x2000/2)	/* fg0 (text layer) */
+		else if (offset < 0x2000/2) /* fg0 (text layer) */
 		{
 			tilemap_mark_tile_dirty( TC0080VCO_tilemap[2],(offset &0x07ff) * 2 );
 			tilemap_mark_tile_dirty( TC0080VCO_tilemap[2],(offset &0x07ff) * 2 + 1 );
@@ -1725,9 +1852,9 @@ WRITE16_HANDLER( TC0080VCO_word_w )
 			}
 #endif
 		}
-		else if (offset < 0xc000/2)	/* chain ram */
+		else if (offset < 0xc000/2) /* chain ram */
 		{}
-		else if (offset < 0xe000/2)	/* bg0 (0) */
+		else if (offset < 0xe000/2) /* bg0 (0) */
 			tilemap_mark_tile_dirty(TC0080VCO_tilemap[0],(offset & 0xfff));
 
 		else if (offset < 0x10000/2)	/* bg1 (0) */
@@ -1804,7 +1931,7 @@ void TC0080VCO_tilemap_update(void)
 			int attr = TC0080VCO_tx_ram_0[tile_index >> 1];
 
 			/* should this be reversed in flipscreen ?? */
-			if (tile_index & 1)	/* each word has 2 chars */
+			if (tile_index & 1) /* each word has 2 chars */
 			{
 				attr = (attr &0xff);
 			}
@@ -1857,7 +1984,7 @@ static void TC0080VCO_bg0_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 		int x_index,x_step;
 
 		int flip = TC0080VCO_flipscreen;
-		int machine_flip = 0;	/* for  ROT 180 ? */
+		int machine_flip = 0;	/* for	ROT 180 ? */
 
 		int min_x = cliprect->min_x;
 		int max_x = cliprect->max_x;
@@ -1903,7 +2030,7 @@ static void TC0080VCO_bg0_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 
 		if (!flip)
 		{
-			sx =       (-TC0080VCO_scroll_ram[1] - 1) << 16;
+			sx =	   (-TC0080VCO_scroll_ram[1] - 1) << 16;
 			y_index = (( TC0080VCO_scroll_ram[3] - 1) << 16) + min_y * zoomy;
 		}
 		else
@@ -1913,8 +2040,8 @@ static void TC0080VCO_bg0_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 					- (max_x + min_x) * (zoomx-0x10000);
 
 			/* 0x130 correct for Dleague. Syvalion correct with 0x1f0.
-               min_y is 0x20 and 0x30; max_y is 0x10f and 0x1bf;
-               max_y + min_y seems a good bet... */
+			   min_y is 0x20 and 0x30; max_y is 0x10f and 0x1bf;
+			   max_y + min_y seems a good bet... */
 
 			y_index = ((-TC0080VCO_scroll_ram[3] - 2) << 16)
 					+ min_y * zoomy - (max_y + min_y) * (zoomy-0x10000);
@@ -1924,7 +2051,7 @@ static void TC0080VCO_bg0_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 
 		do
 		{
-			src_y_index = (y_index>>16) &0x3ff;	/* tilemaps are 1024 px up/down */
+			src_y_index = (y_index>>16) &0x3ff; /* tilemaps are 1024 px up/down */
 
 			/* row areas are the same in flipscreen, so we must read in reverse */
 			row_index = (src_y_index &0x1ff);
@@ -1960,14 +2087,14 @@ static void TC0080VCO_bg0_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 			}
 /***********/
 
-//          while (x_index<x_max)
-//          {
-//              *dst16++ = src16[(x_index >> 16) &width_mask];
-//              x_index += x_step;
-//          }
+//			while (x_index<x_max)
+//			{
+//				*dst16++ = src16[(x_index >> 16) &width_mask];
+//				x_index += x_step;
+//			}
 //
-//                  pdraw_scanline16(bitmap,0,y,screen_width,
-//                      scanline,0,0,rot,priority);
+//					pdraw_scanline16(bitmap,0,y,screen_width,
+//						scanline,0,0,rot,priority);
 
 /*** NEW ***/
 			if (flags & TILEMAP_IGNORE_TRANSPARENCY)
@@ -1998,7 +2125,7 @@ static void TC0080VCO_bg1_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 	zoomx = (zoom & 0xff00) >> 8;
 	zoomy =  zoom & 0x00ff;
 
-	if (zoomx == 0x3f && zoomy == 0x7f)		/* normal size */
+	if (zoomx == 0x3f && zoomy == 0x7f) 	/* normal size */
 	{
 		tilemap_draw(bitmap,cliprect,TC0080VCO_tilemap[layer],flags,priority);
 	}
@@ -2060,10 +2187,10 @@ static void TC0080VCO_bg1_tilemap_draw(struct mame_bitmap *bitmap,const struct r
 	}
 }
 
-
+/* TAITO_H & TAITO_AIR */
 void TC0080VCO_tilemap_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int layer,int flags,UINT32 priority)
 {
-	int disable = 0x00;	/* possibly layer disable bits do exist ?? */
+	int disable = 0x00; /* possibly layer disable bits do exist ?? */
 
 #if 0
 	usrintf_showmessage("layer disable = %x",disable);
@@ -2086,10 +2213,10 @@ void TC0080VCO_tilemap_draw(struct mame_bitmap *bitmap,const struct rectangle *c
 	}
 }
 
-
+#endif //(1==have_TC0080VCO)
 
 /***************************************************************************/
-
+#if (1==have_TC0100SCN)
 
 #define TC0100SCN_RAM_SIZE 0x14000	/* enough for double-width tilemaps */
 #define TC0100SCN_TOTAL_CHARS 256
@@ -2099,9 +2226,9 @@ static struct rectangle myclip;
 
 const int TC0100SCN_SINGLE_VDU = 1024;
 
-static data16_t TC0100SCN_ctrl[TC0100SCN_MAX_CHIPS][8];
+static UINT16 TC0100SCN_ctrl[TC0100SCN_MAX_CHIPS][8];
 
-static data16_t *TC0100SCN_ram[TC0100SCN_MAX_CHIPS],
+static UINT16 *TC0100SCN_ram[TC0100SCN_MAX_CHIPS],
 				*TC0100SCN_bg_ram[TC0100SCN_MAX_CHIPS],
 				*TC0100SCN_fg_ram[TC0100SCN_MAX_CHIPS],
 				*TC0100SCN_tx_ram[TC0100SCN_MAX_CHIPS],
@@ -2125,7 +2252,7 @@ static int TC0100SCN_gfxbank,TC0100SCN_chip_colbank[3],TC0100SCN_colbank[3];
 static int TC0100SCN_dblwidth[TC0100SCN_MAX_CHIPS];
 
 
-INLINE void common_get_bg0_tile_info(data16_t *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
+INLINE void common_get_bg0_tile_info(UINT16 *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
 {
 	int code,attr;
 
@@ -2147,7 +2274,7 @@ INLINE void common_get_bg0_tile_info(data16_t *ram,int gfxnum,int tile_index,int
 			TILE_FLIPYX((attr & 0xc000) >> 14))
 }
 
-INLINE void common_get_bg1_tile_info(data16_t *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
+INLINE void common_get_bg1_tile_info(UINT16 *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
 {
 	int code,attr;
 
@@ -2169,7 +2296,7 @@ INLINE void common_get_bg1_tile_info(data16_t *ram,int gfxnum,int tile_index,int
 			TILE_FLIPYX((attr & 0xc000) >> 14))
 }
 
-INLINE void common_get_tx_tile_info(data16_t *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
+INLINE void common_get_tx_tile_info(UINT16 *ram,int gfxnum,int tile_index,int colbank,int dblwidth)
 {
 	int attr = ram[tile_index];
 
@@ -2279,32 +2406,32 @@ void TC0100SCN_set_bg_tilemask(int mask)
 	TC0100SCN_bg_tilemask = mask;
 }
 
-WRITE16_HANDLER( TC0100SCN_gfxbank_w )   /* Mjnquest banks its 2 sets of scr tiles */
+WRITE16_HANDLER( TC0100SCN_gfxbank_w )	 /* Mjnquest banks its 2 sets of scr tiles */
 {
-    TC0100SCN_gfxbank = (data & 0x1);
+	TC0100SCN_gfxbank = (data & 0x1);
 }
 
 void TC0100SCN_set_layer_ptrs(int i)
 {
 	if (!TC0100SCN_dblwidth[i])
 	{
-		TC0100SCN_bg_ram[i]        = TC0100SCN_ram[i] + 0x0;
-		TC0100SCN_tx_ram[i]        = TC0100SCN_ram[i] + 0x4000 /2;
-		TC0100SCN_char_ram[i]      = TC0100SCN_ram[i] + 0x6000 /2;
-		TC0100SCN_fg_ram[i]        = TC0100SCN_ram[i] + 0x8000 /2;
+		TC0100SCN_bg_ram[i] 	   = TC0100SCN_ram[i] + 0x0;
+		TC0100SCN_tx_ram[i] 	   = TC0100SCN_ram[i] + 0x4000 /2;
+		TC0100SCN_char_ram[i]	   = TC0100SCN_ram[i] + 0x6000 /2;
+		TC0100SCN_fg_ram[i] 	   = TC0100SCN_ram[i] + 0x8000 /2;
 		TC0100SCN_bgscroll_ram[i]  = TC0100SCN_ram[i] + 0xc000 /2;
 		TC0100SCN_fgscroll_ram[i]  = TC0100SCN_ram[i] + 0xc400 /2;
 		TC0100SCN_colscroll_ram[i] = TC0100SCN_ram[i] + 0xe000 /2;
 	}
 	else
 	{
-		TC0100SCN_bg_ram[i]        = TC0100SCN_ram[i] + 0x0;
-		TC0100SCN_fg_ram[i]        = TC0100SCN_ram[i] + 0x08000 /2;
+		TC0100SCN_bg_ram[i] 	   = TC0100SCN_ram[i] + 0x0;
+		TC0100SCN_fg_ram[i] 	   = TC0100SCN_ram[i] + 0x08000 /2;
 		TC0100SCN_bgscroll_ram[i]  = TC0100SCN_ram[i] + 0x10000 /2;
 		TC0100SCN_fgscroll_ram[i]  = TC0100SCN_ram[i] + 0x10400 /2;
 		TC0100SCN_colscroll_ram[i] = TC0100SCN_ram[i] + 0x10800 /2;
-		TC0100SCN_char_ram[i]      = TC0100SCN_ram[i] + 0x11000 /2;
-		TC0100SCN_tx_ram[i]        = TC0100SCN_ram[i] + 0x12000 /2;
+		TC0100SCN_char_ram[i]	   = TC0100SCN_ram[i] + 0x11000 /2;
+		TC0100SCN_tx_ram[i] 	   = TC0100SCN_ram[i] + 0x12000 /2;
 	}
 }
 
@@ -2454,9 +2581,9 @@ int TC0100SCN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int flip_x
 		TC0100SCN_tilemap[i][2][1] = tilemap_create(TC0100SCN_get_tile_info[i][2],tilemap_scan_rows,TILEMAP_TRANSPARENT,8,8,128,32);
 
 		/* Set up clipping for multi-TC0100SCN games. We assume
-           this code won't ever affect single screen games:
-           Thundfox is the only one of those with two chips, and
-           we're safe as it uses single width tilemaps. */
+		   this code won't ever affect single screen games:
+		   Thundfox is the only one of those with two chips, and
+		   we're safe as it uses single width tilemaps. */
 
 		myclip = Machine->visible_area;
 
@@ -2525,7 +2652,7 @@ int TC0100SCN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int flip_x
 		TC0100SCN_tx_gfx[i] = gfx_index;
 
 		/* use the given gfx set for bg tiles; 2nd/3rd chips will
-           use the same gfx set */
+		   use the same gfx set */
 		gfxset_offs = i;
 		if (i > 1)
 			gfxset_offs = 1;
@@ -2540,23 +2667,23 @@ int TC0100SCN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int flip_x
 		tilemap_set_transparent_pen(TC0100SCN_tilemap[i][2][1],0);
 
 		/* Standard width tilemaps. I'm setting the optional chip #2
-           7 bits higher and 2 pixels to the left than chip #1 because
-           that's how thundfox wants it. */
+		   7 bits higher and 2 pixels to the left than chip #1 because
+		   that's how thundfox wants it. */
 
 		xd = (i == 0) ?  (-x_offset) : (-x_offset-2);
 		yd = (i == 0) ? (8-y_offset) : (1-y_offset);
 
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][0][0], xd-16, -flip_xoffs -xd-16);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][0][0], yd,    -flip_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][0][0], yd,	-flip_yoffs -yd);
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][1][0], xd-16, -flip_xoffs -xd-16);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][1][0], yd,    -flip_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][1][0], yd,	-flip_yoffs -yd);
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][2][0], xd-16, -flip_text_xoffs -xd-16-7);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][2][0], yd,    -flip_text_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][2][0], yd,	-flip_text_yoffs -yd);
 
 		/* Double width tilemaps. We must correct offsets for
-           extra chips, as MAME sees offsets from LHS of whole
-           display not from the edges of individual screens.
-           NB flipscreen tilemap offsets are based on Cameltry */
+		   extra chips, as MAME sees offsets from LHS of whole
+		   display not from the edges of individual screens.
+		   NB flipscreen tilemap offsets are based on Cameltry */
 
 		xd = -x_offset;
 		yd = 8-y_offset;
@@ -2571,11 +2698,11 @@ int TC0100SCN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int flip_x
 			if (i==2)  xd += (572-multiscrn_xoffs*2);
 		}
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][0][1], xd-16, -flip_xoffs -xd-16);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][0][1], yd,    -flip_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][0][1], yd,	-flip_yoffs -yd);
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][1][1], xd-16, -flip_xoffs -xd-16);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][1][1], yd,    -flip_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][1][1], yd,	-flip_yoffs -yd);
 		tilemap_set_scrolldx(TC0100SCN_tilemap[i][2][1], xd-16, -flip_text_xoffs -xd-16-7);
-		tilemap_set_scrolldy(TC0100SCN_tilemap[i][2][1], yd,    -flip_text_yoffs -yd);
+		tilemap_set_scrolldy(TC0100SCN_tilemap[i][2][1], yd,	-flip_text_yoffs -yd);
 
 		tilemap_set_scroll_rows(TC0100SCN_tilemap[i][0][0],512);
 		tilemap_set_scroll_rows(TC0100SCN_tilemap[i][1][0],512);
@@ -2589,7 +2716,7 @@ int TC0100SCN_vh_start(int chips,int gfxnum,int x_offset,int y_offset,int flip_x
 	TC0100SCN_gfxbank= 0;	/* Mjnquest uniquely banks tiles */
 	state_save_register_int ("TC100SCN_bank", 0, "control", &TC0100SCN_gfxbank);
 
-	TC0100SCN_bg_tilemask = 0xffff;	/* Mjnquest has 0x7fff tilemask */
+	TC0100SCN_bg_tilemask = 0xffff; /* Mjnquest has 0x7fff tilemask */
 
 	TC0100SCN_bg_col_mult = 1;	/* multiplier for when bg gfx != 4bpp */
 	TC0100SCN_tx_col_mult = 1;	/* multiplier needed when bg gfx is 6bpp */
@@ -2624,7 +2751,7 @@ READ16_HANDLER( TC0100SCN_word_2_r )
 	return TC0100SCN_ram[2][offset];
 }
 
-static void TC0100SCN_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void TC0100SCN_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	int oldword = TC0100SCN_ram[chip][offset];
 
@@ -2707,7 +2834,7 @@ READ16_HANDLER( TC0100SCN_ctrl_word_2_r )
 }
 
 
-static void TC0100SCN_ctrl_word_w(int chip,offs_t offset,data16_t data,UINT32 mem_mask)
+static void TC0100SCN_ctrl_word_w(int chip,offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	COMBINE_DATA(&TC0100SCN_ctrl[chip][offset]);
 
@@ -2789,7 +2916,7 @@ WRITE16_HANDLER( TC0100SCN_ctrl_word_2_w )
 	TC0100SCN_ctrl_word_w(2,offset,data,mem_mask);
 }
 
-
+#if (0==PSP_NO_CPU32)
 READ32_HANDLER( TC0100SCN_ctrl_long_r )
 {
 	return (TC0100SCN_ctrl_word_0_r(offset*2,0)<<16)|TC0100SCN_ctrl_word_0_r(offset*2+1,0);
@@ -2829,7 +2956,7 @@ WRITE32_HANDLER( TC0100SCN_long_w )
 		TC0100SCN_word_0_w((offset*2)+1,newword,0);
 	}
 }
-
+#endif //(0==PSP_NO_CPU32)
 
 void TC0100SCN_tilemap_update(void)
 {
@@ -2907,13 +3034,14 @@ int TC0100SCN_bottomlayer(int chip)
 {
 	return (TC0100SCN_ctrl[chip][6] & 0x8) >> 3;
 }
-
+#endif //(1==TC0100SCN)
 
 /***************************************************************************/
+#if (0==MMM_FORCE_NO_ROZ)
 
 #define TC0280GRD_RAM_SIZE 0x2000
-static data16_t TC0280GRD_ctrl[8];
-static data16_t *TC0280GRD_ram;
+static UINT16 TC0280GRD_ctrl[8];
+static UINT16 *TC0280GRD_ram;
 static struct tilemap *TC0280GRD_tilemap;
 static int TC0280GRD_gfxnum,TC0280GRD_base_color;
 
@@ -2947,19 +3075,9 @@ int TC0280GRD_vh_start(int gfxnum)
 	return 0;
 }
 
-int TC0430GRW_vh_start(int gfxnum)
-{
-	return TC0280GRD_vh_start(gfxnum);
-}
-
 READ16_HANDLER( TC0280GRD_word_r )
 {
 	return TC0280GRD_ram[offset];
-}
-
-READ16_HANDLER( TC0430GRW_word_r )
-{
-	return TC0280GRD_word_r(offset,mem_mask);
 }
 
 WRITE16_HANDLER( TC0280GRD_word_w )
@@ -2973,19 +3091,9 @@ WRITE16_HANDLER( TC0280GRD_word_w )
 	}
 }
 
-WRITE16_HANDLER( TC0430GRW_word_w )
-{
-	TC0280GRD_word_w(offset,data,mem_mask);
-}
-
 WRITE16_HANDLER( TC0280GRD_ctrl_word_w )
 {
 	COMBINE_DATA(&TC0280GRD_ctrl[offset]);
-}
-
-WRITE16_HANDLER( TC0430GRW_ctrl_word_w )
-{
-	TC0280GRD_ctrl_word_w(offset,data,mem_mask);
 }
 
 void TC0280GRD_tilemap_update(int base_color)
@@ -2997,10 +3105,33 @@ void TC0280GRD_tilemap_update(int base_color)
 	}
 }
 
+#if (0==MMM_FORCE_NO_ZOOM)
+int TC0430GRW_vh_start(int gfxnum)
+{
+	return TC0280GRD_vh_start(gfxnum);
+}
+
+READ16_HANDLER( TC0430GRW_word_r )
+{
+	return TC0280GRD_word_r(offset,mem_mask);
+}
+
+WRITE16_HANDLER( TC0430GRW_word_w )
+{
+	TC0280GRD_word_w(offset,data,mem_mask);
+}
+
+WRITE16_HANDLER( TC0430GRW_ctrl_word_w )
+{
+	TC0280GRD_ctrl_word_w(offset,data,mem_mask);
+}
+
 void TC0430GRW_tilemap_update(int base_color)
 {
 	TC0280GRD_tilemap_update(base_color);
 }
+
+#endif //(0==MMM_FORCE_NO_ZOOM)
 
 static void zoom_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int xoffset,int yoffset,UINT32 priority,int xmultiply)
 {
@@ -3038,9 +3169,10 @@ void TC0430GRW_zoom_draw(struct mame_bitmap *bitmap,const struct rectangle *clip
 {
 	zoom_draw(bitmap,cliprect,xoffset,yoffset,priority,1);
 }
-
+#endif //(0==MMM_FORCE_NO_ROZ)
 
 /***************************************************************************/
+#if (1==have_TC0360PRI)
 
 UINT8 TC0360PRI_regs[16];
 
@@ -3092,15 +3224,15 @@ if (data & 0xff)
 #endif
 	}
 }
-
+#endif //(1==have_TC0360PRI)
 
 /***************************************************************************/
-
+#if (1==have_TC0480SCP)
 
 #define TC0480SCP_RAM_SIZE 0x10000
 #define TC0480SCP_TOTAL_CHARS 256
-static data16_t TC0480SCP_ctrl[0x18];
-static data16_t *TC0480SCP_ram,
+static UINT16 TC0480SCP_ctrl[0x18];
+static UINT16 *TC0480SCP_ram,
 		*TC0480SCP_bg_ram[4],
 		*TC0480SCP_tx_ram,
 		*TC0480SCP_char_ram,
@@ -3122,7 +3254,7 @@ static int TC0480SCP_text_xoffs,TC0480SCP_text_yoffs;
 static int TC0480SCP_flip_xoffs,TC0480SCP_flip_yoffs;
 
 
-INLINE void common_get_tc0480bg_tile_info(data16_t *ram,int gfxnum,int tile_index)
+INLINE void common_get_tc0480bg_tile_info(UINT16 *ram,int gfxnum,int tile_index)
 {
 	int code = ram[2*tile_index + 1] & 0x7fff;
 	int attr = ram[2*tile_index];
@@ -3133,7 +3265,7 @@ INLINE void common_get_tc0480bg_tile_info(data16_t *ram,int gfxnum,int tile_inde
 			TILE_FLIPYX((attr & 0xc000) >> 14))
 }
 
-INLINE void common_get_tc0480tx_tile_info(data16_t *ram,int gfxnum,int tile_index)
+INLINE void common_get_tc0480tx_tile_info(UINT16 *ram,int gfxnum,int tile_index)
 {
 	int attr = ram[tile_index];
 	SET_TILE_INFO(
@@ -3195,10 +3327,10 @@ void TC0480SCP_set_layer_ptrs(void)
 {
 	if (!TC0480SCP_dblwidth)
 	{
-		TC0480SCP_bg_ram[0]	  = TC0480SCP_ram + 0x0000; //0000
-		TC0480SCP_bg_ram[1]	  = TC0480SCP_ram + 0x0800; //1000
-		TC0480SCP_bg_ram[2]	  = TC0480SCP_ram + 0x1000; //2000
-		TC0480SCP_bg_ram[3]	  = TC0480SCP_ram + 0x1800; //3000
+		TC0480SCP_bg_ram[0]   = TC0480SCP_ram + 0x0000; //0000
+		TC0480SCP_bg_ram[1]   = TC0480SCP_ram + 0x0800; //1000
+		TC0480SCP_bg_ram[2]   = TC0480SCP_ram + 0x1000; //2000
+		TC0480SCP_bg_ram[3]   = TC0480SCP_ram + 0x1800; //3000
 		TC0480SCP_bgscroll_ram[0] = TC0480SCP_ram + 0x2000; //4000
 		TC0480SCP_bgscroll_ram[1] = TC0480SCP_ram + 0x2200; //4400
 		TC0480SCP_bgscroll_ram[2] = TC0480SCP_ram + 0x2400; //4800
@@ -3212,10 +3344,10 @@ void TC0480SCP_set_layer_ptrs(void)
 	}
 	else
 	{
-		TC0480SCP_bg_ram[0]	  = TC0480SCP_ram + 0x0000; //0000
-		TC0480SCP_bg_ram[1]	  = TC0480SCP_ram + 0x1000; //2000
-		TC0480SCP_bg_ram[2]	  = TC0480SCP_ram + 0x2000; //4000
-		TC0480SCP_bg_ram[3]	  = TC0480SCP_ram + 0x3000; //6000
+		TC0480SCP_bg_ram[0]   = TC0480SCP_ram + 0x0000; //0000
+		TC0480SCP_bg_ram[1]   = TC0480SCP_ram + 0x1000; //2000
+		TC0480SCP_bg_ram[2]   = TC0480SCP_ram + 0x2000; //4000
+		TC0480SCP_bg_ram[3]   = TC0480SCP_ram + 0x3000; //6000
 		TC0480SCP_bgscroll_ram[0] = TC0480SCP_ram + 0x4000; //8000
 		TC0480SCP_bgscroll_ram[1] = TC0480SCP_ram + 0x4200; //8400
 		TC0480SCP_bgscroll_ram[2] = TC0480SCP_ram + 0x4400; //8800
@@ -3262,35 +3394,35 @@ static void TC0480SCP_restore_scroll(void)
 	tilemap_set_flip(TC0480SCP_tilemap[4][1],flip);
 
 	reg = TC0480SCP_ctrl[0];
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrollx[0] = reg;
 
 	reg = TC0480SCP_ctrl[1] + 4;
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrollx[1] = reg;
 
 	reg = TC0480SCP_ctrl[2] + 8;
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrollx[2] = reg;
 
 	reg = TC0480SCP_ctrl[3] + 12;
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrollx[3] = reg;
 
 	reg = TC0480SCP_ctrl[4];
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrolly[0] = reg;
 
 	reg = TC0480SCP_ctrl[5];
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrolly[1] = reg;
 
 	reg = TC0480SCP_ctrl[6];
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrolly[2] = reg;
 
 	reg = TC0480SCP_ctrl[7];
-	if (!flip)  reg = -reg;
+	if (!flip)	reg = -reg;
 	TC0480SCP_bgscrolly[3] = reg;
 
 	reg = TC0480SCP_ctrl[0x0c];
@@ -3394,36 +3526,36 @@ int TC0480SCP_vh_start(int gfxnum,int pixels,int x_offset,int y_offset,int text_
 		yd =  TC0480SCP_y_offs;
 
 		/* Metalb and Deadconx have minor screenflip issues: blue planet
-           is off on x axis by 1 and in Deadconx the dark blue screen
-           between stages also seems off by 1 pixel. */
+		   is off on x axis by 1 and in Deadconx the dark blue screen
+		   between stages also seems off by 1 pixel. */
 
 		/* It's not possible to get the text scrolldx calculations
-           harmonised with the other layers: xd-2, 315-xd is the
-           next valid pair:- the numbers diverge from xd, 319-xd */
+		   harmonised with the other layers: xd-2, 315-xd is the
+		   next valid pair:- the numbers diverge from xd, 319-xd */
 
 		/* Single width offsets */
-		tilemap_set_scrolldx(TC0480SCP_tilemap[0][0], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[0][0], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[1][0], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[1][0], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[2][0], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[2][0], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[3][0], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[3][0], yd,   256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[0][0], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[0][0], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[1][0], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[1][0], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[2][0], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[2][0], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[3][0], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[3][0], yd,	256-yd +TC0480SCP_flip_yoffs );
 		tilemap_set_scrolldx(TC0480SCP_tilemap[4][0], xd-3, 316-xd);	/* text layer */
-		tilemap_set_scrolldy(TC0480SCP_tilemap[4][0], yd,   256-yd);	/* text layer */
+		tilemap_set_scrolldy(TC0480SCP_tilemap[4][0], yd,	256-yd);	/* text layer */
 
 		/* Double width offsets */
-		tilemap_set_scrolldx(TC0480SCP_tilemap[0][1], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[0][1], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[1][1], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[1][1], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[2][1], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[2][1], yd,   256-yd +TC0480SCP_flip_yoffs );
-		tilemap_set_scrolldx(TC0480SCP_tilemap[3][1], xd,   320-xd +TC0480SCP_flip_xoffs );
-		tilemap_set_scrolldy(TC0480SCP_tilemap[3][1], yd,   256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[0][1], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[0][1], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[1][1], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[1][1], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[2][1], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[2][1], yd,	256-yd +TC0480SCP_flip_yoffs );
+		tilemap_set_scrolldx(TC0480SCP_tilemap[3][1], xd,	320-xd +TC0480SCP_flip_xoffs );
+		tilemap_set_scrolldy(TC0480SCP_tilemap[3][1], yd,	256-yd +TC0480SCP_flip_yoffs );
 		tilemap_set_scrolldx(TC0480SCP_tilemap[4][1], xd-3, 317-xd);	/* text layer */
-		tilemap_set_scrolldy(TC0480SCP_tilemap[4][1], yd,   256-yd);	/* text layer */
+		tilemap_set_scrolldy(TC0480SCP_tilemap[4][1], yd,	256-yd);	/* text layer */
 
 		for (i=0;i<2;i++)
 		{
@@ -3437,6 +3569,7 @@ int TC0480SCP_vh_start(int gfxnum,int pixels,int x_offset,int y_offset,int text_
 	return 0;
 }
 
+#if (0==PSP_NO_CPU32)
 READ32_HANDLER( TC0480SCP_ctrl_long_r )
 {
 	return (TC0480SCP_ctrl_word_r(offset*2,0)<<16)|TC0480SCP_ctrl_word_r(offset*2+1,0);
@@ -3478,13 +3611,14 @@ WRITE32_HANDLER( TC0480SCP_long_w )
 		TC0480SCP_word_w((offset*2)+1,newword,0);
 	}
 }
+#endif //(0==PSP_NO_CPU32)
 
 READ16_HANDLER( TC0480SCP_word_r )
 {
 	return TC0480SCP_ram[offset];
 }
 
-static void TC0480SCP_word_write(offs_t offset,data16_t data,UINT32 mem_mask)
+static void TC0480SCP_word_write(offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	int oldword = TC0480SCP_ram[offset];
 	COMBINE_DATA(&TC0480SCP_ram[offset]);
@@ -3499,7 +3633,7 @@ static void TC0480SCP_word_write(offs_t offset,data16_t data,UINT32 mem_mask)
 					0x800)][TC0480SCP_dblwidth],((offset % 0x800) / 2));
 			}
 			else if (offset < 0x6000)
-			{   /* do nothing */
+			{	/* do nothing */
 			}
 			else if (offset < 0x7000)
 			{
@@ -3520,7 +3654,7 @@ static void TC0480SCP_word_write(offs_t offset,data16_t data,UINT32 mem_mask)
 					0x1000)][TC0480SCP_dblwidth],((offset % 0x1000) / 2));
 			}
 			else if (offset < 0x6000)
-			{   /* do nothing */
+			{	/* do nothing */
 			}
 			else if (offset < 0x7000)
 			{
@@ -3546,7 +3680,7 @@ READ16_HANDLER( TC0480SCP_ctrl_word_r )
 	return TC0480SCP_ctrl[offset];
 }
 
-static void TC0480SCP_ctrl_word_write(offs_t offset,data16_t data,UINT32 mem_mask)
+static void TC0480SCP_ctrl_word_write(offs_t offset,UINT16 data,UINT32 mem_mask)
 {
 	int flip = TC0480SCP_pri_reg & 0x40;
 
@@ -3557,56 +3691,56 @@ static void TC0480SCP_ctrl_word_write(offs_t offset,data16_t data,UINT32 mem_mas
 	{
 		/* The x offsets of the four bg layers are staggered by intervals of 4 pixels */
 
-		case 0x00:   /* bg0 x */
-			if (!flip)  data = -data;
+		case 0x00:	 /* bg0 x */
+			if (!flip)	data = -data;
 			TC0480SCP_bgscrollx[0] = data;
 			break;
 
-		case 0x01:   /* bg1 x */
+		case 0x01:	 /* bg1 x */
 			data += 4;
-			if (!flip)  data = -data;
+			if (!flip)	data = -data;
 			TC0480SCP_bgscrollx[1] = data;
 			break;
 
-		case 0x02:   /* bg2 x */
+		case 0x02:	 /* bg2 x */
 			data += 8;
-			if (!flip)  data = -data;
+			if (!flip)	data = -data;
 			TC0480SCP_bgscrollx[2] = data;
 			break;
 
-		case 0x03:   /* bg3 x */
+		case 0x03:	 /* bg3 x */
 			data += 12;
-			if (!flip)  data = -data;
+			if (!flip)	data = -data;
 			TC0480SCP_bgscrollx[3] = data;
 			break;
 
-		case 0x04:   /* bg0 y */
+		case 0x04:	 /* bg0 y */
 			if (flip)  data = -data;
 			TC0480SCP_bgscrolly[0] = data;
 			break;
 
-		case 0x05:   /* bg1 y */
+		case 0x05:	 /* bg1 y */
 			if (flip)  data = -data;
 			TC0480SCP_bgscrolly[1] = data;
 			break;
 
-		case 0x06:   /* bg2 y */
+		case 0x06:	 /* bg2 y */
 			if (flip)  data = -data;
 			TC0480SCP_bgscrolly[2] = data;
 			break;
 
-		case 0x07:   /* bg3 y */
+		case 0x07:	 /* bg3 y */
 			if (flip)  data = -data;
 			TC0480SCP_bgscrolly[3] = data;
 			break;
 
-		case 0x08:   /* bg0 zoom */
-		case 0x09:   /* bg1 zoom */
-		case 0x0a:   /* bg2 zoom */
-		case 0x0b:   /* bg3 zoom */
+		case 0x08:	 /* bg0 zoom */
+		case 0x09:	 /* bg1 zoom */
+		case 0x0a:	 /* bg2 zoom */
+		case 0x0b:	 /* bg3 zoom */
 			break;
 
-		case 0x0c:   /* fg (text) x */
+		case 0x0c:	 /* fg (text) x */
 
 			/* Text layer can be offset from bg0 (e.g. Metalb) */
 			if (!flip)	data -= TC0480SCP_text_xoffs;
@@ -3616,7 +3750,7 @@ static void TC0480SCP_ctrl_word_write(offs_t offset,data16_t data,UINT32 mem_mas
 			tilemap_set_scrollx(TC0480SCP_tilemap[4][1], 0, -data);
 			break;
 
-		case 0x0d:   /* fg (text) y */
+		case 0x0d:	 /* fg (text) y */
 
 			/* Text layer can be offset from bg0 (e.g. Slapshot) */
 			if (!flip)	data -= TC0480SCP_text_yoffs;
@@ -3628,7 +3762,7 @@ static void TC0480SCP_ctrl_word_write(offs_t offset,data16_t data,UINT32 mem_mas
 
 		/* offset 0x0e unused */
 
-		case 0x0f:   /* control register */
+		case 0x0f:	 /* control register */
 		{
 			int old_width = (TC0480SCP_pri_reg &0x80) >> 7;
 			flip = (data & 0x40) ? (TILEMAP_FLIPX | TILEMAP_FLIPY) : 0;
@@ -3729,7 +3863,7 @@ void TC0480SCP_tilemap_update(void)
 
 
 /*********************************************************************
-                BG0,1 LAYER DRAW
+				BG0,1 LAYER DRAW
 
 TODO
 ----
@@ -3767,8 +3901,8 @@ Historical Issues
 static void TC0480SCP_bg01_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int layer,int flags,UINT32 priority)
 {
 	/* X-axis zoom offers expansion only: 0 = no zoom, 0xff = max
-       Y-axis zoom offers expansion/compression: 0x7f = no zoom, 0xff = max
-       (0x1a in Footchmp hiscore = shrunk) */
+	   Y-axis zoom offers expansion/compression: 0x7f = no zoom, 0xff = max
+	   (0x1a in Footchmp hiscore = shrunk) */
 
 	int zoomx = 0x10000 - (TC0480SCP_ctrl[0x08 + layer] &0xff00);
 	int zoomy = 0x10000 - (((TC0480SCP_ctrl[0x08 + layer] &0xff) - 0x7f) * 512);
@@ -3790,14 +3924,14 @@ static void TC0480SCP_bg01_draw(struct mame_bitmap *bitmap,const struct rectangl
 		int flip = TC0480SCP_pri_reg & 0x40;
 		int i,y,y_index,src_y_index,row_index;
 		int x_index,x_step;
-		int machine_flip = 0;	/* for  ROT 180 ? */
+		int machine_flip = 0;	/* for	ROT 180 ? */
 
 		UINT16 screen_width = 512; //cliprect->max_x - cliprect->min_x + 1;
 		UINT16 min_y = cliprect->min_y;
 		UINT16 max_y = cliprect->max_y;
 
 		int width_mask=0x1ff;
-		if (TC0480SCP_dblwidth)	width_mask=0x3ff;
+		if (TC0480SCP_dblwidth) width_mask=0x3ff;
 
 
 		if (!flip)
@@ -3876,7 +4010,7 @@ static void TC0480SCP_bg01_draw(struct mame_bitmap *bitmap,const struct rectangl
 
 
 /****************************************************************
-                BG2,3 LAYER DRAW
+				BG2,3 LAYER DRAW
 
 TODO
 ----
@@ -3928,18 +4062,18 @@ static void TC0480SCP_bg23_draw(struct mame_bitmap *bitmap,const struct rectangl
 	UINT32 zoomx,zoomy;
 	UINT16 scanline[512];
 	int flipscreen = TC0480SCP_pri_reg & 0x40;
-	int machine_flip = 0;	/* for  ROT 180 ? */
+	int machine_flip = 0;	/* for	ROT 180 ? */
 
 	UINT16 screen_width = 512; //cliprect->max_x - cliprect->min_x + 1;
 	UINT16 min_y = cliprect->min_y;
 	UINT16 max_y = cliprect->max_y;
 
 	int width_mask=0x1ff;
-	if (TC0480SCP_dblwidth)	width_mask=0x3ff;
+	if (TC0480SCP_dblwidth) width_mask=0x3ff;
 
 	/* X-axis zoom offers expansion only: 0 = no zoom, 0xff = max
-       Y-axis zoom offers expansion/compression: 0x7f = no zoom, 0xff = max
-       (0x1a in Footchmp hiscore = shrunk) */
+	   Y-axis zoom offers expansion/compression: 0x7f = no zoom, 0xff = max
+	   (0x1a in Footchmp hiscore = shrunk) */
 
 	zoomx = 0x10000 - (TC0480SCP_ctrl[0x08 + layer] &0xff00);
 	zoomy = 0x10000 - (((TC0480SCP_ctrl[0x08 + layer] &0xff) - 0x7f) * 512);
@@ -3979,7 +4113,7 @@ static void TC0480SCP_bg23_draw(struct mame_bitmap *bitmap,const struct rectangl
 
 		/* row areas are the same in flipscreen, so we must read in reverse */
 		row_index = src_y_index;
-		if (flipscreen)	row_index = 0x1ff - row_index;
+		if (flipscreen) row_index = 0x1ff - row_index;
 
 		if (TC0480SCP_pri_reg & (layer-1))	/* bit0 enables for BG2, bit1 for BG3 */
 			row_zoom = TC0480SCP_rowzoom_ram[layer][row_index];
@@ -4083,13 +4217,16 @@ int TC0480SCP_get_bg_priority(void)
 {
 	return TC0480SCP_bg_pri_lookup[(TC0480SCP_pri_reg &0x1c) >> 2];
 }
+#endif //(1==have_TC0480SCP)
 
 
+
+#if (1==have_TC0150ROD)
 /****************************************************************
-                            TC0150ROD
+							TC0150ROD
 ****************************************************************/
 
-static data16_t *TC0150ROD_ram;
+static UINT16 *TC0150ROD_ram;
 #define TC0150ROD_RAM_SIZE 0x2000
 
 READ16_HANDLER( TC0150ROD_word_r )
@@ -4115,69 +4252,69 @@ int TC0150ROD_vh_start(void)
 
 /******************************************************************************
 
-    Memory map for TC0150ROD
-    ------------------------
+	Memory map for TC0150ROD
+	------------------------
 
-    0000-07ff  Road A, bank 0   [all are 256 lines]
-    0800-0fff  Road A, bank 1
-    1000-17ff  Road B, bank 0
-    1800-1fff  Road B, bank 1
+	0000-07ff  Road A, bank 0	[all are 256 lines]
+	0800-0fff  Road A, bank 1
+	1000-17ff  Road B, bank 0
+	1800-1fff  Road B, bank 1
 
-    1ffe-1fff  Control word
+	1ffe-1fff  Control word
 
-               Contcirc: 08 0d   [bifurcating]
-               ChaseHQ:  00 05   [08 0d when road rejoins]
-               SCI:      09 0c   [when road bifurcates]
-               Nightstr: 08 0d   [both bifurcating and not...]
-               Aquajack: 04      [always?]
-               Dblaxle:  08 0d
+			   Contcirc: 08 0d	 [bifurcating]
+			   ChaseHQ:  00 05	 [08 0d when road rejoins]
+			   SCI: 	 09 0c	 [when road bifurcates]
+			   Nightstr: 08 0d	 [both bifurcating and not...]
+			   Aquajack: 04 	 [always?]
+			   Dblaxle:  08 0d
 
-               1000 1101
-               1001 1100
-               0000 0101
+			   1000 1101
+			   1001 1100
+			   0000 0101
 
 
-    Road ram line layout (thanks to Raine for original table)
-    --------------------
+	Road ram line layout (thanks to Raine for original table)
+	--------------------
 
-    -----+-----------------+----------------------------------------
-    Word | Bit(s)          |  Info
-    -----+-----------------+----------------------------------------
-      0  |x....... ........|  Draw background outside road edge on LHS
-      0  |.x...... ........|  Left road edge from road A has priority over road B ?? (+)
-      0  |..x..... ........|  Left road edge from road A has priority over road B ?? (*)
-      0  |...x.... ........|  Left edge/background palette entry offset  (set = +2)
-      0  |......xx xxxxxxxx|  Left edge   [pixels from road center] (@)
-         |                 |
-      1  |x....... ........|  Draw background outside road edge on RHS
-      1  |.x...... ........|  Right road edge from road A has priority over road B ??
-      1  |..x..... ........|  Right road edge from road A has priority over road B ?? (*)
-      1  |...x.... ........|  Right edge/background palette entry offset  (set = +2)
-      1  |......xx xxxxxxxx|  Right edge   [pixels from road center] (@)
-         |                 |
-      2  |x....... ........|  Set for either road a/b used lines in all games (Aquajack varies)
-      2  |.x...... ........|  Road line body from Road A has higher priority than Road B ??
-      2  |..x..... ........|  Road line body from Road A has higher priority than Road B ??
-      2  |...x.... ........|  Palette entry offset   (set = +2)
-      2  |....?... ........|  ? unknown, maybe line enable (always set?)
-      2  |.....xxx xxxxxxxx|  X Offset   [offset is inverted] (^)
-         |                 |
-      3  |xxxx.... ........|  Color Bank  (selects group of 4 palette entries used for line)
-      3  |......xx xxxxxxxx|  Road Gfx Tile number
-    -----+-----------------+-----------------------------------------
+	-----+-----------------+----------------------------------------
+	Word | Bit(s)		   |  Info
+	-----+-----------------+----------------------------------------
+	  0  |x....... ........|  Draw background outside road edge on LHS
+	  0  |.x...... ........|  Left road edge from road A has priority over road B ?? (+)
+	  0  |..x..... ........|  Left road edge from road A has priority over road B ?? (*)
+	  0  |...x.... ........|  Left edge/background palette entry offset  (set = +2)
+	  0  |......xx xxxxxxxx|  Left edge   [pixels from road center] (@)
+		 |				   |
+	  1  |x....... ........|  Draw background outside road edge on RHS
+	  1  |.x...... ........|  Right road edge from road A has priority over road B ??
+	  1  |..x..... ........|  Right road edge from road A has priority over road B ?? (*)
+	  1  |...x.... ........|  Right edge/background palette entry offset  (set = +2)
+	  1  |......xx xxxxxxxx|  Right edge   [pixels from road center] (@)
+		 |				   |
+	  2  |x....... ........|  Set for either road a/b used lines in all games (Aquajack varies)
+	  2  |.x...... ........|  Road line body from Road A has higher priority than Road B ??
+	  2  |..x..... ........|  Road line body from Road A has higher priority than Road B ??
+	  2  |...x.... ........|  Palette entry offset	 (set = +2)
+	  2  |....?... ........|  ? unknown, maybe line enable (always set?)
+	  2  |.....xxx xxxxxxxx|  X Offset	 [offset is inverted] (^)
+		 |				   |
+	  3  |xxxx.... ........|  Color Bank  (selects group of 4 palette entries used for line)
+	  3  |......xx xxxxxxxx|  Road Gfx Tile number
+	-----+-----------------+-----------------------------------------
 
-    @ size of bitmask suggested by Nightstr stage C when boss appears
-    ^ bitmask confirmed in ChaseHQ code
+	@ size of bitmask suggested by Nightstr stage C when boss appears
+	^ bitmask confirmed in ChaseHQ code
 
-    * see Nightstr "stage choice tunnel"
-    + see Contcirc track at race start
+	* see Nightstr "stage choice tunnel"
+	+ see Contcirc track at race start
 
-    These priority bits have a different meaning in road B ram. They appear to mean
-    that the relevant part of road B slips under road A. I.e. in road A they raise
-    priority, in road B they lower it.
+	These priority bits have a different meaning in road B ram. They appear to mean
+	that the relevant part of road B slips under road A. I.e. in road A they raise
+	priority, in road B they lower it.
 
-    We need a screenshot of Nightstr "stage choice tunnel" showing exactly what effect
-    happens at top and bottom of screen while tunnel bifurcates.
+	We need a screenshot of Nightstr "stage choice tunnel" showing exactly what effect
+	happens at top and bottom of screen while tunnel bifurcates.
 
 
 Priority Levels - used by this code to represent the way the TC0150ROD appears to work
@@ -4202,20 +4339,20 @@ Pixel priority levels
 Priority bits refer to: (edge a, body a, edge b, body b)
 
 Standard:  bits=(0,0,0,0)
-     edge a, body a, edge b, body b
-     1       2       3       4
+	 edge a, body a, edge b, body b
+	 1		 2		 3		 4
 
 Contcirc:  bits=(0,1,0,0) (body a up by 2)
-     edge a, edge b, body b, body a
-     1       3       4       4
+	 edge a, edge b, body b, body a
+	 1		 3		 4		 4
 
 Nightstr bottom half:  bits=(0,1,1,0) (Contcirc PLUS edge b down by 2)
-     edge b, edge a, body b, body a
-     1       1       4       4
+	 edge b, edge a, body b, body a
+	 1		 1		 4		 4
 
-Nightstr top half:  bits=(1,0,0,1) (edge b down by 1, body a up by 1)
-     edge a, edge b, body a, body b
-     1       2       3       4
+Nightstr top half:	bits=(1,0,0,1) (edge b down by 1, body a up by 1)
+	 edge a, edge b, body a, body b
+	 1		 2		 3		 4
 
 When numbers are the same, A goes on top...
 
@@ -4286,15 +4423,15 @@ lookup table from rom for the TaitoZ sprites.
 void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int y_offs,int palette_offs,int type,int road_trans,UINT32 priority)
 {
 #ifdef MAME_DEBUG
-	static int dislayer[6];	/* Road Layer toggles to help get road correct */
+	static int dislayer[6]; /* Road Layer toggles to help get road correct */
 #endif
 
 	int x_offs = 0xa7;	/* Increasing this shifts road to right */
 	UINT16 scanline[512];
 	UINT16 roada_line[512],roadb_line[512];
-	data16_t *dst16;
-	data16_t *roada,*roadb;
-	data16_t *roadgfx = (data16_t *)memory_region(REGION_GFX3);
+	UINT16 *dst16;
+	UINT16 *roada,*roadb;
+	UINT16 *roadgfx = (UINT16 *)memory_region(REGION_GFX3);
 
 	UINT16 pixel,color,gfx_word;
 	UINT16 roada_clipl,roada_clipr,roada_bodyctrl;
@@ -4368,10 +4505,10 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 #endif
 
 	/* Check which bank Road A should be drawn from */
-	if ((road_ctrl &0x100))	road_A_address += 0x400;
+	if ((road_ctrl &0x100)) road_A_address += 0x400;
 
 	/* Check which bank Road B should be drawn from */
-	if ((road_ctrl &0x400))	road_B_address += 0x400;
+	if ((road_ctrl &0x400)) road_B_address += 0x400;
 
 	do
 	{
@@ -4412,14 +4549,14 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 		if (roada_clipr    & 0x2000)	priorities[4] -= 1;
 		if (roadb_clipr    & 0x2000)	priorities[4] -= 2;
 
-		if (priorities[4] == 0)	priorities[4]++;	/* Fixes Aquajack LH edge dropping below background */
+		if (priorities[4] == 0) priorities[4]++;	/* Fixes Aquajack LH edge dropping below background */
 
 		if ((roada_bodyctrl &0x8000) || (roadb_bodyctrl &0x8000))
 			twin_road ++;
 
 		/********************************************************/
-		/*                        ROAD A                        */
-            /********************************************************/
+		/*						  ROAD A						*/
+			/********************************************************/
 
 		palroffs =(roada_clipr &0x1000) >> 11;
 		palloffs =(roada_clipl &0x1000) >> 11;
@@ -4431,10 +4568,10 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 		left_over = 0;
 
 		road_center = 0x5ff - ((-xoffset + x_offs) &0x7ff);
-		left_edge = road_center - (roada_clipl &0x3ff);		/* start pixel for left edge */
+		left_edge = road_center - (roada_clipl &0x3ff); 	/* start pixel for left edge */
 		right_edge = road_center + 1 + (roada_clipr &0x3ff);	/* start pixel for right edge */
 
-		if ((roada_clipl) || (roada_clipr))	line_needs_drawing = 1;
+		if ((roada_clipl) || (roada_clipr)) line_needs_drawing = 1;
 
 		/* Main road line is drawn from 'begin' to 'end'-1 */
 
@@ -4447,12 +4584,12 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 		end = right_edge;
 		if (end > screen_width)
 		{
-			end = screen_width;	/* can't end off edge of screen */
+			end = screen_width; /* can't end off edge of screen */
 		}
 
 		/* We need to offset start pixel we draw for road edge when edge of
-           road is partially or wholly offscreen on the opposite side
-           e.g. Contcirc attract */
+		   road is partially or wholly offscreen on the opposite side
+		   e.g. Contcirc attract */
 
 		if (right_edge < 0)
 		{
@@ -4478,7 +4615,7 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 	if (!dislayer[0])
 #endif
 		{
-		/* Is this calculation imperfect ?  (0xa0 = screen width/2) */
+		/* Is this calculation imperfect ?	(0xa0 = screen width/2) */
 		x_index = (-xoffset + x_offs + begin) &0x7ff;
 
 		roada = roada_line + screen_width - 1 - begin;
@@ -4607,12 +4744,12 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 
 
 		/********************************************************/
-		/*                        ROAD B                        */
-            /********************************************************/
+		/*						  ROAD B						*/
+		/********************************************************/
 
 		palroffs = (roadb_clipr &0x1000) >> 11;
 		palloffs = (roadb_clipl &0x1000) >> 11;
-		xoffset  =  roadb_bodyctrl &0x7ff;
+		xoffset  =	roadb_bodyctrl &0x7ff;
 		paloffs  = (roadb_bodyctrl &0x1800) >> 11;
 		colbank  = (TC0150ROD_ram[roadram2_index+3] &0xf000) >> 10;
 		road_gfx_tilenum = TC0150ROD_ram[roadram2_index+3] &0x3ff;
@@ -4630,11 +4767,11 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 // ChaseHQ glitches on right when road rejoins:
 // 0a6 and lower => 0x5ff 5fe etc.
 // 35c => 575 right road edge wraps back onto other side of screen
-// 5ff-54a     thru    5ff-331
-// b6          thru    2ce
+// 5ff-54a	   thru    5ff-331
+// b6		   thru    2ce
 // 2a6 thru 0 thru 5a7 ??
 
-		left_edge = road_center - (roadb_clipl &0x3ff);		/* start pixel for left edge */
+		left_edge = road_center - (roadb_clipl &0x3ff); 	/* start pixel for left edge */
 		right_edge = road_center + 1 + (roadb_clipr &0x3ff);	/* start pixel for right edge */
 
 		if (((roadb_clipl) || (roadb_clipr)) && ((road_ctrl &0x800) || (type==2)))
@@ -4655,12 +4792,12 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 		end = right_edge;
 		if (end > screen_width)
 		{
-			end = screen_width;	/* can't end off edge of screen */
+			end = screen_width; /* can't end off edge of screen */
 		}
 
 		/* We need to offset start pixel we draw for road edge when edge of
-           road is partially or wholly offscreen on the opposite side
-           e.g. Contcirc attract */
+		   road is partially or wholly offscreen on the opposite side
+		   e.g. Contcirc attract */
 
 		if (right_edge < 0)
 		{
@@ -4686,7 +4823,7 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 	if (!dislayer[3])
 #endif
 		{
-		/* Is this calculation imperfect ?  (0xa0 = screen width/2) */
+		/* Is this calculation imperfect ?	(0xa0 = screen width/2) */
 		x_index = (-xoffset + x_offs + begin) &0x7ff;
 
 		if (x_index > 0x3ff)	/* Second half of gfx contains the road body line */
@@ -4743,7 +4880,7 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 
 				roadb = roadb_line + screen_width - 1 - left_edge;
 
-				if (draw_top_road_line)		// rename to draw_roadb_line !?
+				if (draw_top_road_line) 	// rename to draw_roadb_line !?
 				{
 					for (i=left_edge; i>=0; i--)
 					{
@@ -4802,7 +4939,7 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 					else
 					{
 						if (type)	pixel = (pixel-1)&3;
-						*roadb-- =  (color + pixel) | pixpri;
+						*roadb-- =	(color + pixel) | pixpri;
 					}
 
 					x_index++;
@@ -4858,13 +4995,13 @@ void TC0150ROD_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,
 	}
 #endif
 }
-
+#endif //(1==have_TC0150ROD)
 /***************************************************************************/
-
+#if (1==have_TC0110PCR)
 
 static int TC0110PCR_type = 0;
 static int TC0110PCR_addr[3];
-static data16_t *TC0110PCR_ram[3];
+static UINT16 *TC0110PCR_ram[3];
 #define TC0110PCR_RAM_SIZE 0x2000
 
 
@@ -4945,7 +5082,7 @@ int TC0110PCR_vh_start(void)
 		TC0110PCR_RAM_SIZE * sizeof(*TC0110PCR_ram[0]) / 2);
 	state_save_register_func_postload(TC0110PCR_restore_cols_0);
 
-	TC0110PCR_type = 0;	/* default, xBBBBBGGGGGRRRRR */
+	TC0110PCR_type = 0; /* default, xBBBBBGGGGGRRRRR */
 
 	return 0;
 }
@@ -5027,7 +5164,7 @@ WRITE16_HANDLER( TC0110PCR_word_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette BGR value */
+			int r,g,b;	 /* data = palette BGR value */
 
 			TC0110PCR_ram[0][(TC0110PCR_addr[0])] = data & 0xffff;
 
@@ -5060,7 +5197,7 @@ WRITE16_HANDLER( TC0110PCR_step1_word_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette BGR value */
+			int r,g,b;	 /* data = palette BGR value */
 
 			TC0110PCR_ram[0][(TC0110PCR_addr[0])] = data & 0xffff;
 
@@ -5093,7 +5230,7 @@ WRITE16_HANDLER( TC0110PCR_step1_word_1_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette RGB value */
+			int r,g,b;	 /* data = palette RGB value */
 
 			TC0110PCR_ram[1][(TC0110PCR_addr[1])] = data & 0xffff;
 
@@ -5127,7 +5264,7 @@ WRITE16_HANDLER( TC0110PCR_step1_word_2_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette RGB value */
+			int r,g,b;	 /* data = palette RGB value */
 
 			TC0110PCR_ram[2][(TC0110PCR_addr[2])] = data & 0xffff;
 
@@ -5152,7 +5289,7 @@ logerror("PC %06x: warning - write %04x to third TC0110PCR offset %02x\n",active
 
 WRITE16_HANDLER( TC0110PCR_step1_rbswap_word_w )
 {
-	TC0110PCR_type = 1;	/* xRRRRRGGGGGBBBBB */
+	TC0110PCR_type = 1; /* xRRRRRGGGGGBBBBB */
 
 	switch (offset)
 	{
@@ -5163,7 +5300,7 @@ WRITE16_HANDLER( TC0110PCR_step1_rbswap_word_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette RGB value */
+			int r,g,b;	 /* data = palette RGB value */
 
 			TC0110PCR_ram[0][(TC0110PCR_addr[0])] = data & 0xffff;
 
@@ -5187,7 +5324,7 @@ logerror("PC %06x: warning - write %04x to TC0110PCR offset %02x\n",activecpu_ge
 
 WRITE16_HANDLER( TC0110PCR_step1_4bpg_word_w )
 {
-	TC0110PCR_type = 2;	/* xxxxBBBBGGGGRRRR */
+	TC0110PCR_type = 2; /* xxxxBBBBGGGGRRRR */
 
 	switch (offset)
 	{
@@ -5198,7 +5335,7 @@ WRITE16_HANDLER( TC0110PCR_step1_4bpg_word_w )
 
 		case 1:
 		{
-			int r,g,b;   /* data = palette BGR value */
+			int r,g,b;	 /* data = palette BGR value */
 
 			TC0110PCR_ram[0][(TC0110PCR_addr[0])] = data & 0xffff;
 
@@ -5220,11 +5357,12 @@ logerror("PC %06x: warning - write %04x to TC0110PCR address %02x\n",activecpu_g
 	}
 }
 
+#endif //(1==have_TC0110PCR)
 /***************************************************************************/
+#if (1==have_TC0220IOC)
 
-
-static data8_t TC0220IOC_regs[8];
-static data8_t TC0220IOC_port;
+static UINT8 TC0220IOC_regs[8];
+static UINT8 TC0220IOC_port;
 
 READ8_HANDLER( TC0220IOC_r )
 {
@@ -5359,7 +5497,7 @@ WRITE16_HANDLER( TC0220IOC_halfword_w )
 		/* qtorimon writes here the coin counters - bug? */
 		TC0220IOC_w(offset,(data >> 8) & 0xff);
 
-		if (offset)		/* ainferno writes watchdog in msb */
+		if (offset) 	/* ainferno writes watchdog in msb */
 logerror("CPU #0 PC %06x: warning - write to MSB of TC0220IOC address %02x\n",activecpu_get_pc(),offset);
 	}
 }
@@ -5381,11 +5519,11 @@ logerror("CPU #0 PC %06x: warning - write to LSB of TC0220IOC address %02x\n",ac
 	}
 }
 
-
+#endif //(1==have_TC0220IOC)
 /***************************************************************************/
+#if (1==have_TC0510NIO)
 
-
-static data8_t TC0510NIO_regs[8];
+static UINT8 TC0510NIO_regs[8];
 
 READ8_HANDLER( TC0510NIO_r )
 {
@@ -5465,10 +5603,11 @@ WRITE16_HANDLER( TC0510NIO_halfword_wordswap_w )
 	TC0510NIO_halfword_w(offset ^ 1,data,mem_mask);
 }
 
-
+#endif //(1==have_TC0510NIO)
 /***************************************************************************/
+#if (1==have_TC0640FIO)
 
-static data8_t TC0640FIO_regs[8];
+static UINT8 TC0640FIO_regs[8];
 
 READ8_HANDLER( TC0640FIO_r )
 {
@@ -5552,5 +5691,5 @@ WRITE16_HANDLER( TC0640FIO_halfword_byteswap_w )
 logerror("CPU #0 PC %06x: warning - write to LSB of TC0640FIO address %02x\n",activecpu_get_pc(),offset);
 	}
 }
-
+#endif //(1==have_TC0640FIO)
 

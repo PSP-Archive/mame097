@@ -52,9 +52,9 @@
 
 #include "osd_cpu.h"
 #include "memory.h"
-#include "mamedbg.h"
+#include "mame.h"//#include "mamedbg.h"
 #include "osdepend.h"
-#include "mame.h"
+//#include "mame.h"
 #include "common.h"
 #include "drawgfx.h"
 #include "palette.h"
@@ -317,13 +317,13 @@ void machine_remove_sound(struct InternalMachineDriver *machine, const char *tag
 
 ***************************************************************************/
 
-#define MAX_CPU 8	/* MAX_CPU is the maximum number of CPUs which cpuintrf.c */
+#define MAX_CPU 4	/*8 MAX_CPU is the maximum number of CPUs which cpuintrf.c */
 					/* can run at the same time. Currently, 8 is enough. */
 
-#define MAX_SOUND 32/* MAX_SOUND is the maximum number of sound subsystems */
+#define MAX_SOUND 16/*32 MAX_SOUND is the maximum number of sound subsystems */
 					/* which can run at the same time. Currently, 32 is enough. */
 
-#define MAX_SPEAKER 4 /* MAX_SPEAKER is the maximum number of speakers */
+#define MAX_SPEAKER 4 /*4 MAX_SPEAKER is the maximum number of speakers */
 
 struct InternalMachineDriver
 {

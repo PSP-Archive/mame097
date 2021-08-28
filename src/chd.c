@@ -1,12 +1,12 @@
 /***************************************************************************
 
-    MAME Compressed Hunks of Data file format
+	MAME Compressed Hunks of Data file format
 
 ***************************************************************************/
 
 #include "chd.h"
-#include "md5.h"
-#include "sha1.h"
+//#include "md5.h"
+//#include "sha1.h"
 #include "zlib.h"
 #include <time.h>
 
@@ -14,21 +14,21 @@
 
 /*************************************
  *
- *  Debugging
+ *	Debugging
  *
  *************************************/
 
-#define PRINTF_MAX_HUNK				(0)
+#define PRINTF_MAX_HUNK 			(0)
 
 
 
 /*************************************
  *
- *  Constants
+ *	Constants
  *
  *************************************/
 
-#define MAP_STACK_ENTRIES			512			/* max number of entries to use on the stack */
+#define MAP_STACK_ENTRIES			512 		/* max number of entries to use on the stack */
 #define MAP_ENTRY_SIZE				16			/* V3 and later */
 #define OLD_MAP_ENTRY_SIZE			8			/* V1-V2 */
 #define METADATA_HEADER_SIZE		16			/* metadata header size */
@@ -39,15 +39,15 @@
 
 #define MAP_ENTRY_TYPE_INVALID		0x0000		/* invalid type */
 #define MAP_ENTRY_TYPE_COMPRESSED	0x0001		/* standard compression */
-#define MAP_ENTRY_TYPE_UNCOMPRESSED	0x0002		/* uncompressed data */
-#define MAP_ENTRY_TYPE_MINI			0x0003		/* mini: use offset as raw data */
+#define MAP_ENTRY_TYPE_UNCOMPRESSED 0x0002		/* uncompressed data */
+#define MAP_ENTRY_TYPE_MINI 		0x0003		/* mini: use offset as raw data */
 #define MAP_ENTRY_TYPE_SELF_HUNK	0x0004		/* same as another hunk in this file */
 #define MAP_ENTRY_TYPE_PARENT_HUNK	0x0005		/* same as a hunk in the parent file */
 
-#define CHD_V1_SECTOR_SIZE			512			/* size of a "sector" in the V1 header */
+#define CHD_V1_SECTOR_SIZE			512 		/* size of a "sector" in the V1 header */
 
 #define COOKIE_VALUE				0xbaadf00d
-#define MAX_ZLIB_ALLOCS				64
+#define MAX_ZLIB_ALLOCS 			64
 
 #define END_OF_LIST_COOKIE			"EndOfListCookie"
 
@@ -57,7 +57,7 @@
 
 /*************************************
  *
- *  Macros
+ *	Macros
  *
  *************************************/
 
@@ -71,15 +71,15 @@
 
 /*************************************
  *
- *  Type definitions
+ *	Type definitions
  *
  *************************************/
 
 struct map_entry
 {
-	UINT64					offset;			/* offset within the file of the data */
+	UINT64					offset; 		/* offset within the file of the data */
 	UINT32					crc;			/* 32-bit CRC of the data */
-	UINT16					length;			/* length of the data */
+	UINT16					length; 		/* length of the data */
 	UINT16					flags;			/* misc flags */
 };
 
@@ -91,35 +91,35 @@ struct crcmap_entry
 
 struct metadata_entry
 {
-	UINT64					offset;			/* offset within the file of the header */
+	UINT64					offset; 		/* offset within the file of the header */
 	UINT64					next;			/* offset within the file of the next header */
 	UINT64					prev;			/* offset within the file of the previous header */
-	UINT32					length;			/* length of the metadata */
+	UINT32					length; 		/* length of the metadata */
 	UINT32					metatag;		/* metadata tag */
 };
 
 struct chd_file
 {
-	UINT32					cookie;			/* cookie, should equal COOKIE_VALUE */
+	UINT32					cookie; 		/* cookie, should equal COOKIE_VALUE */
 	struct chd_file *		next;			/* pointer to next file in the global list */
 
 	struct chd_interface_file *file;		/* handle to the open file */
-	struct chd_header 		header;			/* header, extracted from file */
+	struct chd_header		header; 		/* header, extracted from file */
 
-	struct chd_file *		parent;			/* pointer to parent file, or NULL */
+	struct chd_file *		parent; 		/* pointer to parent file, or NULL */
 
 	struct map_entry *		map;			/* array of map entries */
 
-	UINT8 *					cache;			/* hunk cache pointer */
+	UINT8 * 				cache;			/* hunk cache pointer */
 	UINT32					cachehunk;		/* index of currently cached hunk */
 
-	UINT8 *					compare;		/* hunk compare pointer */
+	UINT8 * 				compare;		/* hunk compare pointer */
 	UINT32					comparehunk;	/* index of current compare data */
 
-	UINT8 *					compressed;		/* pointer to buffer for compressed data */
+	UINT8 * 				compressed; 	/* pointer to buffer for compressed data */
 	void *					codecdata;		/* opaque pointer to codec data */
 
-	struct crcmap_entry *	crcmap;			/* CRC map entries */
+	struct crcmap_entry *	crcmap; 		/* CRC map entries */
 	struct crcmap_entry *	crcfree;		/* free list CRC entries */
 	struct crcmap_entry **	crctable;		/* table of CRC entries */
 
@@ -137,7 +137,7 @@ struct zlib_codec_data
 
 /*************************************
  *
- *  Local variables
+ *	Local variables
  *
  *************************************/
 
@@ -145,14 +145,14 @@ static struct chd_interface interface;
 static struct chd_file *first_file;
 static int last_error;
 
-static const UINT8 nullmd5[CHD_MD5_BYTES] = { 0 };
-static const UINT8 nullsha1[CHD_SHA1_BYTES] = { 0 };
+//static const UINT8 nullmd5[CHD_MD5_BYTES] = { 0 };
+//static const UINT8 nullsha1[CHD_SHA1_BYTES] = { 0 };
 
 
 
 /*************************************
  *
- *  Prototypes
+ *	Prototypes
  *
  *************************************/
 
@@ -181,7 +181,7 @@ static UINT64 multi_length(struct chd_interface_file *file);
 
 /*************************************
  *
- *  Inline helpers
+ *	Inline helpers
  *
  *************************************/
 
@@ -266,7 +266,7 @@ INLINE void assemble_old_map_entry(UINT8 *base, struct map_entry *entry)
 
 /*************************************
  *
- *  Interface setup
+ *	Interface setup
  *
  *************************************/
 
@@ -282,7 +282,7 @@ void chd_set_interface(struct chd_interface *new_interface)
 
 /*************************************
  *
- *  Interface save
+ *	Interface save
  *
  *************************************/
 
@@ -295,7 +295,7 @@ void chd_save_interface(struct chd_interface *interface_save)
 
 /*************************************
  *
- *  Create a new data file
+ *	Create a new data file
  *
  *************************************/
 
@@ -476,7 +476,7 @@ cleanup:
 
 /*************************************
  *
- *  Opening a data file
+ *	Opening a data file
  *
  *************************************/
 
@@ -529,20 +529,20 @@ struct chd_file *chd_open(const char *filename, int writeable, struct chd_file *
 		SET_ERROR_AND_CLEANUP(CHDERR_REQUIRES_PARENT);
 
 	/* make sure we have a valid parent */
-	if (parent)
-	{
-		/* check MD5 if it isn't empty */
-		if (memcmp(nullmd5, chd.header.parentmd5, sizeof(chd.header.parentmd5)) &&
-			memcmp(nullmd5, chd.parent->header.md5, sizeof(chd.parent->header.md5)) &&
-			memcmp(chd.parent->header.md5, chd.header.parentmd5, sizeof(chd.header.parentmd5)))
-			SET_ERROR_AND_CLEANUP(CHDERR_INVALID_PARENT);
-
-		/* check SHA1 if it isn't empty */
-		if (memcmp(nullsha1, chd.header.parentsha1, sizeof(chd.header.parentsha1)) &&
-			memcmp(nullsha1, chd.parent->header.sha1, sizeof(chd.parent->header.sha1)) &&
-			memcmp(chd.parent->header.sha1, chd.header.parentsha1, sizeof(chd.header.parentsha1)))
-			SET_ERROR_AND_CLEANUP(CHDERR_INVALID_PARENT);
-	}
+//	if (parent)
+//	{
+//		/* check MD5 if it isn't empty */
+//		if (memcmp(nullmd5, chd.header.parentmd5, sizeof(chd.header.parentmd5)) &&
+//			memcmp(nullmd5, chd.parent->header.md5, sizeof(chd.parent->header.md5)) &&
+//			memcmp(chd.parent->header.md5, chd.header.parentmd5, sizeof(chd.header.parentmd5)))
+//			SET_ERROR_AND_CLEANUP(CHDERR_INVALID_PARENT);
+//
+//		/* check SHA1 if it isn't empty */
+//		if (memcmp(nullsha1, chd.header.parentsha1, sizeof(chd.header.parentsha1)) &&
+//			memcmp(nullsha1, chd.parent->header.sha1, sizeof(chd.parent->header.sha1)) &&
+//			memcmp(chd.parent->header.sha1, chd.header.parentsha1, sizeof(chd.header.parentsha1)))
+//			SET_ERROR_AND_CLEANUP(CHDERR_INVALID_PARENT);
+//	}
 
 	/* now read the hunk map */
 	err = read_hunk_map(&chd);
@@ -601,7 +601,7 @@ cleanup:
 
 /*************************************
  *
- *  Closing a data file
+ *	Closing a data file
  *
  *************************************/
 
@@ -662,7 +662,7 @@ void chd_close(struct chd_file *chd)
 
 /*************************************
  *
- *  Closing all open data files
+ *	Closing all open data files
  *
  *************************************/
 
@@ -676,7 +676,7 @@ void chd_close_all(void)
 
 /*************************************
  *
- *  Read metadata from a data file
+ *	Read metadata from a data file
  *
  *************************************/
 
@@ -728,7 +728,7 @@ UINT32 chd_get_metadata(struct chd_file *chd, UINT32 *metatag, UINT32 metaindex,
 
 /*************************************
  *
- *  Write metadata to a data file
+ *	Write metadata to a data file
  *
  *************************************/
 
@@ -831,7 +831,7 @@ int chd_set_metadata(struct chd_file *chd, UINT32 metatag, UINT32 metaindex, con
 
 /*************************************
  *
- *  Reading from a data file
+ *	Reading from a data file
  *
  *************************************/
 
@@ -882,7 +882,7 @@ cleanup:
 
 /*************************************
  *
- *  Writing to a data file
+ *	Writing to a data file
  *
  *************************************/
 
@@ -927,7 +927,7 @@ cleanup:
 
 /*************************************
  *
- *  Return last error
+ *	Return last error
  *
  *************************************/
 
@@ -940,7 +940,7 @@ int chd_get_last_error(void)
 
 /*************************************
  *
- *  Return pointer to header
+ *	Return pointer to header
  *
  *************************************/
 
@@ -960,7 +960,7 @@ cleanup:
 
 /*************************************
  *
- *  Set the header
+ *	Set the header
  *
  *************************************/
 
@@ -1028,7 +1028,7 @@ cleanup:
 
 /*************************************
  *
- *  All-in-one file compressor
+ *	All-in-one file compressor
  *
  *************************************/
 
@@ -1036,8 +1036,8 @@ int chd_compress(struct chd_file *chd, const char *rawfile, UINT32 offset, void 
 {
 	struct chd_interface_file *sourcefile = NULL;
 	UINT64 sourceoffset = 0;
-	struct MD5Context md5;
-	struct sha1_ctx sha;
+//	struct MD5Context md5;
+//	struct sha1_ctx sha;
 	clock_t lastupdate;
 	int err, hunknum;
 
@@ -1066,8 +1066,8 @@ int chd_compress(struct chd_file *chd, const char *rawfile, UINT32 offset, void 
 		init_crcmap(chd->parent, 1);
 
 	/* init the MD5/SHA1 computations */
-	MD5Init(&md5);
-	sha1_init(&sha);
+//	MD5Init(&md5);
+//	sha1_init(&sha);
 
 	/* loop over source hunks until we run out */
 	lastupdate = 0;
@@ -1100,11 +1100,11 @@ int chd_compress(struct chd_file *chd, const char *rawfile, UINT32 offset, void 
 			else
 				bytestochecksum = chd->header.logicalbytes - sourceoffset;
 		}
-		if (bytestochecksum)
-		{
-			MD5Update(&md5, chd->cache, bytestochecksum);
-			sha1_update(&sha, bytestochecksum, chd->cache);
-		}
+//		if (bytestochecksum)
+//		{
+//			MD5Update(&md5, chd->cache, bytestochecksum);
+//			sha1_update(&sha, bytestochecksum, chd->cache);
+//		}
 
 		/* write out the hunk */
 		err = write_hunk_from_memory(chd, hunknum, chd->cache);
@@ -1121,9 +1121,9 @@ int chd_compress(struct chd_file *chd, const char *rawfile, UINT32 offset, void 
 	}
 
 	/* compute the final MD5/SHA1 values */
-	MD5Final(chd->header.md5, &md5);
-	sha1_final(&sha);
-	sha1_digest(&sha, SHA1_DIGEST_SIZE, chd->header.sha1);
+//	MD5Final(chd->header.md5, &md5);
+//	sha1_final(&sha);
+//	sha1_digest(&sha, SHA1_DIGEST_SIZE, chd->header.sha1);
 
 	/* turn off the writeable flag and re-write the header */
 	chd->header.flags &= ~CHDFLAGS_IS_WRITEABLE;
@@ -1151,14 +1151,14 @@ cleanup:
 
 /*************************************
  *
- *  All-in-one file verifier
+ *	All-in-one file verifier
  *
  *************************************/
 
 int chd_verify(struct chd_file *chd, void (*progress)(const char *, ...), UINT8 actualmd5[CHD_MD5_BYTES], UINT8 actualsha1[CHD_SHA1_BYTES])
 {
-	struct MD5Context md5;
-	struct sha1_ctx sha;
+//	struct MD5Context md5;
+//	struct sha1_ctx sha;
 	UINT64 sourceoffset = 0;
 	int err, prev_err = CHDERR_NONE, hunknum = 0;
 	clock_t lastupdate;
@@ -1176,8 +1176,8 @@ int chd_verify(struct chd_file *chd, void (*progress)(const char *, ...), UINT8 
 		SET_ERROR_AND_CLEANUP(CHDERR_CANT_VERIFY);
 
 	/* init the MD5/SHA1 computations */
-	MD5Init(&md5);
-	sha1_init(&sha);
+//	MD5Init(&md5);
+//	sha1_init(&sha);
 
 	/* loop over source hunks until we run out */
 	lastupdate = 0;
@@ -1214,11 +1214,11 @@ int chd_verify(struct chd_file *chd, void (*progress)(const char *, ...), UINT8 
 			else
 				bytestochecksum = chd->header.logicalbytes - sourceoffset;
 		}
-		if (bytestochecksum)
-		{
-			MD5Update(&md5, chd->cache, bytestochecksum);
-			sha1_update(&sha, bytestochecksum, chd->cache);
-		}
+//		if (bytestochecksum)
+//		{
+//			MD5Update(&md5, chd->cache, bytestochecksum);
+//			sha1_update(&sha, bytestochecksum, chd->cache);
+//		}
 
 		/* prepare for the next hunk */
 		sourceoffset += chd->header.hunkbytes;
@@ -1227,9 +1227,9 @@ int chd_verify(struct chd_file *chd, void (*progress)(const char *, ...), UINT8 
 		SET_ERROR_AND_CLEANUP(prev_err);
 
 	/* compute the final MD5 */
-	MD5Final(actualmd5, &md5);
-	sha1_final(&sha);
-	sha1_digest(&sha, SHA1_DIGEST_SIZE, actualsha1);
+//	MD5Final(actualmd5, &md5);
+//	sha1_final(&sha);
+//	sha1_digest(&sha, SHA1_DIGEST_SIZE, actualsha1);
 
 	/* final progress update */
 	if (progress)
@@ -1244,7 +1244,7 @@ cleanup:
 
 /*************************************
  *
- *  Validate header data
+ *	Validate header data
  *
  *************************************/
 
@@ -1277,8 +1277,11 @@ static int validate_header(const struct chd_header *header)
 		return CHDERR_INVALID_PARAMETER;
 
 	/* require a valid MD5 and/or SHA1 if we're using a parent */
-	if ((header->flags & CHDFLAGS_HAS_PARENT) && !memcmp(header->parentmd5, nullmd5, sizeof(nullmd5)) && !memcmp(header->parentsha1, nullsha1, sizeof(nullsha1)))
-		return CHDERR_INVALID_PARAMETER;
+//	if ((header->flags & CHDFLAGS_HAS_PARENT) &&
+// !memcmp(header->parentmd5, nullmd5, sizeof(nullmd5)) &&
+// !memcmp(header->parentsha1, nullsha1, sizeof(nullsha1))
+//		)
+//		return CHDERR_INVALID_PARAMETER;
 
 	/* if we're V3 or later, the obsolete fields must be 0 */
 	if (header->version >= 3 &&
@@ -1300,7 +1303,7 @@ static int validate_header(const struct chd_header *header)
 
 /*************************************
  *
- *  Hunk read/decompress
+ *	Hunk read/decompress
  *
  *************************************/
 
@@ -1407,7 +1410,7 @@ static int read_hunk_into_cache(struct chd_file *chd, UINT32 hunknum)
 
 /*************************************
  *
- *  Hunk write/compress
+ *	Hunk write/compress
  *
  *************************************/
 
@@ -1529,7 +1532,7 @@ write_entry:
 
 /*************************************
  *
- *  Header read
+ *	Header read
  *
  *************************************/
 
@@ -1561,8 +1564,8 @@ static int read_header(struct chd_interface_file *file, struct chd_header *heade
 
 	/* extract the direct data */
 	memset(header, 0, sizeof(*header));
-	header->length        = get_bigendian_uint32(&rawheader[8]);
-	header->version       = get_bigendian_uint32(&rawheader[12]);
+	header->length		  = get_bigendian_uint32(&rawheader[8]);
+	header->version 	  = get_bigendian_uint32(&rawheader[12]);
 
 	/* make sure it's a version we understand */
 	if (header->version == 0 || header->version > CHD_HEADER_VERSION)
@@ -1575,7 +1578,7 @@ static int read_header(struct chd_interface_file *file, struct chd_header *heade
 		return CHDERR_INVALID_DATA;
 
 	/* extract the common data */
-	header->flags         = get_bigendian_uint32(&rawheader[16]);
+	header->flags		  = get_bigendian_uint32(&rawheader[16]);
 	header->compression   = get_bigendian_uint32(&rawheader[20]);
 	memcpy(header->md5, &rawheader[44], CHD_MD5_BYTES);
 	memcpy(header->parentmd5, &rawheader[60], CHD_MD5_BYTES);
@@ -1585,9 +1588,9 @@ static int read_header(struct chd_interface_file *file, struct chd_header *heade
 	{
 		int seclen = (header->version == 1) ? CHD_V1_SECTOR_SIZE : get_bigendian_uint32(&rawheader[76]);
 		header->obsolete_hunksize  = get_bigendian_uint32(&rawheader[24]);
-		header->totalhunks         = get_bigendian_uint32(&rawheader[28]);
+		header->totalhunks		   = get_bigendian_uint32(&rawheader[28]);
 		header->obsolete_cylinders = get_bigendian_uint32(&rawheader[32]);
-		header->obsolete_heads     = get_bigendian_uint32(&rawheader[36]);
+		header->obsolete_heads	   = get_bigendian_uint32(&rawheader[36]);
 		header->obsolete_sectors   = get_bigendian_uint32(&rawheader[40]);
 		header->logicalbytes = (UINT64)header->obsolete_cylinders * (UINT64)header->obsolete_heads * (UINT64)header->obsolete_sectors * (UINT64)seclen;
 		header->hunkbytes = seclen * header->obsolete_hunksize;
@@ -1597,10 +1600,10 @@ static int read_header(struct chd_interface_file *file, struct chd_header *heade
 	/* extract the V3-specific data */
 	else
 	{
-		header->totalhunks   = get_bigendian_uint32(&rawheader[24]);
+		header->totalhunks	 = get_bigendian_uint32(&rawheader[24]);
 		header->logicalbytes = get_bigendian_uint64(&rawheader[28]);
-		header->metaoffset   = get_bigendian_uint64(&rawheader[36]);
-		header->hunkbytes    = get_bigendian_uint32(&rawheader[76]);
+		header->metaoffset	 = get_bigendian_uint64(&rawheader[36]);
+		header->hunkbytes	 = get_bigendian_uint32(&rawheader[76]);
 		memcpy(header->sha1, &rawheader[80], CHD_SHA1_BYTES);
 		memcpy(header->parentsha1, &rawheader[100], CHD_SHA1_BYTES);
 	}
@@ -1613,7 +1616,7 @@ static int read_header(struct chd_interface_file *file, struct chd_header *heade
 
 /*************************************
  *
- *  Header write
+ *	Header write
  *
  *************************************/
 
@@ -1667,7 +1670,7 @@ static int write_header(struct chd_interface_file *file, const struct chd_header
 
 /*************************************
  *
- *  Read the sector map
+ *	Read the sector map
  *
  *************************************/
 
@@ -1736,7 +1739,7 @@ cleanup:
 
 /*************************************
  *
- *  CRC map initialization
+ *	CRC map initialization
  *
  *************************************/
 
@@ -1787,7 +1790,7 @@ static void init_crcmap(struct chd_file *chd, int prepopulate)
 
 /*************************************
  *
- *  CRC map addition
+ *	CRC map addition
  *
  *************************************/
 
@@ -1810,7 +1813,7 @@ static void add_to_crcmap(struct chd_file *chd, UINT32 hunknum)
 
 /*************************************
  *
- *  Matching hunk verifier
+ *	Matching hunk verifier
  *
  *************************************/
 
@@ -1831,7 +1834,7 @@ static int is_really_matching_hunk(struct chd_file *chd, UINT32 hunknum, const U
 
 /*************************************
  *
- *  Matching hunk locater
+ *	Matching hunk locater
  *
  *************************************/
 
@@ -1870,7 +1873,7 @@ static UINT32 find_matching_hunk(struct chd_file *chd, UINT32 hunknum, UINT32 cr
 
 /*************************************
  *
- *  Internal metadata locator
+ *	Internal metadata locator
  *
  *************************************/
 
@@ -1912,17 +1915,17 @@ static int find_metadata_entry(struct chd_file *chd, UINT32 metatag, UINT32 meta
 
 /*************************************
  *
- *  Extended compressor, works in segments
- *      chd_compress() should collapse to calls
- *      to this code once it's all verified.
+ *	Extended compressor, works in segments
+ *		chd_compress() should collapse to calls
+ *		to this code once it's all verified.
  *
  *************************************/
 
 struct chd_exfile
 {
 	struct chd_file *chd;
-	struct MD5Context md5;
-	struct sha1_ctx sha;
+//	struct MD5Context md5;
+//	struct sha1_ctx sha;
 	int hunknum;
 	UINT64 sourceoffset;
 };
@@ -1956,8 +1959,8 @@ struct chd_exfile *chd_start_compress_ex(struct chd_file *chd)
 		SET_ERROR_AND_CLEANUP(CHDERR_OUT_OF_MEMORY);
 
 	/* init the MD5/SHA1 computations */
-	MD5Init(&finalchdex->md5);
-	sha1_init(&finalchdex->sha);
+//	MD5Init(&finalchdex->md5);
+//	sha1_init(&finalchdex->sha);
 
 	finalchdex->chd = chd;
 	finalchdex->sourceoffset = 0;
@@ -2012,11 +2015,11 @@ int chd_compress_ex(struct chd_exfile *chdex, const char *rawfile, UINT64 offset
 		{
 			bytesread = multi_read(sourcefile, sourcefileoffset + offset, inpsecsize, &chd->cache[i*hunksecsize]);
 			/*
-               NOTE: because we pad CD tracks to a hunk boundry, there is a possibility
-               that we will run off the end of the sourcefile and bytesread will be zero.
-               because we already zero out the hunk beforehand above, no special processing
-               need take place here.
-            */
+			   NOTE: because we pad CD tracks to a hunk boundry, there is a possibility
+			   that we will run off the end of the sourcefile and bytesread will be zero.
+			   because we already zero out the hunk beforehand above, no special processing
+			   need take place here.
+			*/
 
 			blksread++;
 			sourcefileoffset += inpsecsize;
@@ -2040,11 +2043,11 @@ int chd_compress_ex(struct chd_exfile *chdex, const char *rawfile, UINT64 offset
 			else
 				bytestochecksum = chd->header.logicalbytes - chdex->sourceoffset;
 		}
-		if (bytestochecksum)
-		{
-			MD5Update(&chdex->md5, chd->cache, bytestochecksum);
-			sha1_update(&chdex->sha, bytestochecksum, chd->cache);
-		}
+//		if (bytestochecksum)
+//		{
+//			MD5Update(&chdex->md5, chd->cache, bytestochecksum);
+//			sha1_update(&chdex->sha, bytestochecksum, chd->cache);
+//		}
 
 		/* write out the hunk */
 		err = write_hunk_from_memory(chd, hunk + chdex->hunknum, chd->cache);
@@ -2078,9 +2081,9 @@ int chd_end_compress_ex(struct chd_exfile *chdex, void (*progress)(const char *,
 	chd = chdex->chd;
 
 	/* compute the final MD5/SHA1 values */
-	MD5Final(chd->header.md5, &chdex->md5);
-	sha1_final(&chdex->sha);
-	sha1_digest(&chdex->sha, SHA1_DIGEST_SIZE, chd->header.sha1);
+//	MD5Final(chd->header.md5, &chdex->md5);
+//	sha1_final(&chdex->sha);
+//	sha1_digest(&chdex->sha, SHA1_DIGEST_SIZE, chd->header.sha1);
 
 	/* turn off the writeable flag and re-write the header */
 	chd->header.flags &= ~CHDFLAGS_IS_WRITEABLE;
@@ -2103,13 +2106,13 @@ cleanup:
 
 /*************************************
  *
- *  ZLIB memory hooks
+ *	ZLIB memory hooks
  *
  *************************************/
 
 /*
-    Because ZLIB allocates and frees memory frequently (once per compression cycle),
-    we don't call malloc/free, but instead keep track of our own memory.
+	Because ZLIB allocates and frees memory frequently (once per compression cycle),
+	we don't call malloc/free, but instead keep track of our own memory.
 */
 
 static voidpf fast_alloc(voidpf opaque, uInt items, uInt size)
@@ -2172,7 +2175,7 @@ static void fast_free(voidpf opaque, voidpf address)
 
 /*************************************
  *
- *  Compression init
+ *	Compression init
  *
  *************************************/
 
@@ -2241,7 +2244,7 @@ static int init_codec(struct chd_file *chd)
 
 /*************************************
  *
- *  Compression de-init
+ *	Compression de-init
  *
  *************************************/
 
@@ -2282,7 +2285,7 @@ static void free_codec(struct chd_file *chd)
 
 /*************************************
  *
- *  Multifile routines
+ *	Multifile routines
  *
  *************************************/
 

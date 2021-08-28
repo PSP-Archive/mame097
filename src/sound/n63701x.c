@@ -36,13 +36,6 @@ struct namco_63701x
 };
 
 
-/* volume control has three resistors: 22000, 10000 and 3300 Ohm.
-   22000 is always enabled, the other two can be turned off.
-   Since 0x00 and 0xff samples have special meaning, the available range is
-   0x01 to 0xfe, therefore 258 * (0x01 - 0x80) = 0x8002 just keeps us
-   inside 16 bits without overflowing.
- */
-static const int vol_table[4] = { 26, 84, 200, 258 };
 
 
 static void namco_63701x_update(void *param, stream_sample_t **inputs, stream_sample_t **buffer, int length)
@@ -57,6 +50,14 @@ static void namco_63701x_update(void *param, stream_sample_t **inputs, stream_sa
 
 		if (v->playing)
 		{
+/* volume control has three resistors: 22000, 10000 and 3300 Ohm.
+   22000 is always enabled, the other two can be turned off.
+   Since 0x00 and 0xff samples have special meaning, the available range is
+   0x01 to 0xfe, therefore 258 * (0x01 - 0x80) = 0x8002 just keeps us
+   inside 16 bits without overflowing.
+ */
+			static const int vol_table[4] = { 26, 84, 200, 258 };
+
 			UINT8 *base = chip->rom + v->base_addr;
 			int pos = v->position;
 			int vol = vol_table[v->volume];
@@ -109,8 +110,8 @@ static void *namco_63701x_start(int sndindex, int clock, const void *config)
 	chip->intf = config;
 	chip->rom = memory_region(chip->intf->region);
 
-	chip->stream = stream_create(0, 2, clock/1000, chip, namco_63701x_update);
-
+//	chip->stream = stream_create(0, 2, clock/1000, chip, namco_63701x_update);
+	chip->stream = stream_create(0, 2, clock/1024, chip, namco_63701x_update);
 	return chip;
 }
 
@@ -119,7 +120,8 @@ static void *namco_63701x_start(int sndindex, int clock, const void *config)
 void namco_63701x_write(int offset, int data)
 {
 	struct namco_63701x *chip = sndti_token(SOUND_NAMCO_63701X, 0);
-	int ch = offset / 2;
+//	int ch = offset / 2;
+	int ch = (offset>>1);
 
 	if (offset & 1)
 		chip->voices[ch].select = data;
@@ -150,10 +152,6 @@ void namco_63701x_write(int offset, int data)
 		}
 	}
 }
-
-
-
-
 
 
 /**************************************************************************

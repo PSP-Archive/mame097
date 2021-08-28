@@ -492,6 +492,7 @@ void ym2610_get_info(void *token, UINT32 state, union sndinfo *info)
 }
 
 
+#if BUILD_YM2610B
 /**************************************************************************
  * Generic get_info
  **************************************************************************/
@@ -525,5 +526,7 @@ void ym2610b_get_info(void *token, UINT32 state, union sndinfo *info)
 		case SNDINFO_STR_CORE_CREDITS:					info->s = "Copyright (c) 2004, The MAME Team"; break;
 	}
 }
+#endif //BUILD_YM2610B
 
-#endif
+
+#endif //BUILD_YM2610

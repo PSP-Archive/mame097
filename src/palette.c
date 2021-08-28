@@ -35,12 +35,13 @@ enum
 UINT32 direct_rgb_components[3];
 UINT16 *palette_shadow_table;
 
-data8_t *paletteram;
-data8_t *paletteram_2;	/* use when palette RAM is split in two parts */
-data16_t *paletteram16;
-data16_t *paletteram16_2;
-data32_t *paletteram32;
-
+UINT8 *paletteram;
+UINT8 *paletteram_2;	/* use when palette RAM is split in two parts */
+UINT16 *paletteram16;
+UINT16 *paletteram16_2;
+#if (0==PSP_NO_CPU32)
+UINT32 *paletteram32;
+#endif //(0==PSP_NO_CPU32)
 
 
 /*-------------------------------------------------
@@ -56,7 +57,7 @@ static UINT8 adjusted_palette_dirty;
 static UINT8 debug_palette_dirty;
 
 static UINT16 shadow_factor, highlight_factor;
-static double global_brightness, global_brightness_adjust, global_gamma;
+//static float global_brightness, global_brightness_adjust, global_gamma;
 
 static UINT8 colormode, highlight_method;
 static pen_t total_colors;
@@ -112,9 +113,12 @@ INLINE UINT32 rgb_to_direct32(rgb_t rgb)
 
 INLINE rgb_t adjust_palette_entry(rgb_t entry, int pen_bright)
 {
-	int r = color_correct_table[(RGB_RED(entry) * pen_bright) >> PEN_BRIGHTNESS_BITS];
+//	int r = color_correct_table[(RGB_RED(entry)   * pen_bright) >> PEN_BRIGHTNESS_BITS];
+//	int g = color_correct_table[(RGB_GREEN(entry) * pen_bright) >> PEN_BRIGHTNESS_BITS];
+//	int b = color_correct_table[(RGB_BLUE(entry)  * pen_bright) >> PEN_BRIGHTNESS_BITS];
+	int r = color_correct_table[(RGB_RED(entry)   * pen_bright) >> PEN_BRIGHTNESS_BITS];
 	int g = color_correct_table[(RGB_GREEN(entry) * pen_bright) >> PEN_BRIGHTNESS_BITS];
-	int b = color_correct_table[(RGB_BLUE(entry) * pen_bright) >> PEN_BRIGHTNESS_BITS];
+	int b = color_correct_table[(RGB_BLUE(entry)  * pen_bright) >> PEN_BRIGHTNESS_BITS];
 	return MAKE_RGB(r,g,b);
 }
 
@@ -126,7 +130,8 @@ INLINE rgb_t adjust_palette_entry(rgb_t entry, int pen_bright)
 
 INLINE void mark_pen_dirty(int pen)
 {
-	dirty_palette[pen / 32] |= 1 << (pen % 32);
+//	dirty_palette[pen / 32] |= 1 << (pen % 32);
+	dirty_palette[pen / 32] |= 1 << (pen & (32-1));
 }
 
 
@@ -142,11 +147,11 @@ int palette_start(void)
 	adjusted_palette_dirty = 1;
 	debug_palette_dirty = 1;
 
-	shadow_factor = (int)(PALETTE_DEFAULT_SHADOW_FACTOR * (double)(1 << PEN_BRIGHTNESS_BITS));
-	highlight_factor = (int)(PALETTE_DEFAULT_HIGHLIGHT_FACTOR * (double)(1 << PEN_BRIGHTNESS_BITS));
-	global_brightness = (options.brightness > .001) ? options.brightness : 1.0;
-	global_brightness_adjust = 1.0;
-	global_gamma = (options.gamma > .001) ? options.gamma : 1.0;
+	shadow_factor = (int)(PALETTE_DEFAULT_SHADOW_FACTOR * (float)(1 << PEN_BRIGHTNESS_BITS));
+	highlight_factor = (int)(PALETTE_DEFAULT_HIGHLIGHT_FACTOR * (float)(1 << PEN_BRIGHTNESS_BITS));
+	//global_brightness = (options.brightness > .001) ? options.brightness : 1.0;
+	//global_brightness_adjust = 1.0;
+	//global_gamma = (options.gamma > .001) ? options.gamma : 1.0;
 
 	/* determine the color mode */
 	if (Machine->color_depth == 15)
@@ -257,12 +262,12 @@ int palette_start(void)
 static UINT32 *shadow_table_base[MAX_SHADOW_PRESETS];
 
 
-static void internal_set_shadow_preset(int mode, double factor, int dr, int dg, int db, int noclip, int style, int init)
+static void internal_set_shadow_preset(int mode, float factor, int dr, int dg, int db, int noclip, int style, int init)
 {
 #define FP 16
 #define FMAX (0x1f<<FP)
 
-	static double oldfactor[MAX_SHADOW_PRESETS] = {-1,-1,-1,-1};
+	static float oldfactor[MAX_SHADOW_PRESETS] = {-1,-1,-1,-1};
 	static int oldRGB[MAX_SHADOW_PRESETS][3] = {{-1,-1,-1},{-1,-1,-1},{-1,-1,-1},{-1,-1,-1}};
 	static int oldclip;
 
@@ -472,13 +477,13 @@ void palette_set_shadow_mode(int mode)
 }
 
 
-void palette_set_shadow_factor32(double factor)
+void palette_set_shadow_factor32(float factor)
 {
 	internal_set_shadow_preset(0, factor, 0, 0, 0, 0, 1, 0);
 }
 
 
-void palette_set_highlight_factor32(double factor)
+void palette_set_highlight_factor32(float factor)
 {
 	internal_set_shadow_preset(1, factor, 0, 0, 0, 0, 2, 0);
 }
@@ -567,21 +572,18 @@ static int palette_alloc(void)
 	}
 
 	/* allocate memory for the debugger pens */
-	Machine->debug_pens = auto_malloc(DEBUGGER_TOTAL_COLORS * sizeof(Machine->debug_pens[0]));
-	if (!Machine->debug_pens)
-		return 1;
-	for (i = 0; i < DEBUGGER_TOTAL_COLORS; i++)
-		Machine->debug_pens[i] = i;
+//	Machine->debug_pens = auto_malloc(DEBUGGER_TOTAL_COLORS * sizeof(Machine->debug_pens[0]));
+//	if (!Machine->debug_pens)	return 1;
+//	for (i = 0; i < DEBUGGER_TOTAL_COLORS; i++)	Machine->debug_pens[i] = i;
 
 	/* allocate memory for the debugger colortable */
-	Machine->debug_remapped_colortable = auto_malloc(2 * DEBUGGER_TOTAL_COLORS * DEBUGGER_TOTAL_COLORS * sizeof(Machine->debug_remapped_colortable[0]));
-	if (!Machine->debug_remapped_colortable)
-		return 1;
-	for (i = 0; i < DEBUGGER_TOTAL_COLORS * DEBUGGER_TOTAL_COLORS; i++)
-	{
-		Machine->debug_remapped_colortable[2*i+0] = i / DEBUGGER_TOTAL_COLORS;
-		Machine->debug_remapped_colortable[2*i+1] = i % DEBUGGER_TOTAL_COLORS;
-	}
+//	Machine->debug_remapped_colortable = auto_malloc(2 * DEBUGGER_TOTAL_COLORS * DEBUGGER_TOTAL_COLORS * sizeof(Machine->debug_remapped_colortable[0]));
+//	if (!Machine->debug_remapped_colortable)	return 1;
+//	for (i = 0; i < DEBUGGER_TOTAL_COLORS * DEBUGGER_TOTAL_COLORS; i++)
+//	{
+//		Machine->debug_remapped_colortable[2*i+0] = i / DEBUGGER_TOTAL_COLORS;
+//		Machine->debug_remapped_colortable[2*i+1] = i % DEBUGGER_TOTAL_COLORS;
+//	}
 
 #if 0 //* for reference, do not remove
 	/* allocate the shadow lookup table for 16bpp modes */
@@ -993,7 +995,7 @@ static void recompute_adjusted_palette(int brightness_or_gamma_changed)
 	if (brightness_or_gamma_changed)
 		for (i = 0; i < sizeof(color_correct_table); i++)
 		{
-			int value = (int)(255.0 * (global_brightness * global_brightness_adjust) * pow((double)i * (1.0 / 255.0), 1.0 / global_gamma) + 0.5);
+			int value = (int)(255.0 * pow((float)i * (1.0 / 255.0), 1.0) + 0.5);
 			color_correct_table[i] = (value < 0) ? 0 : (value > 255) ? 255 : value;
 		}
 
@@ -1073,10 +1075,10 @@ void palette_get_color(pen_t pen, UINT8 *r, UINT8 *g, UINT8 *b)
     brightness factor
 -------------------------------------------------*/
 
-void palette_set_brightness(pen_t pen, double bright)
+void palette_set_brightness(pen_t pen, float bright)
 {
 	/* compute the integral brightness value */
-	int brightval = (int)(bright * (double)(1 << PEN_BRIGHTNESS_BITS));
+	int brightval = (int)(bright * (float)(1 << PEN_BRIGHTNESS_BITS));
 	if (brightval > MAX_PEN_BRIGHTNESS)
 		brightval = MAX_PEN_BRIGHTNESS;
 
@@ -1095,10 +1097,10 @@ void palette_set_brightness(pen_t pen, double bright)
     shadow brightness factor
 -------------------------------------------------*/
 
-void palette_set_shadow_factor(double factor)
+void palette_set_shadow_factor(float factor)
 {
 	/* compute the integral shadow factor value */
-	int factorval = (int)(factor * (double)(1 << PEN_BRIGHTNESS_BITS));
+	int factorval = (int)(factor * (float)(1 << PEN_BRIGHTNESS_BITS));
 	if (factorval > MAX_PEN_BRIGHTNESS)
 		factorval = MAX_PEN_BRIGHTNESS;
 
@@ -1117,10 +1119,10 @@ void palette_set_shadow_factor(double factor)
     highlight brightness factor
 -------------------------------------------------*/
 
-void palette_set_highlight_factor(double factor)
+void palette_set_highlight_factor(float factor)
 {
 	/* compute the integral highlight factor value */
-	int factorval = (int)(factor * (double)(1 << PEN_BRIGHTNESS_BITS));
+	int factorval = (int)(factor * (float)(1 << PEN_BRIGHTNESS_BITS));
 	if (factorval > MAX_PEN_BRIGHTNESS)
 		factorval = MAX_PEN_BRIGHTNESS;
 
@@ -1135,77 +1137,12 @@ void palette_set_highlight_factor(double factor)
 
 
 /*-------------------------------------------------
-    palette_set_global_gamma - set the global
-    gamma factor
+    palette_set_global_gamma
 -------------------------------------------------*/
-
-void palette_set_global_gamma(double _gamma)
-{
-	/* if the gamma changed, recompute */
-	if (global_gamma != _gamma)
-	{
-		global_gamma = _gamma;
-		recompute_adjusted_palette(1);
-	}
-}
-
-
-
-/*-------------------------------------------------
-    palette_get_global_gamma - return the global
-    gamma factor
--------------------------------------------------*/
-
-double palette_get_global_gamma(void)
-{
-	return global_gamma;
-}
-
-
-
-/*-------------------------------------------------
-    palette_set_global_brightness - set the global
-    brightness factor
--------------------------------------------------*/
-
-void palette_set_global_brightness(double brightness)
-{
-	/* if the gamma changed, recompute */
-	if (global_brightness != brightness)
-	{
-		global_brightness = brightness;
-		recompute_adjusted_palette(1);
-	}
-}
-
-
-
-/*-------------------------------------------------
-    palette_set_global_brightness_adjust - set
-    the global brightness adjustment factor
--------------------------------------------------*/
-
-void palette_set_global_brightness_adjust(double adjustment)
-{
-	/* if the gamma changed, recompute */
-	if (global_brightness_adjust != adjustment)
-	{
-		global_brightness_adjust = adjustment;
-		recompute_adjusted_palette(1);
-	}
-}
-
-
-
-/*-------------------------------------------------
-    palette_get_global_brightness - return the global
-    brightness factor
--------------------------------------------------*/
-
-double palette_get_global_brightness(void)
-{
-	return global_brightness;
-}
+//void palette_set_global_gamma(float _gamma){}
+//float palette_get_global_gamma(void){	return 1.0;}
+//void palette_set_global_brightness(float brightness){}
+//float palette_get_global_brightness(void){	return 1.0;}
 
 
 
@@ -1247,12 +1184,12 @@ READ16_HANDLER( paletteram16_2_word_r )
 {
 	return paletteram16_2[offset];
 }
-
+#if (0==PSP_NO_CPU32)
 READ32_HANDLER( paletteram32_r )
 {
 	return paletteram32[offset];
 }
-
+#endif //(0==PSP_NO_CPU32)
 WRITE8_HANDLER( paletteram_RRRGGGBB_w )
 {
 	int r,g,b;
@@ -1852,7 +1789,7 @@ WRITE16_HANDLER( paletteram16_RRRRGGGGBBBBIIII_word_w )
 WRITE16_HANDLER( paletteram16_xrgb_word_w )
 {
 	int r, g, b;
-	data16_t data0, data1;
+	UINT16 data0, data1;
 
 	COMBINE_DATA(paletteram16 + offset);
 
@@ -1875,7 +1812,7 @@ WRITE16_HANDLER( paletteram16_xrgb_word_w )
 WRITE16_HANDLER( paletteram16_xbgr_word_w )
 {
 	int r, g, b;
-	data16_t data0, data1;
+	UINT16 data0, data1;
 
 	COMBINE_DATA(paletteram16 + offset);
 

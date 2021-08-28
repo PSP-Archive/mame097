@@ -10,8 +10,8 @@
 #include "driver.h"
 #include "timer.h"
 #include "state.h"
-#include "mamedbg.h"
-#include "hiscore.h"
+#include "mame.h"//#include "mamedbg.h"
+//#include "hiscore.h"
 #if defined(MAME_DEBUG) && defined(NEW_DEBUGGER)
 #include "debugcpu.h"
 #endif

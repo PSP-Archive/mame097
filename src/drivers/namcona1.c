@@ -2,44 +2,44 @@
 Namco NA-1 / NA-2 System
 
 NA-1 Games:
--   Bakuretsu Quiz Ma-Q Dai Bouken
--   F/A
--   Super World Court (C354, C357)
--   Nettou! Gekitou! Quiztou!! (C354, C365 - both are 32pin)
--   Exvania (C350, C354)
--   Cosmo Gang the Puzzle (C356)
--   Tinkle Pit (C354, C367)
--   Emeraldia (C354, C358)
+-	Bakuretsu Quiz Ma-Q Dai Bouken
+-	F/A
+-	Super World Court (C354, C357)
+-	Nettou! Gekitou! Quiztou!! (C354, C365 - both are 32pin)
+-	Exvania (C350, C354)
+-	Cosmo Gang the Puzzle (C356)
+-	Tinkle Pit (C354, C367)
+-	Emeraldia (C354, C358)
 
 NA-2 Games:
--   Knuckle Heads
--   Numan Athletics
--   X-Day 2
+-	Knuckle Heads
+-	Numan Athletics
+-	X-Day 2
 
 To Do:
 
 - Pressing "F3" (reset) crashes MAME
 
 - Emeralda:
-    After selecting the game type, tilemap scrolling is briefly incorrect
+	After selecting the game type, tilemap scrolling is briefly incorrect
 
 - Emeralda:
-    Shadow sprites, if enabled, make the score display invisible
+	Shadow sprites, if enabled, make the score display invisible
 
 - Hook up ROZ registers
 
 - Is view area controlled by registers?
 
 - Xday 2:
-    has some graphics glitches (wrong sprite tiles); probably blitter-related
+	has some graphics glitches (wrong sprite tiles); probably blitter-related
 
-    Rom board  M112
-    Rom board custom Key chip i.d. C394
-    Game uses a small cash-register type printer (connects to rom board)
-    Game also has a large L.E.D. type score board with several
-    displays for various scores. (connects to rom board)
-    Game uses coin-type battery on rom board. (not suicide)
-    Game won't startup unless printer is connected and with paper.
+	Rom board  M112
+	Rom board custom Key chip i.d. C394
+	Game uses a small cash-register type printer (connects to rom board)
+	Game also has a large L.E.D. type score board with several
+	displays for various scores. (connects to rom board)
+	Game uses coin-type battery on rom board. (not suicide)
+	Game won't startup unless printer is connected and with paper.
 
 The board has a 28c16 EEPROM
 
@@ -54,21 +54,21 @@ Plus 1 or 2 custom chips on ROM board.
 
 Notes:
 
--   NA-2 is backwards compatible with NA-1.
+-	NA-2 is backwards compatible with NA-1.
 
--   NA-2 games use a different MCU BIOS
+-	NA-2 games use a different MCU BIOS
 
--   Test mode for NA2 games includes an additional item: UART Test.
-    No games are known to actually link up and use the UART feature.
-    It's been confirmed that a Numan Athletics fails the UART test,
-    behaving as it does in MAME.
+-	Test mode for NA2 games includes an additional item: UART Test.
+	No games are known to actually link up and use the UART feature.
+	It's been confirmed that a Numan Athletics fails the UART test,
+	behaving as it does in MAME.
 
--   Quiz games use 1p button 1 to pick test, 2p button 1 to begin test,
-    and 2p button 2 to exit. Because quiz games doesn't have joystick.
+-	Quiz games use 1p button 1 to pick test, 2p button 1 to begin test,
+	and 2p button 2 to exit. Because quiz games doesn't have joystick.
 
--   Almost all quiz games using JAMMA edge connector assign
-    button1 to up, button 2 to down, button 3 to left, button 4 to right.
-    But Taito F2 quiz games assign button 3 to right and button 4 to left.
+-	Almost all quiz games using JAMMA edge connector assign
+	button1 to up, button 2 to down, button 3 to left, button 4 to right.
+	But Taito F2 quiz games assign button 3 to right and button 4 to left.
 
 ***************************************************************************/
 
@@ -76,12 +76,16 @@ Notes:
 #include "vidhrdw/generic.h"
 #include "namcona1.h"
 #include "sound/namcona.h"
-#include "machine/random.h"
+//#include "machine/random.h"
 
-static data16_t *mpBank0, *mpBank1;
-static data8_t mCoinCount[4];
-static data8_t mCoinState;
-static data16_t *mcu_ram;
+
+
+//static UINT8 mCoinCount[(4-2)];
+static UINT16 mCoinCount01;
+//static UINT16 mCoinCount23;
+static UINT8 mCoinState;
+//static UINT16 *mcu_ram;
+#define mcu_ram namcona1_workram
 static int mEnableInterrupts;
 int namcona1_gametype;
 
@@ -93,7 +97,7 @@ static const UINT8 ExvaniaDefaultNvMem[] =
  * the game software automatically writes these values there, but then jumps
  * to an unmapped (bogus) address, causing MAME to crash.
  */
- 	0x30,0x32,0x4f,0x63,0x74,0x39,0x32,0x52,0x45,0x56,0x49,0x53,0x49,0x4f,0x4e,0x35,
+	0x30,0x32,0x4f,0x63,0x74,0x39,0x32,0x52,0x45,0x56,0x49,0x53,0x49,0x4f,0x4e,0x35,
 	0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x00,0x00,0x01,
 	0x00,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -146,7 +150,7 @@ static const UINT8 QuiztouDefaultNvMem[] =
 	0x23,0x64,0xB8,0xA6
 }; /* QuiztouDefaultNvMem */
 
-static data8_t namcona1_nvmem[NA1_NVRAM_SIZE];
+static UINT8 namcona1_nvmem[NA1_NVRAM_SIZE];
 
 static NVRAM_HANDLER( namcosna1 )
 {
@@ -167,11 +171,15 @@ static NVRAM_HANDLER( namcosna1 )
 			switch( namcona1_gametype )
 			{
 			case NAMCO_EXBANIA:
+				{
 				memcpy( namcona1_nvmem, ExvaniaDefaultNvMem, sizeof(ExvaniaDefaultNvMem) );
+				}
 				break;
 
 			case NAMCO_QUIZTOU:
+				{
 				memcpy( namcona1_nvmem, QuiztouDefaultNvMem, sizeof(QuiztouDefaultNvMem) );
+				}
 				break;
 			}
 		}
@@ -193,20 +201,20 @@ static WRITE16_HANDLER( namcona1_nvram_w )
 
 /***************************************************************************/
 
-INPUT_PORTS_START( namcona1_joy )
+INPUT_PORTS_START( na1_joy )
 	PORT_START
 	PORT_DIPNAME( 0x01, 0x00, "DIP2 (Freeze)" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x01, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x01, DEF_STR( On ) )
 	PORT_DIPNAME( 0x02, 0x00, "DIP1 (Test)" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x02, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x02, DEF_STR( On ) )
 	PORT_DIPNAME( 0x20, 0x00, DEF_STR( Test ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x20, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x20, DEF_STR( On ) )
 	PORT_DIPNAME( 0x40, 0x00, "SERVICE" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x40, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x40, DEF_STR( On ) )
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_SERVICE )
 
 	PORT_START
@@ -228,7 +236,7 @@ INPUT_PORTS_START( namcona1_joy )
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(2)
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(2)
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START2 )
-
+#if 000
 	PORT_START
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(3)
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(3)
@@ -248,7 +256,7 @@ INPUT_PORTS_START( namcona1_joy )
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(4)
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(4)
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START4 )
-
+#endif //000
 	PORT_START
 	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_UNKNOWN )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_COIN1 )
@@ -257,20 +265,20 @@ INPUT_PORTS_START( namcona1_joy )
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_COIN4 )
 INPUT_PORTS_END
 
-INPUT_PORTS_START( namcona1_quiz )
+INPUT_PORTS_START( na1_quiz )
 	PORT_START
 	PORT_DIPNAME( 0x01, 0x00, "DIP2 (Freeze)" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x01, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x01, DEF_STR( On ) )
 	PORT_DIPNAME( 0x02, 0x00, "DIP1 (Test)" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x02, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x02, DEF_STR( On ) )
 	PORT_DIPNAME( 0x20, 0x00, DEF_STR( Test ) )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x20, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x20, DEF_STR( On ) )
 	PORT_DIPNAME( 0x40, 0x00, "SERVICE" )
-	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
-	PORT_DIPSETTING(    0x40, DEF_STR( On ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x40, DEF_STR( On ) )
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_SERVICE )
 
 	PORT_START
@@ -292,7 +300,7 @@ INPUT_PORTS_START( namcona1_quiz )
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START2 )
-
+#if 000
 	PORT_START
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_PLAYER(3)
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(3)
@@ -312,7 +320,7 @@ INPUT_PORTS_START( namcona1_quiz )
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START4 )
-
+#endif //000
 	PORT_START
 	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_UNKNOWN )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_COIN1 )
@@ -321,22 +329,95 @@ INPUT_PORTS_START( namcona1_quiz )
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_COIN4 )
 INPUT_PORTS_END
 
+#if 00000
+INPUT_PORTS_START( na1_xday )
+	PORT_START
+	PORT_DIPNAME( 0x01, 0x00, "DIP2 (Freeze)" )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x01, DEF_STR( On ) )
+	PORT_DIPNAME( 0x02, 0x00, "DIP1 (Test)" )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x02, DEF_STR( On ) )
+	PORT_DIPNAME( 0x20, 0x00, DEF_STR( Test ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x20, DEF_STR( On ) )
+	PORT_DIPNAME( 0x40, 0x00, "SERVICE" )
+	PORT_DIPSETTING(	0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x40, DEF_STR( On ) )
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_SERVICE )
+
+	PORT_START
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_8WAY
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN ) PORT_8WAY
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_8WAY
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON1 )
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 )
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 )
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START1 )
+
+	PORT_START
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN ) PORT_8WAY PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(2)
+//	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(2)
+//	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(2)
+//	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(2)
+	PORT_BIT( 0x70, IP_ACTIVE_HIGH, IPT_BUTTON4 )
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START2 )
+#if 000
+	PORT_START
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(3)
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(3)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN ) PORT_8WAY PORT_PLAYER(3)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(3)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(3)
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(3)
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(3)
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START3 )
+
+	PORT_START
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_PLAYER(4)
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_8WAY PORT_PLAYER(4)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_JOYSTICK_DOWN ) PORT_8WAY PORT_PLAYER(4)
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP ) PORT_8WAY PORT_PLAYER(4)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_PLAYER(4)
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_PLAYER(4)
+	PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(4)
+	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_START4 )
+#endif //000
+	PORT_START
+	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_UNKNOWN )
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_COIN1 )
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN2 )
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_COIN3 )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_COIN4 )
+INPUT_PORTS_END
+#endif
+
 /***************************************************************************/
+//#define MCU_COIN (5)
+#define MCU_COIN (5-2)
 
 static void
 simulate_mcu( void )
 {
-	int i;
-	data16_t data;
-	data8_t poll_coins;
+//	int i;
+	UINT16 data;
+	UINT8 poll_coins;
 
-	mcu_ram[0xf60/2] = 0x0000; /* mcu ready */
+//	mcu_ram[0xf60/2] = 0x0000; /* mcu ready */
+	namcona1_workram[0xf60/2] = 0x0000; /* mcu ready */
 
 	mcu_ram[0xfc0/2] = readinputport(0x0); /* dipswitch */
 
-	for( i=1; i<=4; i++ )
+#if 00
+//	for( i=1; i<=4; i++ )
+	for( i=1; i<=(4-2); i++ )
 	{
 		data = readinputport(i)<<8;
+
 		switch( namcona1_gametype )
 		{
 		case NAMCO_KNCKHEAD:
@@ -348,6 +429,11 @@ simulate_mcu( void )
 
 		case NAMCO_XDAY2:
 			data |= data>>8; /* wrong! */
+		//	data >>= 8;
+		//	if( i==1 )
+		//	{
+		//		if( readinputport(1)&0x80 ) data |= 0x8000; /* P1 start */
+		//	}
 			break;
 
 		case NAMCO_TINKLPIT:
@@ -368,51 +454,54 @@ simulate_mcu( void )
 		}
 		mcu_ram[0xfc0/2+i] = data;
 	}
-
+#endif
+	data = readinputport(1);	mcu_ram[0xfc0/2+1] = ((data<<8)|(data));
+	data = readinputport(2);	mcu_ram[0xfc0/2+2] = ((data<<8)|(data));
+#if 000
 	/* "analog" and "encoder" ports are polled during test mode,
-     * but I haven't found any games that make use of them.
-     */
+	 * but I haven't found any games that make use of them.
+	 */
 	mcu_ram[0xfc0/2+0x05] = 0xffff; /* analog0,1 */
 	mcu_ram[0xfc0/2+0x06] = 0xffff; /* analog2,3 */
 	mcu_ram[0xfc0/2+0x07] = 0xffff; /* analog4,5 */
 	mcu_ram[0xfc0/2+0x08] = 0xffff; /* analog6,7 */
 	mcu_ram[0xfc0/2+0x09] = 0xffff; /* encoder0,1 */
-
-	poll_coins = readinputport(5); /* coin input */
-	if( (poll_coins&0x8)&~(mCoinState&0x8) ) mCoinCount[0]++;
-	if( (poll_coins&0x4)&~(mCoinState&0x4) ) mCoinCount[1]++;
-	if( (poll_coins&0x2)&~(mCoinState&0x2) ) mCoinCount[2]++;
-	if( (poll_coins&0x1)&~(mCoinState&0x1) ) mCoinCount[3]++;
+#endif
+	poll_coins = readinputport(MCU_COIN); /*5 coin input */
+	if( (poll_coins&0x8)&~(mCoinState&0x8) ) mCoinCount01+=0x0100;
+	if( (poll_coins&0x4)&~(mCoinState&0x4) ) mCoinCount01+=0x0001;
+//	if( (poll_coins&0x2)&~(mCoinState&0x2) ) mCoinCount23+=0x0100;
+//	if( (poll_coins&0x1)&~(mCoinState&0x1) ) mCoinCount23+=0x0001;
 	mCoinState = poll_coins;
 
-	mcu_ram[0xfc0/2+0xa] = (mCoinCount[0]<<8)|mCoinCount[1];
-	mcu_ram[0xfc0/2+0xb] = (mCoinCount[2]<<8)|mCoinCount[3];
+	mcu_ram[0xfc0/2+0xa] = mCoinCount01;
+//	mcu_ram[0xfc0/2+0xb] = mCoinCount23;
 
 	/* special handling for F/A */
 	data = ~((readinputport(1)<<8)|readinputport(2));
 	mcu_ram[0xffc/2] = data;
 	mcu_ram[0xffe/2] = data;
 
-	if( namcona1_gametype == NAMCO_XDAY2 )
-	{
-		int p1 = readinputport(1);
-		int p2 = readinputport(2);
-		data32_t code = 0;
-		if( p2&0x40 ) code |= 0x2000; // enter (top-level of self-test)
-		if( p2&0x20 ) code |= 0x1000; // exit  (top-level of self-test)
-		if( p1&0x40 ) code |= 0x0020; // next  (top-level of self-test)
-		if( p1&0x20 ) code |= 0x0010; // prev  (top-level of self-test)
-		code = ~code;
-		mcu_ram[0xffc/2] = code>>16;
-		mcu_ram[0xffe/2] = code&0xffff;
-	}
+//	if( namcona1_gametype == NAMCO_XDAY2 )
+//	{
+//		int p1 = readinputport(1);
+//		int p2 = readinputport(2);
+//		UINT32 code = 0;
+//		if( p2&0x40 ) code |= 0x2000; // enter (top-level of self-test)
+//		if( p2&0x20 ) code |= 0x1000; // exit  (top-level of self-test)
+//		if( p1&0x40 ) code |= 0x0020; // next  (top-level of self-test)
+//		if( p1&0x20 ) code |= 0x0010; // prev  (top-level of self-test)
+//		code = ~code;
+//		mcu_ram[0xffc/2] = code>>16;
+//		mcu_ram[0xffe/2] = code&0xffff;
+//	}
 } /* simulate_mcu */
 
-static READ16_HANDLER( namcona1_mcu_r )
-{
-	return mcu_ram[offset];
-}
-
+//static READ16_HANDLER( namcona1_mcu_r )
+//{
+//	return mcu_ram[offset];
+//}
+#if 000
 static WRITE16_HANDLER( namcona1_mcu_w )
 {
 	COMBINE_DATA( &mcu_ram[offset] );
@@ -421,78 +510,77 @@ static WRITE16_HANDLER( namcona1_mcu_w )
 		logerror( "0x%03x: 0x%04x\n", offset*2, mcu_ram[offset] );
 	}
 	/*
-        400..53d  code for MCU?
+		400..53d  code for MCU?
 
-        820:                    song select
-        822:                    song control (volume? tempo?)
-        824,826,828,....89e:    sample select
-            0x40 is written to odd addresses to signal the MCU that a sound command has been issued
+		820:					song select
+		822:					song control (volume? tempo?)
+		824,826,828,....89e:	sample select
+			0x40 is written to odd addresses to signal the MCU that a sound command has been issued
 
-        8f0: 0x07 unknown
-        8f2: 0x01 unknown
-        8f4: 0xa4 unknown
+		8f0: 0x07 unknown
+		8f2: 0x01 unknown
+		8f4: 0xa4 unknown
 
-        f30..f71    data for MCU
-        f72: MCU command:
-            0x07 = identify version
-            0x03 = process data
-            0x87 = ?
+		f30..f71	data for MCU
+		f72: MCU command:
+			0x07 = identify version
+			0x03 = process data
+			0x87 = ?
 
-        fc0..fc9: used by knuckleheads (NA2-specific?)
+		fc0..fc9: used by knuckleheads (NA2-specific?)
 
-        fd8: ?
+		fd8: ?
 
-        fbf: watchdog
-    */
+		fbf: watchdog
+	*/
 }
-
+#endif
 /* NA2 hardware sends a special command to the MCU, then tests to
  * see if the proper BIOS version string appears in shared memory.
  */
 static void write_version_info( void )
 {
-	const data16_t source[0x8] =
+	const UINT16 source[0x8] =
 	{ /* "NSA-BIOS ver"... */
 		0x534e,0x2d41,0x4942,0x534f,0x7620,0x7265,0x2e31,0x3133
 	};
 	int i;
 	for( i=0; i<8; i++ )
 	{
-		namcona1_workram[i] = source[i];
+	//	namcona1_workram[i] = source[i];
+		namcona1_workram[0x1000/2+i] = source[i];
 	}
 } /* write_version_info */
 
+static UINT16 *pRom;
 static WRITE16_HANDLER( mcu_command_w )
 {
-	data16_t *pMem = (data16_t *)memory_region( REGION_CPU1 );
-	data16_t cmd = pMem[0xf72/2]>>8;
-
-	switch( cmd ){
+	switch( ((pRom[0xf72/2])>>8) ){/* cmd */
 	case 0x03:
 		/* Process data at 0xf30..0xf71
-         *
-         * f30: 0101 0020 0400 013e 8a00 0000 0000 011e
-         * f40: 0301 0000 0000 0000 8a16 0000 0000 012c
-         * f50: 0301 0000 0000 0000 8a61 0000 0000 019e
-         * f60: 0301 0000 0000 0000 8a61 0000 0000 01ae
-         * f70: 0000
-         *
-         * f30: 0301 0000 0000 0000 8a88 0000 0000 0120
-         * f40: 0301 0000 0000 0000 8ad1 0000 0000 015a
-         * f50: 0301 0000 0000 0000 8af6 0000 0000 011c
-         * f60: 0301 0000 0000 0000 8b08 0000 0000 0114
-         * f70: 0000
-         *
-         * f30: 0300 0000 0000 0000 8b1f 2004 0000 0000
-         * f40: 0301 0000 0000 0000 8b33 0000 0000 8902
-         * f50: 0000
-         */
+		 *
+		 * f30: 0101 0020 0400 013e 8a00 0000 0000 011e
+		 * f40: 0301 0000 0000 0000 8a16 0000 0000 012c
+		 * f50: 0301 0000 0000 0000 8a61 0000 0000 019e
+		 * f60: 0301 0000 0000 0000 8a61 0000 0000 01ae
+		 * f70: 0000
+		 *
+		 * f30: 0301 0000 0000 0000 8a88 0000 0000 0120
+		 * f40: 0301 0000 0000 0000 8ad1 0000 0000 015a
+		 * f50: 0301 0000 0000 0000 8af6 0000 0000 011c
+		 * f60: 0301 0000 0000 0000 8b08 0000 0000 0114
+		 * f70: 0000
+		 *
+		 * f30: 0300 0000 0000 0000 8b1f 2004 0000 0000
+		 * f40: 0301 0000 0000 0000 8b33 0000 0000 8902
+		 * f50: 0000
+		 */
 		break;
 
 	case 0x07:
 		/* This command is used to detect Namco NA-2 hardware; without it,
-         * NA-2 games (Knuckleheads, Numan Athletics) refuse to run.
-         */
+		 * NA-2 games (Knuckleheads, Numan Athletics) refuse to run.
+		 */
 		write_version_info();
 		break;
 	}
@@ -504,12 +592,12 @@ static WRITE16_HANDLER( mcu_command_w )
  * 8 bit signed PCM data
  * copied to workram
  *
- *  0x01fffc: pointer
- *  0x020000: samples
- *  0x040000: samples
- *  0x060000: samples
+ *	0x01fffc: pointer
+ *	0x020000: samples
+ *	0x040000: samples
+ *	0x060000: samples
  *
- *  0x070000: metadata; 10 byte frames
+ *	0x070000: metadata; 10 byte frames
  */
 
 /***************************************************************************/
@@ -526,65 +614,65 @@ static WRITE16_HANDLER( mcu_command_w )
 static READ16_HANDLER( custom_key_r )
 {
 	static unsigned char keyseq;
-	static data16_t count;
+	static UINT16 count;
 	int old_count;
 
 	old_count = count;
 	do
 	{
-		count = mame_rand();
+		count = /*mame_*/rand();
 	} while( old_count == count );
 
 	switch( namcona1_gametype )
 	{
 	case NAMCO_BKRTMAQ:
-		if( offset==2 ) return 0x015c;
+		if( offset==2 ) return 0x015c;/*348*/
 		break;
 
 	case NAMCO_FA:
-		if( offset==2 ) return 0x015d;
+		if( offset==2 ) return 0x015d;/*349*/
 		if( offset==4 ) return count;
 		break;
 
-	case NAMCO_EXBANIA:
-		if( offset==2 ) return 0x015e;
+	case NAMCO_EXBANIA:/* C354+C350 */
+		if( offset==2 ) return 0x015e;/*350*/
 		break;
 
 	case NAMCO_CGANGPZL:
-		if( offset==1 ) return 0x0164;
+		if( offset==1 ) return 0x0164;/*356*/
 		if( offset==2 ) return count;
 		break;
 
-	case NAMCO_SWCOURT:
-		if( offset==1 ) return 0x0165;
+	case NAMCO_SWCOURT:/* C354+C357 */
+		if( offset==1 ) return 0x0165;/*357*/
 		if( offset==2 ) return count;
 		break;
 
-	case NAMCO_EMERALDA:
-		if( offset==1 ) return 0x0166;
+	case NAMCO_EMERALDA:/* C354+C358 */
+		if( offset==1 ) return 0x0166;/*358*/
 		if( offset==2 ) return count;
 		break;
 
 	case NAMCO_NUMANATH:
-		if( offset==1 ) return 0x0167;
+		if( offset==1 ) return 0x0167;/*359*/
 		if( offset==2 ) return count;
 		break;
 
 	case NAMCO_KNCKHEAD:
-		if( offset==1 ) return 0x0168;
+		if( offset==1 ) return 0x0168;/*360*/
 		if( offset==2 ) return count;
 		break;
 
 	case NAMCO_QUIZTOU:
-		if( offset==2 ) return 0x016d;
+		if( offset==2 ) return 0x016d;/*365*/
 		break;
 
-	case NAMCO_TINKLPIT:
-		if( offset==7 ) return 0x016f;
+	case NAMCO_TINKLPIT:/* C354+C367 */
+		if( offset==7 ) return 0x016f;/*367*/
 		if( offset==4 ) keyseq = 0;
 		if( offset==3 )
 		{
-			const data16_t data[] =
+			const UINT16 data[] =
 			{
 				0x0000,0x2000,0x2100,0x2104,0x0106,0x0007,0x4003,0x6021,
 				0x61a0,0x31a4,0x9186,0x9047,0xc443,0x6471,0x6db0,0x39bc,
@@ -595,15 +683,20 @@ static READ16_HANDLER( custom_key_r )
 		}
 		break;
 
+	case NAMCO_XDAY:
+		if( offset==2 ) return 0x0177;/*???*/
+		if( offset==3 ) return count;
+		break;
+
 	case NAMCO_XDAY2:
-		if( offset==2 ) return 0x018a;
+		if( offset==2 ) return 0x018a;/*394*/
 		if( offset==3 ) return count;
 		break;
 
 	default:
 		return 0;
 	}
-	return mame_rand()&0xffff;
+	return /*mame_*/rand()&0xffff;
 } /* custom_key_r */
 
 static WRITE16_HANDLER( custom_key_w )
@@ -617,79 +710,73 @@ static READ16_HANDLER( namcona1_vreg_r )
 	return namcona1_vreg[offset];
 } /* namcona1_vreg_r */
 
-static int
-transfer_dword( UINT32 dest, UINT32 source )
-{
-	data16_t data;
+static UINT16 *mpBank0, *mpBank1;
 
-	if( source>=0x400000 && source<0xc00000 )
+static int transfer_dword( UINT32 dest, UINT32 source )
+{
+	UINT16 data;
+
+	if( source>=(0x400000/2) && source<(0xc00000/2) )
 	{
-		data = mpBank1[(source-0x400000)/2];
+		data = mpBank1[(source-(0x400000/2))];
 	}
-	else if( source>=0xc00000 && source<0xe00000 )
+	else if( source>=(0xc00000/2) && source<(0xe00000/2) )
 	{
-		data = mpBank0[(source-0xc00000)/2];
+		data = mpBank0[(source-(0xc00000/2))];
 	}
-	else if( source<0x80000 && source>=0x1000 )
+	else if( source<(0x80000/2) && source>=(0x1000/2) )
 	{
-		data = namcona1_workram[(source-0x001000)/2];
+	/*	data = namcona1_workram[(source-(0x001000/2))];*/
+		data = namcona1_workram[source];
 	}
-	else
+	else{	/*logerror( "bad blt src %08x\n", (source*2) );*/	return -1;	}
+
+	if( dest>=(0xf00000/2) && dest<=(0xf02000/2) )
 	{
-		logerror( "bad blt src %08x\n", source );
-		return -1;
+		namcona1_paletteram_w( (dest-(0xf00000/2)), data, 0x0000 );
 	}
-	if( dest>=0xf00000 && dest<=0xf02000 )
+	else if( dest>=(0xf40000/2) && dest<=(0xf80000/2) )
 	{
-		namcona1_paletteram_w( (dest-0xf00000)/2, data, 0x0000 );
+		namcona1_gfxram_w( (dest-(0xf40000/2)), data, 0x0000 );
 	}
-	else if( dest>=0xf40000 && dest<=0xf80000 )
+	else if( dest>=(0xff0000/2) && dest<(0xff8000/2) )
 	{
-		namcona1_gfxram_w( (dest-0xf40000)/2, data, 0x0000 );
+		namcona1_videoram_w( (dest-(0xff0000/2)), data, 0x0000 );
 	}
-	else if( dest>=0xff0000 && dest<0xff8000 )
+	else if( dest>=(0xff8000/2) && dest<=(0xffdfff/2) )
 	{
-		namcona1_videoram_w( (dest-0xff0000)/2, data, 0x0000 );
+		namcona1_sparevram[(dest-(0xff8000/2))] = data;
 	}
-	else if( dest>=0xff8000 && dest<=0xffdfff )
+	else if( dest>=(0xfff000/2) && dest<=(0xffffff/2) )
 	{
-		namcona1_sparevram[(dest-0xff8000)/2] = data;
+		spriteram16[(dest-(0xfff000/2))] = data;
 	}
-	else if( dest>=0xfff000 && dest<=0xffffff )
-	{
-		spriteram16[(dest-0xfff000)/2] = data;
-	}
-	else
-	{
-		logerror( "bad blt dst %08x\n", dest );
-		return -1;
-	}
+	else{	/*logerror( "bad blt dst %08x\n", (dest*2) );*/		return -1;	}
 	return 0;
 } /* transfer_dword */
 
-static void
-blit_setup( int format, int *bytes_per_row, int *pitch, int mode )
+static void blit_setup( int format, int *bytes_per_row, int *pitch, int mode )
 {
 	if( mode == 3 )
 	{
 		switch( format )
 		{
 		case 0x0001:
-			*bytes_per_row = 0x1000;
-			*pitch = 0x1000;
+			*bytes_per_row	= (0x1000/2);
+			*pitch			= (0x1000/2);
 			break;
 
 		case 0x0081:
-			*bytes_per_row = 4*8;
-			*pitch = 36*8;
+			*bytes_per_row	= ((4*8)/2);
+			*pitch			= ((36*8)/2);
 			break;
 
 		default:
-//      case 0x00f1:
-//      case 0x00f9:
-//      case 0x00fd:
-			*bytes_per_row = (64 - (format>>2))*0x08;
-			*pitch = 0x200;
+//		case 0x00f1:
+//		case 0x00f9:
+//		case 0x00fd:
+			*bytes_per_row	= (((64 - (format>>2))*0x08)/2);
+			*pitch			= ((0x200)/2);
 			break;
 		}
 	}
@@ -698,42 +785,42 @@ blit_setup( int format, int *bytes_per_row, int *pitch, int mode )
 		switch( format )
 		{
 		case 0x00bd: /* Numan Athletics */
-			*bytes_per_row = 4;
-			*pitch = 0x120;
+			*bytes_per_row	= (0x04/2);
+			*pitch			= ((0x120)/2);
 			break;
 		case 0x008d: /* Numan Athletics */
-			*bytes_per_row = 8;
-			*pitch = 0x120;
+			*bytes_per_row	= (0x08/2);
+			*pitch			= ((0x120)/2);
 			break;
 
 		case 0x0000: /* Numan (used to clear spriteram) */
-//      0000 0000 0000 : src0
-//      0000 0001 0000 : dst0
-//      003d 75a0      : src (7AEB40)
-//      ---- ----      : spriteram
-//      0800           : numbytes
-//      0000           : blit
-			*bytes_per_row = 0x10;
-			*pitch = 0;
+//		0000 0000 0000 : src0
+//		0000 0001 0000 : dst0
+//		003d 75a0	   : src (7AEB40)
+//		---- ----	   : spriteram
+//		0800		   : numbytes
+//		0000		   : blit
+			*bytes_per_row	= (0x10/2);
+			*pitch			= ((0)/2);
 			break;
 
 		case 0x0001:
-			*bytes_per_row = 0x1000;
-			*pitch = 0x1000;
+			*bytes_per_row	= (0x1000/2);
+			*pitch			= ((0x1000)/2);
 			break;
 
 		case 0x0401: /* F/A */
-			*bytes_per_row = 4*0x40;
-			*pitch = 36*0x40;
+			*bytes_per_row	= ((4*0x40)/2);
+			*pitch			= ((36*0x40)/2);
 			break;
 
 		default:
-//      case 0x00f1:
-//      case 0x0781:
-//      case 0x07c1:
-//      case 0x07e1:
-			*bytes_per_row = (64 - (format>>5))*0x40;
-			*pitch = 0x1000;
+//		case 0x00f1:
+//		case 0x0781:
+//		case 0x07c1:
+//		case 0x07e1:
+			*bytes_per_row	= (((64 - (format>>5))*0x40)/2);
+			*pitch			= ((0x1000)/2);
 			break;
 		}
 	}
@@ -741,25 +828,25 @@ blit_setup( int format, int *bytes_per_row, int *pitch, int mode )
 
 /*
 $efff20: sprite control: 0x3a,0x3e,0x3f
-            bit 0x01 selects spriteram bank
+			bit 0x01 selects spriteram bank
 
-               0    2    4    6    8    a    c    e
-$efff00:    src0 src1 src2 dst0 dst1 dst2 BANK [src
-$efff10:    src] [dst dst] #BYT BLIT eINT 001f 0001
-$efff20:    003f 003f IACK ---- ---- ---- ---- ----
-$efff30:    ---- ---- ---- ---- ---- ---- ---- ----
-$efff40:    ---- ---- ---- ---- ---- ---- ---- ----
-$efff50:    ---- ---- ---- ---- ---- ---- ---- ----
-$efff60:    ---- ---- ---- ---- ---- ---- ---- ----
-$efff70:    ---- ---- ---- ---- ---- ---- ---- ----
-$efff80:    0050 0170 0020 0100 0000 0000 0000 GFXE
-$efff90:    0000 0001 0002 0003 FLIP ---- ---- ----
-$efffa0:    PRI  PRI  PRI  PRI  ---- ---- 00c0 ----     priority (0..7)
-$efffb0:    COLR COLR COLR COLR 0001 0004 0000 ----     color (0..f)
-$efffc0:    ???? ???? ???? ???? ???? ???? ???? ----     ROZ
+			   0	2	 4	  6    8	a	 c	  e
+$efff00:	src0 src1 src2 dst0 dst1 dst2 BANK [src
+$efff10:	src] [dst dst] #BYT BLIT eINT 001f 0001
+$efff20:	003f 003f IACK ---- ---- ---- ---- ----
+$efff30:	---- ---- ---- ---- ---- ---- ---- ----
+$efff40:	---- ---- ---- ---- ---- ---- ---- ----
+$efff50:	---- ---- ---- ---- ---- ---- ---- ----
+$efff60:	---- ---- ---- ---- ---- ---- ---- ----
+$efff70:	---- ---- ---- ---- ---- ---- ---- ----
+$efff80:	0050 0170 0020 0100 0000 0000 0000 GFXE
+$efff90:	0000 0001 0002 0003 FLIP ---- ---- ----
+$efffa0:	PRI  PRI  PRI  PRI	---- ---- 00c0 ---- 	priority (0..7)
+$efffb0:	COLR COLR COLR COLR 0001 0004 0000 ---- 	color (0..f)
+$efffc0:	???? ???? ???? ???? ???? ???? ???? ---- 	ROZ
 
 Emeralda:
-$efff80:    0048 0177 0020 0100 0000 00fd 0000 GFXE
+$efff80:	0048 0177 0020 0100 0000 00fd 0000 GFXE
 */
 
 static void namcona1_blit( void )
@@ -775,65 +862,65 @@ static void namcona1_blit( void )
 	int gfxbank = namcona1_vreg[0x6];
 
 	/* dest and source are provided as dword offsets */
-	UINT32 src_baseaddr	= 2*((namcona1_vreg[0x7]<<16)|namcona1_vreg[0x8]);
-	UINT32 dst_baseaddr	= 2*((namcona1_vreg[0x9]<<16)|namcona1_vreg[0xa]);
+	UINT32 src_baseaddr = ((namcona1_vreg[0x7]<<16)|namcona1_vreg[0x8]);
+	UINT32 dst_baseaddr = ((namcona1_vreg[0x9]<<16)|namcona1_vreg[0xa]);
 
 	int num_bytes = namcona1_vreg[0xb];
 
 	int dest_offset, source_offset;
-	int dest_bytes_per_row, dst_pitch;
-	int source_bytes_per_row, src_pitch;
+	int dest_bytes_per_row2,   dst_pitch;
+	int source_bytes_per_row2, src_pitch;
 
 	(void)dst2;
 	(void)dst0;
 	(void)src2;
 	(void)src0;
 
-	logerror( "0x%08x: blt(%08x,%08x,%08x);%04x %04x %04x; %04x %04x %04x; gfx=%04x\n",
-		activecpu_get_pc(),
-		dst_baseaddr,src_baseaddr,num_bytes,
-		src0,src1,src2,
-		dst0,dst1,dst2,
-		gfxbank );
+//	logerror( "0x%08x: blt(%08x,%08x,%08x);%04x %04x %04x; %04x %04x %04x; gfx=%04x\n",
+//		activecpu_get_pc(),
+//		(dst_baseaddr*2),(src_baseaddr*2),num_bytes,
+//		src0,src1,src2,
+//		dst0,dst1,dst2,
+//		gfxbank );
 
-	blit_setup( dst1, &dest_bytes_per_row, &dst_pitch, gfxbank);
-	blit_setup( src1, &source_bytes_per_row, &src_pitch, gfxbank );
+	blit_setup( dst1, &dest_bytes_per_row2,   &dst_pitch, gfxbank);
+	blit_setup( src1, &source_bytes_per_row2, &src_pitch, gfxbank);
 
 	if( num_bytes&1 )
 	{
 		num_bytes++;
 	}
 
-	if( dst_baseaddr < 0xf00000 )
+	if( dst_baseaddr < (0xf00000/2) )
 	{
-		dst_baseaddr += 0xf40000;
+		dst_baseaddr += (0xf40000/2);
 	}
 
-	dest_offset		= 0;
+	dest_offset 	= 0;
 	source_offset	= 0;
 
 	while( num_bytes>0 )
 	{
 		if( transfer_dword(
-			dst_baseaddr + dest_offset,
-			src_baseaddr + source_offset ) )
+			dst_baseaddr + ((dest_offset)),
+			src_baseaddr + ((source_offset)) ) )
 		{
 			return;
 		}
 
 		num_bytes -= 2;
 
-		dest_offset+=2;
-		if( dest_offset >= dest_bytes_per_row )
+		dest_offset++;
+		if( (dest_offset) >= dest_bytes_per_row2 )
 		{
-			dst_baseaddr += dst_pitch;
+			dst_baseaddr += (dst_pitch);
 			dest_offset = 0;
 		}
 
-		source_offset+=2;
-		if( source_offset >= source_bytes_per_row )
+		source_offset++;
+		if( (source_offset) >= source_bytes_per_row2 )
 		{
-			src_baseaddr += src_pitch;
+			src_baseaddr += (src_pitch);
 			source_offset = 0;
 		}
 	}
@@ -861,19 +948,20 @@ static WRITE16_HANDLER( namcona1_vreg_w )
 
 static WRITE16_HANDLER( bogus_w )
 {
-//  extern int debug_key_pressed;
-//  debug_key_pressed = 1;
+//	extern int debug_key_pressed;
+//	debug_key_pressed = 1;
 }
 static READ16_HANDLER( bogus_r )
 {
-//  extern int debug_key_pressed;
-//  debug_key_pressed = 1;
+//	extern int debug_key_pressed;
+//	debug_key_pressed = 1;
 	return 0;
 }
 
 static ADDRESS_MAP_START( namcona1_readmem, ADDRESS_SPACE_PROGRAM, 16 )
-	AM_RANGE(0x000000, 0x000fff) AM_READ(namcona1_mcu_r)
-	AM_RANGE(0x001000, 0x07ffff) AM_READ(MRA16_RAM)		/* work RAM */
+//	AM_RANGE(0x000000, 0x000fff) AM_READ(namcona1_mcu_r)
+//	AM_RANGE(0x001000, 0x07ffff) AM_READ(MRA16_RAM) 	/* work RAM */
+	AM_RANGE(0x000000, 0x07ffff) AM_READ(MRA16_RAM) 	/* work RAM */
 	AM_RANGE(0x080000, 0x3fffff) AM_READ(bogus_r)
 	AM_RANGE(0x400000, 0xbfffff) AM_READ(MRA16_BANK2)	/* data */
 	AM_RANGE(0xc00000, 0xdfffff) AM_READ(MRA16_BANK1)	/* code */
@@ -886,14 +974,15 @@ static ADDRESS_MAP_START( namcona1_readmem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xf40000, 0xf7ffff) AM_READ(namcona1_gfxram_r)
 	AM_RANGE(0xf80000, 0xfeffff) AM_READ(bogus_r)
 	AM_RANGE(0xff0000, 0xff7fff) AM_READ(namcona1_videoram_r)
-	AM_RANGE(0xff8000, 0xffdfff) AM_READ(MRA16_RAM)		/* spare videoram */
-	AM_RANGE(0xffe000, 0xffefff) AM_READ(MRA16_RAM)		/* scroll registers */
-	AM_RANGE(0xfff000, 0xffffff) AM_READ(MRA16_RAM)		/* spriteram */
+	AM_RANGE(0xff8000, 0xffdfff) AM_READ(MRA16_RAM) 	/* spare videoram */
+	AM_RANGE(0xffe000, 0xffefff) AM_READ(MRA16_RAM) 	/* scroll registers */
+	AM_RANGE(0xfff000, 0xffffff) AM_READ(MRA16_RAM) 	/* spriteram */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( namcona1_writemem, ADDRESS_SPACE_PROGRAM, 16 )
-	AM_RANGE(0x000000, 0x000fff) AM_WRITE(namcona1_mcu_w) AM_BASE(&mcu_ram)
-	AM_RANGE(0x001000, 0x07ffff) AM_WRITE(MWA16_RAM) AM_BASE(&namcona1_workram)
+//	AM_RANGE(0x000000, 0x000fff) AM_WRITE(namcona1_mcu_w) AM_BASE(&mcu_ram)
+//	AM_RANGE(0x001000, 0x07ffff) AM_WRITE(MWA16_RAM) AM_BASE(&namcona1_workram)
+	AM_RANGE(0x000000, 0x07ffff) AM_WRITE(MWA16_RAM) AM_BASE(&namcona1_workram)
 	AM_RANGE(0x080000, 0x3f8007) AM_WRITE(bogus_w)
 	AM_RANGE(0x3f8008, 0x3f8009) AM_WRITE(mcu_command_w)
 	AM_RANGE(0x3f800a, 0x3fffff) AM_WRITE(bogus_w)
@@ -916,13 +1005,13 @@ ADDRESS_MAP_END
 INTERRUPT_GEN( namcona1_interrupt )
 {
 	int level = cpu_getiloops(); /* 0,1,2,3,4 */
-	if( level==0 )
+	if( 0==level )
 	{
 		simulate_mcu();
 	}
 	if( mEnableInterrupts )
 	{
-		if( (namcona1_vreg[0x1a/2]&(1<<level))==0 )
+		if( 0==(namcona1_vreg[0x1a/2]&(1<<level)) )
 		{
 			cpunum_set_input_line(0, level+1, HOLD_LINE);
 		}
@@ -935,10 +1024,18 @@ static struct NAMCONAinterface NAMCONA_interface =
 	0x70000/2
 };
 
+extern UINT8 is_na1;/* from \src\sound\namcona.c */
+
+// Real board xtal labeled 50.113[MHz]
+//efine NA_MASTER_XTAL 50113630
+#define NA_MASTER_XTAL (3579545*14)
 /* cropped at sides */
-static MACHINE_DRIVER_START( namcona1 )
+static MACHINE_DRIVER_START( na_base )
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 50113000/4)
+//	MDRV_CPU_ADD(M68000, NA_MASTER_XTAL/4) /* 12[MHz]? (built on real boards m68k can 12[MHz]) */
+//	MDRV_CPU_ADD(M68000, NA_MASTER_XTAL/6) /*  8[MHz]? */
+	MDRV_CPU_ADD(N68000, NA_MASTER_XTAL/7) /*  6[MHz]fake! */
+//	MDRV_CPU_ADD(N68000, NA_MASTER_XTAL/8) /*  6[MHz]fake? */
 	MDRV_CPU_PROGRAM_MAP(namcona1_readmem,namcona1_writemem)
 	MDRV_CPU_VBLANK_INT(namcona1_interrupt,5)
 
@@ -950,7 +1047,7 @@ static MACHINE_DRIVER_START( namcona1 )
 	/* video hardware */
 	MDRV_VIDEO_ATTRIBUTES(VIDEO_TYPE_RASTER|VIDEO_HAS_SHADOWS)
 	MDRV_SCREEN_SIZE(38*8, 32*8)
-	MDRV_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
+//	MDRV_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
 	MDRV_PALETTE_LENGTH(0x1000)
 
 	MDRV_VIDEO_START(namcona1)
@@ -959,99 +1056,147 @@ static MACHINE_DRIVER_START( namcona1 )
 	/* sound hardware */
 	MDRV_SPEAKER_STANDARD_STEREO("left", "right")
 
-	MDRV_SOUND_ADD(NAMCONA, 4*8000)
+	//MDRV_SOUND_ADD(NAMCONA, 4*8000)
+//	MDRV_SOUND_ADD(NAMCONA, 42667)
+//	MDRV_SOUND_ADD(NAMCONA, 48938)
+	MDRV_SOUND_ADD(NAMCONA, 42667)
 	MDRV_SOUND_CONFIG(NAMCONA_interface)
-	MDRV_SOUND_ROUTE(0, "left", 1.0)
+	MDRV_SOUND_ROUTE(0, "left",  1.0)
 	MDRV_SOUND_ROUTE(1, "right", 1.0)
+	is_na1=1;
 MACHINE_DRIVER_END
 
+/* NA1 Cosmo & exvania */
+static MACHINE_DRIVER_START( na1c )
+	MDRV_IMPORT_FROM(na_base)
+	/* video hardware */
+	MDRV_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)/*[Cosmo & exvania]*/
+MACHINE_DRIVER_END
 
-/* full-width */
-static MACHINE_DRIVER_START( namcona1w )
+/* NA1 f/a */
+static MACHINE_DRIVER_START( na1f )
+	MDRV_IMPORT_FROM(na_base)
+	/* video hardware */
+//	MDRV_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
+	MDRV_VISIBLE_AREA(9, 38*8-1-7, 4*8, 32*8-1)/*[F/A]*/
+MACHINE_DRIVER_END
 
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(namcona1)
-
+/* NA1W full-width */
+static MACHINE_DRIVER_START( na1w )
+	MDRV_IMPORT_FROM(na_base)
 	/* video hardware */
 	MDRV_VISIBLE_AREA(0, 38*8-1-0, 4*8, 32*8-1)
 MACHINE_DRIVER_END
 
+/* NA2 */
+static MACHINE_DRIVER_START( na2 )
+	MDRV_IMPORT_FROM(na_base)
+	is_na1=0;
+	/* video hardware */
+	MDRV_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
+MACHINE_DRIVER_END
 
 static void
 init_namcona1( int gametype )
 {
-	data16_t *pMem = (data16_t *)memory_region( REGION_CPU1 );
-	pMem[0] = 0x0007; pMem[1] = 0xfffc; /* (?) stack */
-	pMem[2] = 0x00c0; pMem[3] = 0x0000; /* reset vector */
+//	UINT16 *pRom;
+	pRom = (UINT16 *)memory_region( REGION_CPU1 );
+//	pRom = (UINT16 *)memory_region( REGION_CPU1 );
+//	pRom[0] = 0x0007; pRom[1] = 0xfffc; /* (?) stack */
+//	pRom[2] = 0x00c0; pRom[3] = 0x0000; /* reset vector */
+	namcona1_workram[0] = 0x0007; namcona1_workram[1] = 0xfffc; /* (?) stack */
+	namcona1_workram[2] = 0x00c0; namcona1_workram[3] = 0x0000; /* reset vector */
 
 	namcona1_gametype = gametype;
-	mpBank0 = &pMem[0x80000/2];
+	mpBank0 =      &pRom[0x080000/2];
 	mpBank1 = mpBank0 +  0x200000/2;
 
-	cpu_setbank( 1, mpBank0 ); /* code */
-	cpu_setbank( 2, mpBank1 ); /* data */
+	memory_set_bankptr( 1, mpBank0 ); /* code */
+	memory_set_bankptr( 2, mpBank1 ); /* data */
 
-	mCoinCount[0] = mCoinCount[1] = mCoinCount[2] = mCoinCount[3] = 0;
+	mCoinCount01 = 0x0000;
+//	mCoinCount23 = 0x0000;
 	mCoinState = 0;
 	mEnableInterrupts = 0;
 
-	if (namcona1_gametype == NAMCO_KNCKHEAD)
-		NAMCONA_interface.metadata_offset = 0x10000/2;
+	//NAMCONA_interface.memory_base = namcona1_workram;
+	if (NAMCO_KNCKHEAD == namcona1_gametype)
+	{	NAMCONA_interface.metadata_offset = 0x10000/2;}
 	else
-		NAMCONA_interface.metadata_offset = 0x70000/2;
+	{	NAMCONA_interface.metadata_offset = 0x70000/2;}
 }
 
-DRIVER_INIT( bkrtmaq ){		init_namcona1(NAMCO_BKRTMAQ); }
+DRIVER_INIT( bkrtmaq ){ 	init_namcona1(NAMCO_BKRTMAQ); }
 DRIVER_INIT( cgangpzl ){	init_namcona1(NAMCO_CGANGPZL); }
 DRIVER_INIT( emeralda ){	init_namcona1(NAMCO_EMERALDA); }
-DRIVER_INIT( exbania ){		init_namcona1(NAMCO_EXBANIA); }
-DRIVER_INIT( fa ){	init_namcona1(NAMCO_FA); }
+DRIVER_INIT( exbania ){ 	init_namcona1(NAMCO_EXBANIA); }
+DRIVER_INIT( fa ){			init_namcona1(NAMCO_FA); }
 DRIVER_INIT( knckhead ){	init_namcona1(NAMCO_KNCKHEAD); }
 DRIVER_INIT( numanath ){	init_namcona1(NAMCO_NUMANATH); }
-DRIVER_INIT( quiztou ){		init_namcona1(NAMCO_QUIZTOU); }
-DRIVER_INIT( swcourt ){		init_namcona1(NAMCO_SWCOURT); }
+DRIVER_INIT( quiztou ){ 	init_namcona1(NAMCO_QUIZTOU); }
+DRIVER_INIT( swcourt ){ 	init_namcona1(NAMCO_SWCOURT); }
 DRIVER_INIT( tinklpit ){	init_namcona1(NAMCO_TINKLPIT); }
 DRIVER_INIT( xday2 ){		init_namcona1(NAMCO_XDAY2); }
 
 ROM_START( bkrtmaq )
 	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "mq1_ep0l.bin", 0x080001, 0x080000, CRC(f029bc57) SHA1(fdbf8b8b9f69d5755ca5197dda4f887b12dd66f4) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "mq1_ep0u.bin", 0x080000, 0x080000, CRC(4cff62b8) SHA1(5cac170dcfbeb3dcfa0840bdbe7541a9d2f44a14) )
-	ROM_LOAD16_BYTE( "mq1_ep1l.bin", 0x180001, 0x080000, CRC(e3be6f4b) SHA1(75d9a4cff25e63a9d6c092aa6e241eccd1c61f91) )
-	ROM_LOAD16_BYTE( "mq1_ep1u.bin", 0x180000, 0x080000, CRC(b44e31b2) SHA1(3d8c63789b98ada3663ba9e28c370815a9a9c3ed) )
+	ROM_LOAD16_BYTE( "mq1-ep0l.bin", 0x080001, 0x080000, CRC(f029bc57) SHA1(fdbf8b8b9f69d5755ca5197dda4f887b12dd66f4) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "mq1-ep0u.bin", 0x080000, 0x080000, CRC(4cff62b8) SHA1(5cac170dcfbeb3dcfa0840bdbe7541a9d2f44a14) )
+	ROM_LOAD16_BYTE( "mq1-ep1l.bin", 0x180001, 0x080000, CRC(e3be6f4b) SHA1(75d9a4cff25e63a9d6c092aa6e241eccd1c61f91) )
+	ROM_LOAD16_BYTE( "mq1-ep1u.bin", 0x180000, 0x080000, CRC(b44e31b2) SHA1(3d8c63789b98ada3663ba9e28c370815a9a9c3ed) )
 
-	ROM_LOAD16_BYTE( "mq1_ma0l.bin", 0x280001, 0x100000, CRC(11fed35f) SHA1(511d98b6b42b330238a1874bca031b1892654a48) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "mq1_ma0u.bin", 0x280000, 0x100000, CRC(23442ac0) SHA1(fac706f24045d51a2712f51530967140ea8e875f) )
-	ROM_LOAD16_BYTE( "mq1_ma1l.bin", 0x480001, 0x100000, CRC(fe82205f) SHA1(860cc7a96ae3f848ce594077c1362e4e22a36908) )
-	ROM_LOAD16_BYTE( "mq1_ma1u.bin", 0x480000, 0x100000, CRC(0cdb6bd0) SHA1(b8b398477c9654e96921110fb30c754240183897) )
+	ROM_LOAD16_BYTE( "mq1-ma0l.bin", 0x280001, 0x100000, CRC(11fed35f) SHA1(511d98b6b42b330238a1874bca031b1892654a48) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "mq1-ma0u.bin", 0x280000, 0x100000, CRC(23442ac0) SHA1(fac706f24045d51a2712f51530967140ea8e875f) )
+	ROM_LOAD16_BYTE( "mq1-ma1l.bin", 0x480001, 0x100000, CRC(fe82205f) SHA1(860cc7a96ae3f848ce594077c1362e4e22a36908) )
+	ROM_LOAD16_BYTE( "mq1-ma1u.bin", 0x480000, 0x100000, CRC(0cdb6bd0) SHA1(b8b398477c9654e96921110fb30c754240183897) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
 ROM_END
 
 ROM_START( cgangpzl )
-	ROM_REGION( 0x180000, REGION_CPU1, 0 )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
 	ROM_LOAD16_BYTE( "cp2-ep0l.bin", 0x080001, 0x80000, CRC(8f5cdcc5) SHA1(925db3f3f16224bc28f97a57aba0ab2b51c5067c) ) /* 0xc00000 */
 	ROM_LOAD16_BYTE( "cp2-ep0u.bin", 0x080000, 0x80000, CRC(3a816140) SHA1(613c367e08a0a20ec62e1938faab0128743b26f8) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
 ROM_END
 
 ROM_START( cgangpzj )
-	ROM_REGION( 0x180000, REGION_CPU1, 0 )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
 	ROM_LOAD16_BYTE( "cp1-ep0l.bin", 0x080001, 0x80000, CRC(2825f7ba) SHA1(5f6f8df6bdf0f45656904411cdbb31fdcf8f3be0) ) /* 0xc00000 */
 	ROM_LOAD16_BYTE( "cp1-ep0u.bin", 0x080000, 0x80000, CRC(94d7d6fc) SHA1(2460741e0dbb2ccff28f4fbc419a7507382467d2) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
 ROM_END
 
-ROM_START( emeralda )
-	ROM_REGION( 0x280000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "ep0lb.bin",    0x080001, 0x080000, CRC(fcd55293) SHA1(fdabf9d5f528c37196ac1e031b097618b4c887b5) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "ep0ub.bin",    0x080000, 0x080000, CRC(a52f00d5) SHA1(85f95d2a69a2df2e9195f55583645c064b0b6fe6) )
-	ROM_LOAD16_BYTE( "em1-ep1l.bin", 0x180001, 0x080000, CRC(373c1c59) SHA1(385cb3bc056b798878de890dbff97a8bdd48fe4e) )
-	ROM_LOAD16_BYTE( "em1-ep1u.bin", 0x180000, 0x080000, CRC(4e969152) SHA1(2c89ae5d43585f479f16cf8278f8fc001e077e45) )
+ROM_START( emeraldj ) /* NA-1 Game PCB version */
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "em1-ep0lb.bin", 0x080001, 0x080000, CRC(fcd55293) SHA1(fdabf9d5f528c37196ac1e031b097618b4c887b5) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "em1-ep0ub.bin", 0x080000, 0x080000, CRC(a52f00d5) SHA1(85f95d2a69a2df2e9195f55583645c064b0b6fe6) )
+	ROM_LOAD16_BYTE( "em1-ep1l.bin",  0x180001, 0x080000, CRC(373c1c59) SHA1(385cb3bc056b798878de890dbff97a8bdd48fe4e) )
+	ROM_LOAD16_BYTE( "em1-ep1u.bin",  0x180000, 0x080000, CRC(4e969152) SHA1(2c89ae5d43585f479f16cf8278f8fc001e077e45) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
 ROM_END
 
-ROM_START( emerldaa )
-	ROM_REGION( 0x280000, REGION_CPU1, 0 )
+ROM_START( emerldja ) /* NA-1 Game PCB version */
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
 	ROM_LOAD16_BYTE( "em1-ep0l.bin", 0x080001, 0x080000, CRC(443f3fce) SHA1(35b6c834e5716c1e9b55f1e39f4e7336dbbe2d9b) ) /* 0xc00000 */
 	ROM_LOAD16_BYTE( "em1-ep0u.bin", 0x080000, 0x080000, CRC(484a2a81) SHA1(1b60c18dfb2aebfd4aa8b2a85a1e90883a1f8e61) )
 	ROM_LOAD16_BYTE( "em1-ep1l.bin", 0x180001, 0x080000, CRC(373c1c59) SHA1(385cb3bc056b798878de890dbff97a8bdd48fe4e) )
 	ROM_LOAD16_BYTE( "em1-ep1u.bin", 0x180000, 0x080000, CRC(4e969152) SHA1(2c89ae5d43585f479f16cf8278f8fc001e077e45) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
 ROM_END
 
 ROM_START( exvania )
@@ -1063,6 +1208,114 @@ ROM_START( exvania )
 	ROM_LOAD16_BYTE( "ex1-ma0u.bin", 0x280000, 0x100000, CRC(93d66106) SHA1(c5d665db04ae0e8992ef46544e2cb7b0e27c8bfe) )
 	ROM_LOAD16_BYTE( "ex1-ma1l.bin", 0x480001, 0x100000, CRC(e4bba6ed) SHA1(6483ef91e5a5b8ddd13a3d889936c39829fa50d6) )
 	ROM_LOAD16_BYTE( "ex1-ma1u.bin", 0x480000, 0x100000, CRC(04e7c4b0) SHA1(78180d96cd1fae583617d4d227ed4ee24f2f9e29) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+ROM_START( fghtatck )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "fa2-ep0l.bin", 0x080001, 0x080000, CRC(8996db9c) SHA1(ebbe7d4cb2960a346cfbdf38c77638d71b6ba20e) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "fa2-ep0u.bin", 0x080000, 0x080000, CRC(58d5e090) SHA1(950219d4e9bf440f92e3c8765f47e23a9019d2d1) )
+	ROM_LOAD16_BYTE( "fa1-ep1l.bin", 0x180001, 0x080000, CRC(b23a5b01) SHA1(4ba9bc2102fffc93a5ff73a107d557fc0f3beefd) )
+	ROM_LOAD16_BYTE( "fa1-ep1u.bin", 0x180000, 0x080000, CRC(de2eb129) SHA1(912993cab1c2edcaf986478f2ae22a2f10edf807) )
+
+	ROM_LOAD16_BYTE( "fa1-ma0l.bin", 0x280001, 0x100000, CRC(a0a95e54) SHA1(da35f8a6a5bc9e2b5b6cacf8eb0d900ef1073a67) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "fa1-ma0u.bin", 0x280000, 0x100000, CRC(1d0135bd) SHA1(2a7f8d09c213629a68376ce0379be61b37711d0a) )
+	ROM_LOAD16_BYTE( "fa1-ma1l.bin", 0x480001, 0x100000, CRC(c4adf0a2) SHA1(4cc7adc68b1db7e725a973b31d52720bd7dc1140) )
+	ROM_LOAD16_BYTE( "fa1-ma1u.bin", 0x480000, 0x100000, CRC(900297be) SHA1(57bb2078ff104c6f631c67219f80f8ede5ddbd09) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+ROM_START( fa )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "fa1-ep0l.bin", 0x080001, 0x080000, CRC(182eee5c) SHA1(49769e3b72b59fc3e7b73364fe97168977dbe66b) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "fa1-ep0u.bin", 0x080000, 0x080000, CRC(7ea7830e) SHA1(79390943eea0b8029b2b8869233caf27228e776a) )
+	ROM_LOAD16_BYTE( "fa1-ep1l.bin", 0x180001, 0x080000, CRC(b23a5b01) SHA1(4ba9bc2102fffc93a5ff73a107d557fc0f3beefd) )
+	ROM_LOAD16_BYTE( "fa1-ep1u.bin", 0x180000, 0x080000, CRC(de2eb129) SHA1(912993cab1c2edcaf986478f2ae22a2f10edf807) )
+
+	ROM_LOAD16_BYTE( "fa1-ma0l.bin", 0x280001, 0x100000, CRC(a0a95e54) SHA1(da35f8a6a5bc9e2b5b6cacf8eb0d900ef1073a67) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "fa1-ma0u.bin", 0x280000, 0x100000, CRC(1d0135bd) SHA1(2a7f8d09c213629a68376ce0379be61b37711d0a) )
+	ROM_LOAD16_BYTE( "fa1-ma1l.bin", 0x480001, 0x100000, CRC(c4adf0a2) SHA1(4cc7adc68b1db7e725a973b31d52720bd7dc1140) )
+	ROM_LOAD16_BYTE( "fa1-ma1u.bin", 0x480000, 0x100000, CRC(900297be) SHA1(57bb2078ff104c6f631c67219f80f8ede5ddbd09) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+ROM_START( swcourt )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "sc2-ep0l.4c",  0x080001, 0x080000, CRC(5053a02e) SHA1(8ab5a085969cef5e01be01d8f531233002ea5bff) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "sc2-ep0u.4f",  0x080000, 0x080000, CRC(7b3fc7fa) SHA1(f96c03a03339b7677b8dc8689d907f2c8895886c) )
+	ROM_LOAD16_BYTE( "sc1-ep1l.bin", 0x180001, 0x080000, CRC(fb45cf5f) SHA1(6ded351daa9b39d0b8149100caefc4fa0c598e79) )
+	ROM_LOAD16_BYTE( "sc1-ep1u.bin", 0x180000, 0x080000, CRC(1ce07b15) SHA1(b1b28cc480301c9ad642597c7cdd8e9cdec996a6) )
+
+	ROM_LOAD16_BYTE( "sc1-ma0l.bin", 0x280001, 0x100000, CRC(3e531f5e) SHA1(6da56630bdfbb19f1639c539779c180d106f6ee2) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "sc1-ma0u.bin", 0x280000, 0x100000, CRC(31e76a45) SHA1(5c278c167c1025c648ce2da2c3764645e96dcd55) )
+	ROM_LOAD16_BYTE( "sc1-ma1l.bin", 0x480001, 0x100000, CRC(8ba3a4ec) SHA1(f881e7b4728f388d18450ba85e13e233071fbc88) )
+	ROM_LOAD16_BYTE( "sc1-ma1u.bin", 0x480000, 0x100000, CRC(252dc4b7) SHA1(f1be6bd045495c7a0ecd97f01d1dc8ad341fecfd) )
+
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+ROM_START( swcourtj )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "sc1-ep0l.4c",  0x080001, 0x080000, CRC(145111dd) SHA1(f8f74f77fb80af2ea37ea8ddbf02c1f3fcaf3fdb) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "sc1-ep0u.4f",  0x080000, 0x080000, CRC(c721c138) SHA1(5d30d66629d982b54c3bb62118be940dc7b69a6b) )
+	ROM_LOAD16_BYTE( "sc1-ep1l.bin", 0x180001, 0x080000, CRC(fb45cf5f) SHA1(6ded351daa9b39d0b8149100caefc4fa0c598e79) )
+	ROM_LOAD16_BYTE( "sc1-ep1u.bin", 0x180000, 0x080000, CRC(1ce07b15) SHA1(b1b28cc480301c9ad642597c7cdd8e9cdec996a6) )
+
+	ROM_LOAD16_BYTE( "sc1-ma0l.bin", 0x280001, 0x100000, CRC(3e531f5e) SHA1(6da56630bdfbb19f1639c539779c180d106f6ee2) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "sc1-ma0u.bin", 0x280000, 0x100000, CRC(31e76a45) SHA1(5c278c167c1025c648ce2da2c3764645e96dcd55) )
+	ROM_LOAD16_BYTE( "sc1-ma1l.bin", 0x480001, 0x100000, CRC(8ba3a4ec) SHA1(f881e7b4728f388d18450ba85e13e233071fbc88) )
+	ROM_LOAD16_BYTE( "sc1-ma1u.bin", 0x480000, 0x100000, CRC(252dc4b7) SHA1(f1be6bd045495c7a0ecd97f01d1dc8ad341fecfd) )
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+ROM_START( tinklpit )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "tk1-ep0l.bin", 0x080001, 0x080000, CRC(fdccae42) SHA1(398384482ccb3eb08bfb9db495513272a5188d92) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "tk1-ep0u.bin", 0x080000, 0x080000, CRC(62cdb48c) SHA1(73c7b99b117b8dc567bc254b0ffcc117c9d42fb5) )
+	ROM_LOAD16_BYTE( "tk1-ep1l.bin", 0x180001, 0x080000, CRC(7e90f104) SHA1(79e371426b2e32dc8f687e4d124d23c251198937) )
+	ROM_LOAD16_BYTE( "tk1-ep1u.bin", 0x180000, 0x080000, CRC(9c0b70d6) SHA1(eac44d3470f4c2ddd9c41f82e6398bca0cc8a4fd) )
+
+	ROM_LOAD16_BYTE( "tk1-ma0l.bin", 0x280001, 0x100000, CRC(c6b4e15d) SHA1(55252ba4d904b14940436f1b4dc5e2a6bd163bdf) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "tk1-ma0u.bin", 0x280000, 0x100000, CRC(a3ad6f67) SHA1(54289eed5347defb5464ec5a610a6748909159f6) )
+	ROM_LOAD16_BYTE( "tk1-ma1l.bin", 0x480001, 0x100000, CRC(61cfb92a) SHA1(eacf0e7557f33d552045f43a116ff08c533a2771) )
+	ROM_LOAD16_BYTE( "tk1-ma1u.bin", 0x480000, 0x100000, CRC(54b77816) SHA1(9341d07858623e1920eaae7b2b90126c7057297e) )
+	ROM_LOAD16_BYTE( "tk1-ma2l.bin", 0x680001, 0x100000, CRC(087311d2) SHA1(6fe50f9e08551e57d15a15b01e3822a6cb7c8352) )
+	ROM_LOAD16_BYTE( "tk1-ma2u.bin", 0x680000, 0x100000, CRC(5ce20c2c) SHA1(7eaff21714bae44f8b21b6db98f055e04bfbae18) )
+	/* M37702 BIOS - labeled as Namco custom C69 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c69.bin",	  0x000000, 0x004000, CRC(349134d9) SHA1(61a4981fc2716c228b6121fedcbf1ed6f34dc2de) )
+ROM_END
+
+
+
+/**************************************
+	 NA-2 Based games
+**************************************/
+
+
+ROM_START( emeralda ) /* NA-2 Game PCB, clones are NA-1 based; see games listed above */
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "em2-ep0l.6c", 0x080001, 0x080000, CRC(ff1479dc) SHA1(ea945d97ed909be13fb6e062742c7142c0d96c31) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "em2-ep0u.6f", 0x080000, 0x080000, CRC(ffe750a2) SHA1(d10d31489ae364572d7517dd515a6af2182ac764) )
+	ROM_LOAD16_BYTE( "em2-ep1l.7c", 0x180001, 0x080000, CRC(6c3e5b53) SHA1(72b941e28c7fda8cb81240a8226386fe55c14e2d) )
+	ROM_LOAD16_BYTE( "em2-ep1u.7f", 0x180000, 0x080000, CRC(dee15a81) SHA1(474a264029bd77e4205773a7461dea695e65933f) )
+
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
 ROM_START( knckhead )
@@ -1080,6 +1333,10 @@ ROM_START( knckhead )
 	ROM_LOAD16_BYTE( "kh1-ma2u.bin", 0x680000, 0x100000, CRC(17fe8c3d) SHA1(88c45076477725faa5f8a23512e65a40385bb27d) )
 	ROM_LOAD16_BYTE( "kh1-ma3l.bin", 0x880001, 0x100000, CRC(ad9a7807) SHA1(c40f18a68306e76acd89ccb3fc82b8106556912e) )
 	ROM_LOAD16_BYTE( "kh1-ma3u.bin", 0x880000, 0x100000, CRC(efeb768d) SHA1(15d016244549f3ea0d19f5cfb04bcebd65ac6134) )
+
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
 ROM_START( knckhedj )
@@ -1097,137 +1354,121 @@ ROM_START( knckhedj )
 	ROM_LOAD16_BYTE( "kh1-ma2u.bin", 0x680000, 0x100000, CRC(17fe8c3d) SHA1(88c45076477725faa5f8a23512e65a40385bb27d) )
 	ROM_LOAD16_BYTE( "kh1-ma3l.bin", 0x880001, 0x100000, CRC(ad9a7807) SHA1(c40f18a68306e76acd89ccb3fc82b8106556912e) )
 	ROM_LOAD16_BYTE( "kh1-ma3u.bin", 0x880000, 0x100000, CRC(efeb768d) SHA1(15d016244549f3ea0d19f5cfb04bcebd65ac6134) )
-ROM_END
 
-ROM_START( numanatj )
-	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "nm1_ep0l.bin", 0x080001, 0x080000, CRC(4398b898) SHA1(0d1517409ba181f796f7f413cac704c60085b505) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "nm1_ep0u.bin", 0x080000, 0x080000, CRC(be90aa79) SHA1(6884a8d72dd34c889527e8e653f5e5b4cf3fb5d6) )
-	ROM_LOAD16_BYTE( "nm1_ep1l.bin", 0x180001, 0x080000, CRC(4581dcb4) SHA1(1f46f98e63a7c9cdfde9e8ee2696a13c3f9bcc8e) )
-	ROM_LOAD16_BYTE( "nm1_ep1u.bin", 0x180000, 0x080000, CRC(30cd589a) SHA1(74a14ec41fe4fc9f73e5357b0903f1199ed96337) )
-
-	ROM_LOAD16_BYTE( "nm1_ma0l.bin", 0x280001, 0x100000, CRC(20faaa57) SHA1(9dbfc0dd48eec37b2c0715a5691c6e6f923fc7f7) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "nm1_ma0u.bin", 0x280000, 0x100000, CRC(ed7c37f2) SHA1(829751af33754ade941f76982e196b494d56ab0a) )
-	ROM_LOAD16_BYTE( "nm1_ma1l.bin", 0x480001, 0x100000, CRC(2232e3b4) SHA1(e9da3dc34eb2576c8a88e23cb9007129e885496d) )
-	ROM_LOAD16_BYTE( "nm1_ma1u.bin", 0x480000, 0x100000, CRC(6cc9675c) SHA1(fec74da4479f2a088760efc6908e6acfaea3989f) )
-	ROM_LOAD16_BYTE( "nm1_ma2l.bin", 0x680001, 0x100000, CRC(208abb39) SHA1(52d7247a71c6a14467f12f5270921bba1824cc3f) )
-	ROM_LOAD16_BYTE( "nm1_ma2u.bin", 0x680000, 0x100000, CRC(03a3f204) SHA1(9cb0422c8ecc819d0cc8a65c29a228369d78d986) )
-	ROM_LOAD16_BYTE( "nm1_ma3l.bin", 0x880001, 0x100000, CRC(42a539e9) SHA1(1c53a5a031648891ab7a37cf026c979404ce9589) )
-	ROM_LOAD16_BYTE( "nm1_ma3u.bin", 0x880000, 0x100000, CRC(f79e2112) SHA1(8bb8639a9d3a5d3ac5c9bb78e72b3d76582a9c25) )
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
 ROM_START( numanath )
 	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "nm2_ep0l.bin", 0x080001, 0x080000, CRC(f24414bb) SHA1(68b13dfdc2292afd5279edb891fe63972f991e7b) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "nm2_ep0u.bin", 0x080000, 0x080000, CRC(25c41616) SHA1(68ba67d3dd45f3bdddfa2fd21b574535306c1214) )
-	ROM_LOAD16_BYTE( "nm1_ep1l.bin", 0x180001, 0x080000, CRC(4581dcb4) SHA1(1f46f98e63a7c9cdfde9e8ee2696a13c3f9bcc8e) )
-	ROM_LOAD16_BYTE( "nm1_ep1u.bin", 0x180000, 0x080000, CRC(30cd589a) SHA1(74a14ec41fe4fc9f73e5357b0903f1199ed96337) )
+	ROM_LOAD16_BYTE( "nm2-ep0l.bin", 0x080001, 0x080000, CRC(f24414bb) SHA1(68b13dfdc2292afd5279edb891fe63972f991e7b) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "nm2-ep0u.bin", 0x080000, 0x080000, CRC(25c41616) SHA1(68ba67d3dd45f3bdddfa2fd21b574535306c1214) )
+	ROM_LOAD16_BYTE( "nm1-ep1l.bin", 0x180001, 0x080000, CRC(4581dcb4) SHA1(1f46f98e63a7c9cdfde9e8ee2696a13c3f9bcc8e) )
+	ROM_LOAD16_BYTE( "nm1-ep1u.bin", 0x180000, 0x080000, CRC(30cd589a) SHA1(74a14ec41fe4fc9f73e5357b0903f1199ed96337) )
 
-	ROM_LOAD16_BYTE( "nm1_ma0l.bin", 0x280001, 0x100000, CRC(20faaa57) SHA1(9dbfc0dd48eec37b2c0715a5691c6e6f923fc7f7) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "nm1_ma0u.bin", 0x280000, 0x100000, CRC(ed7c37f2) SHA1(829751af33754ade941f76982e196b494d56ab0a) )
-	ROM_LOAD16_BYTE( "nm1_ma1l.bin", 0x480001, 0x100000, CRC(2232e3b4) SHA1(e9da3dc34eb2576c8a88e23cb9007129e885496d) )
-	ROM_LOAD16_BYTE( "nm1_ma1u.bin", 0x480000, 0x100000, CRC(6cc9675c) SHA1(fec74da4479f2a088760efc6908e6acfaea3989f) )
-	ROM_LOAD16_BYTE( "nm1_ma2l.bin", 0x680001, 0x100000, CRC(208abb39) SHA1(52d7247a71c6a14467f12f5270921bba1824cc3f) )
-	ROM_LOAD16_BYTE( "nm1_ma2u.bin", 0x680000, 0x100000, CRC(03a3f204) SHA1(9cb0422c8ecc819d0cc8a65c29a228369d78d986) )
-	ROM_LOAD16_BYTE( "nm1_ma3l.bin", 0x880001, 0x100000, CRC(42a539e9) SHA1(1c53a5a031648891ab7a37cf026c979404ce9589) )
-	ROM_LOAD16_BYTE( "nm1_ma3u.bin", 0x880000, 0x100000, CRC(f79e2112) SHA1(8bb8639a9d3a5d3ac5c9bb78e72b3d76582a9c25) )
+	ROM_LOAD16_BYTE( "nm1-ma0l.bin", 0x280001, 0x100000, CRC(20faaa57) SHA1(9dbfc0dd48eec37b2c0715a5691c6e6f923fc7f7) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "nm1-ma0u.bin", 0x280000, 0x100000, CRC(ed7c37f2) SHA1(829751af33754ade941f76982e196b494d56ab0a) )
+	ROM_LOAD16_BYTE( "nm1-ma1l.bin", 0x480001, 0x100000, CRC(2232e3b4) SHA1(e9da3dc34eb2576c8a88e23cb9007129e885496d) )
+	ROM_LOAD16_BYTE( "nm1-ma1u.bin", 0x480000, 0x100000, CRC(6cc9675c) SHA1(fec74da4479f2a088760efc6908e6acfaea3989f) )
+	ROM_LOAD16_BYTE( "nm1-ma2l.bin", 0x680001, 0x100000, CRC(208abb39) SHA1(52d7247a71c6a14467f12f5270921bba1824cc3f) )
+	ROM_LOAD16_BYTE( "nm1-ma2u.bin", 0x680000, 0x100000, CRC(03a3f204) SHA1(9cb0422c8ecc819d0cc8a65c29a228369d78d986) )
+	ROM_LOAD16_BYTE( "nm1-ma3l.bin", 0x880001, 0x100000, CRC(42a539e9) SHA1(1c53a5a031648891ab7a37cf026c979404ce9589) )
+	ROM_LOAD16_BYTE( "nm1-ma3u.bin", 0x880000, 0x100000, CRC(f79e2112) SHA1(8bb8639a9d3a5d3ac5c9bb78e72b3d76582a9c25) )
+
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
+ROM_END
+
+ROM_START( numanatj )
+	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
+	ROM_LOAD16_BYTE( "nm1-ep0l.bin", 0x080001, 0x080000, CRC(4398b898) SHA1(0d1517409ba181f796f7f413cac704c60085b505) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "nm1-ep0u.bin", 0x080000, 0x080000, CRC(be90aa79) SHA1(6884a8d72dd34c889527e8e653f5e5b4cf3fb5d6) )
+	ROM_LOAD16_BYTE( "nm1-ep1l.bin", 0x180001, 0x080000, CRC(4581dcb4) SHA1(1f46f98e63a7c9cdfde9e8ee2696a13c3f9bcc8e) )
+	ROM_LOAD16_BYTE( "nm1-ep1u.bin", 0x180000, 0x080000, CRC(30cd589a) SHA1(74a14ec41fe4fc9f73e5357b0903f1199ed96337) )
+
+	ROM_LOAD16_BYTE( "nm1-ma0l.bin", 0x280001, 0x100000, CRC(20faaa57) SHA1(9dbfc0dd48eec37b2c0715a5691c6e6f923fc7f7) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "nm1-ma0u.bin", 0x280000, 0x100000, CRC(ed7c37f2) SHA1(829751af33754ade941f76982e196b494d56ab0a) )
+	ROM_LOAD16_BYTE( "nm1-ma1l.bin", 0x480001, 0x100000, CRC(2232e3b4) SHA1(e9da3dc34eb2576c8a88e23cb9007129e885496d) )
+	ROM_LOAD16_BYTE( "nm1-ma1u.bin", 0x480000, 0x100000, CRC(6cc9675c) SHA1(fec74da4479f2a088760efc6908e6acfaea3989f) )
+	ROM_LOAD16_BYTE( "nm1-ma2l.bin", 0x680001, 0x100000, CRC(208abb39) SHA1(52d7247a71c6a14467f12f5270921bba1824cc3f) )
+	ROM_LOAD16_BYTE( "nm1-ma2u.bin", 0x680000, 0x100000, CRC(03a3f204) SHA1(9cb0422c8ecc819d0cc8a65c29a228369d78d986) )
+	ROM_LOAD16_BYTE( "nm1-ma3l.bin", 0x880001, 0x100000, CRC(42a539e9) SHA1(1c53a5a031648891ab7a37cf026c979404ce9589) )
+	ROM_LOAD16_BYTE( "nm1-ma3u.bin", 0x880000, 0x100000, CRC(f79e2112) SHA1(8bb8639a9d3a5d3ac5c9bb78e72b3d76582a9c25) )
+
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
 ROM_START( quiztou )
 	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "qt1_ep0l.bin", 0x080001, 0x080000, CRC(b680e543) SHA1(f10f38113a46c821d8e9d66f52d7311d9d52e595) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "qt1_ep0u.bin", 0x080000, 0x080000, CRC(143c5e4d) SHA1(24c584986c97a5e6fe7e73f0e9af4af28ed20c4a) )
-	ROM_LOAD16_BYTE( "qt1_ep1l.bin", 0x180001, 0x080000, CRC(33a72242) SHA1(5d17f033878d28dbebba50931a549ccf84802c05) )
-	ROM_LOAD16_BYTE( "qt1_ep1u.bin", 0x180000, 0x080000, CRC(69f876cb) SHA1(d0c7e972a04c45d3ab34ef5be88614d6389189c6) )
+	ROM_LOAD16_BYTE( "qt1ep0l.6c", 0x080001, 0x080000, CRC(b680e543) SHA1(f10f38113a46c821d8e9d66f52d7311d9d52e595) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "qt1ep0u.6f", 0x080000, 0x080000, CRC(143c5e4d) SHA1(24c584986c97a5e6fe7e73f0e9af4af28ed20c4a) )
+	ROM_LOAD16_BYTE( "qt1ep1l.7c", 0x180001, 0x080000, CRC(33a72242) SHA1(5d17f033878d28dbebba50931a549ccf84802c05) )
+	ROM_LOAD16_BYTE( "qt1ep1u.7f", 0x180000, 0x080000, CRC(69f876cb) SHA1(d0c7e972a04c45d3ab34ef5be88614d6389189c6) )
 
-	ROM_LOAD16_BYTE( "qt1_ma0l.bin", 0x280001, 0x100000, CRC(5597f2b9) SHA1(747c4be867d4eb37ffab8303740729686a00b825) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "qt1_ma0u.bin", 0x280000, 0x100000, CRC(f0a4cb7d) SHA1(364e85af956e7cfc29c957da11574a4b389f7797) )
-	ROM_LOAD16_BYTE( "qt1_ma1l.bin", 0x480001, 0x100000, CRC(1b9ce7a6) SHA1(dac1da9dd8076f238211fed5c780b4b8bededf22) )
-	ROM_LOAD16_BYTE( "qt1_ma1u.bin", 0x480000, 0x100000, CRC(58910872) SHA1(c0acbd64e90672564c3839fd21870672aa32e439) )
-	ROM_LOAD16_BYTE( "qt1_ma2l.bin", 0x680001, 0x100000, CRC(94739917) SHA1(b5be5c9fd7223d3fb601f769cb80f56a5a586de0) )
-	ROM_LOAD16_BYTE( "qt1_ma2u.bin", 0x680000, 0x100000, CRC(6ba5b893) SHA1(071caed9cf261f1f8af7079875bd206177baef1a) )
-	ROM_LOAD16_BYTE( "qt1_ma3l.bin", 0x880001, 0x100000, CRC(aa9dc6ff) SHA1(c738f8c59bb5245874576c5bcf88c7138fa9a147) )
-	ROM_LOAD16_BYTE( "qt1_ma3u.bin", 0x880000, 0x100000, CRC(14a5a163) SHA1(1107f50e491bedeb4ab7ac3f32cfe47727274ba9) )
+	ROM_LOAD16_BYTE( "qt1ma0l.2c", 0x280001, 0x100000, CRC(5597f2b9) SHA1(747c4be867d4eb37ffab8303740729686a00b825) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "qt1ma0u.2f", 0x280000, 0x100000, CRC(f0a4cb7d) SHA1(364e85af956e7cfc29c957da11574a4b389f7797) )
+	ROM_LOAD16_BYTE( "qt1ma1l.3c", 0x480001, 0x100000, CRC(1b9ce7a6) SHA1(dac1da9dd8076f238211fed5c780b4b8bededf22) )
+	ROM_LOAD16_BYTE( "qt1ma1u.3f", 0x480000, 0x100000, CRC(58910872) SHA1(c0acbd64e90672564c3839fd21870672aa32e439) )
+	ROM_LOAD16_BYTE( "qt1ma2l.4c", 0x680001, 0x100000, CRC(94739917) SHA1(b5be5c9fd7223d3fb601f769cb80f56a5a586de0) )
+	ROM_LOAD16_BYTE( "qt1ma2u.4f", 0x680000, 0x100000, CRC(6ba5b893) SHA1(071caed9cf261f1f8af7079875bd206177baef1a) )
+	ROM_LOAD16_BYTE( "qt1ma3l.5c", 0x880001, 0x100000, CRC(aa9dc6ff) SHA1(c738f8c59bb5245874576c5bcf88c7138fa9a147) )
+	ROM_LOAD16_BYTE( "qt1ma3u.5f", 0x880000, 0x100000, CRC(14a5a163) SHA1(1107f50e491bedeb4ab7ac3f32cfe47727274ba9) )
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
-ROM_START( swcourt )
+ROM_START( xday )
 	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "sc1-ep0l.bin", 0x080001, 0x080000, CRC(145111dd) SHA1(f8f74f77fb80af2ea37ea8ddbf02c1f3fcaf3fdb) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "sc1-ep0u.bin", 0x080000, 0x080000, CRC(c721c138) SHA1(5d30d66629d982b54c3bb62118be940dc7b69a6b) )
-	ROM_LOAD16_BYTE( "sc1-ep1l.bin", 0x180001, 0x080000, CRC(fb45cf5f) SHA1(6ded351daa9b39d0b8149100caefc4fa0c598e79) )
-	ROM_LOAD16_BYTE( "sc1-ep1u.bin", 0x180000, 0x080000, CRC(1ce07b15) SHA1(b1b28cc480301c9ad642597c7cdd8e9cdec996a6) )
+	ROM_LOAD16_BYTE( "xd1-mpr0.4b", 0x080001, 0x080000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "xd1-mpr1.8b", 0x080000, 0x080000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) )
 
-	ROM_LOAD16_BYTE( "sc1-ma0l.bin", 0x280001, 0x100000, CRC(3e531f5e) SHA1(6da56630bdfbb19f1639c539779c180d106f6ee2) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "sc1-ma0u.bin", 0x280000, 0x100000, CRC(31e76a45) SHA1(5c278c167c1025c648ce2da2c3764645e96dcd55) )
-	ROM_LOAD16_BYTE( "sc1-ma1l.bin", 0x480001, 0x100000, CRC(8ba3a4ec) SHA1(f881e7b4728f388d18450ba85e13e233071fbc88) )
-	ROM_LOAD16_BYTE( "sc1-ma1u.bin", 0x480000, 0x100000, CRC(252dc4b7) SHA1(f1be6bd045495c7a0ecd97f01d1dc8ad341fecfd) )
-ROM_END
-
-ROM_START( tinklpit )
-	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "tk1-ep0l.bin", 0x080001, 0x080000, CRC(fdccae42) SHA1(398384482ccb3eb08bfb9db495513272a5188d92) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "tk1-ep0u.bin", 0x080000, 0x080000, CRC(62cdb48c) SHA1(73c7b99b117b8dc567bc254b0ffcc117c9d42fb5) )
-	ROM_LOAD16_BYTE( "tk1-ep1l.bin", 0x180001, 0x080000, CRC(7e90f104) SHA1(79e371426b2e32dc8f687e4d124d23c251198937) )
-	ROM_LOAD16_BYTE( "tk1-ep1u.bin", 0x180000, 0x080000, CRC(9c0b70d6) SHA1(eac44d3470f4c2ddd9c41f82e6398bca0cc8a4fd) )
-
-	ROM_LOAD16_BYTE( "tk1-ma0l.bin", 0x280001, 0x100000, CRC(c6b4e15d) SHA1(55252ba4d904b14940436f1b4dc5e2a6bd163bdf) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "tk1-ma0u.bin", 0x280000, 0x100000, CRC(a3ad6f67) SHA1(54289eed5347defb5464ec5a610a6748909159f6) )
-	ROM_LOAD16_BYTE( "tk1-ma1l.bin", 0x480001, 0x100000, CRC(61cfb92a) SHA1(eacf0e7557f33d552045f43a116ff08c533a2771) )
-	ROM_LOAD16_BYTE( "tk1-ma1u.bin", 0x480000, 0x100000, CRC(54b77816) SHA1(9341d07858623e1920eaae7b2b90126c7057297e) )
-	ROM_LOAD16_BYTE( "tk1-ma2l.bin", 0x680001, 0x100000, CRC(087311d2) SHA1(6fe50f9e08551e57d15a15b01e3822a6cb7c8352) )
-	ROM_LOAD16_BYTE( "tk1-ma2u.bin", 0x680000, 0x100000, CRC(5ce20c2c) SHA1(7eaff21714bae44f8b21b6db98f055e04bfbae18) )
-ROM_END
-
-ROM_START( fghtatck )
-	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "fa2_ep0l.bin", 0x080001, 0x080000, CRC(8996db9c) SHA1(ebbe7d4cb2960a346cfbdf38c77638d71b6ba20e) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "fa2_ep0u.bin", 0x080000, 0x080000, CRC(58d5e090) SHA1(950219d4e9bf440f92e3c8765f47e23a9019d2d1) )
-	ROM_LOAD16_BYTE( "fa1_ep1l.bin", 0x180001, 0x080000, CRC(b23a5b01) SHA1(4ba9bc2102fffc93a5ff73a107d557fc0f3beefd) )
-	ROM_LOAD16_BYTE( "fa1_ep1u.bin", 0x180000, 0x080000, CRC(de2eb129) SHA1(912993cab1c2edcaf986478f2ae22a2f10edf807) )
-
-	ROM_LOAD16_BYTE( "fa1_ma0l.bin", 0x280001, 0x100000, CRC(a0a95e54) SHA1(da35f8a6a5bc9e2b5b6cacf8eb0d900ef1073a67) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "fa1_ma0u.bin", 0x280000, 0x100000, CRC(1d0135bd) SHA1(2a7f8d09c213629a68376ce0379be61b37711d0a) )
-	ROM_LOAD16_BYTE( "fa1_ma1l.bin", 0x480001, 0x100000, CRC(c4adf0a2) SHA1(4cc7adc68b1db7e725a973b31d52720bd7dc1140) )
-	ROM_LOAD16_BYTE( "fa1_ma1u.bin", 0x480000, 0x100000, CRC(900297be) SHA1(57bb2078ff104c6f631c67219f80f8ede5ddbd09) )
-ROM_END
-
-ROM_START( fa )
-	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "fa1_ep0l.bin", 0x080001, 0x080000, CRC(182eee5c) SHA1(49769e3b72b59fc3e7b73364fe97168977dbe66b) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "fa1_ep0u.bin", 0x080000, 0x080000, CRC(7ea7830e) SHA1(79390943eea0b8029b2b8869233caf27228e776a) )
-	ROM_LOAD16_BYTE( "fa1_ep1l.bin", 0x180001, 0x080000, CRC(b23a5b01) SHA1(4ba9bc2102fffc93a5ff73a107d557fc0f3beefd) )
-	ROM_LOAD16_BYTE( "fa1_ep1u.bin", 0x180000, 0x080000, CRC(de2eb129) SHA1(912993cab1c2edcaf986478f2ae22a2f10edf807) )
-
-	ROM_LOAD16_BYTE( "fa1_ma0l.bin", 0x280001, 0x100000, CRC(a0a95e54) SHA1(da35f8a6a5bc9e2b5b6cacf8eb0d900ef1073a67) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "fa1_ma0u.bin", 0x280000, 0x100000, CRC(1d0135bd) SHA1(2a7f8d09c213629a68376ce0379be61b37711d0a) )
-	ROM_LOAD16_BYTE( "fa1_ma1l.bin", 0x480001, 0x100000, CRC(c4adf0a2) SHA1(4cc7adc68b1db7e725a973b31d52720bd7dc1140) )
-	ROM_LOAD16_BYTE( "fa1_ma1u.bin", 0x480000, 0x100000, CRC(900297be) SHA1(57bb2078ff104c6f631c67219f80f8ede5ddbd09) )
+	ROM_LOAD16_BYTE( "xd1-dat0.4b", 0x280001, 0x200000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "xd1-dat1.8b", 0x280000, 0x200000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) )
+	ROM_LOAD16_BYTE( "xd1-dat2.4c", 0x680001, 0x200000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) )
+	ROM_LOAD16_BYTE( "xd1-dat3.8c", 0x680000, 0x200000, CRC(11111111) SHA1(1111111111111111111111111111111111111111) )
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
 ROM_START( xday2 )
 	ROM_REGION( 0xa80000, REGION_CPU1, 0 )
-	ROM_LOAD16_BYTE( "xds1mpr0.4b", 0x080001, 0x080000, CRC(83539aaa) SHA1(42d97bb2daaf5ff48efac70f0ff37869c5ba177d) ) /* 0xc00000 */
-	ROM_LOAD16_BYTE( "xds1mpr1.8b", 0x080000, 0x080000, CRC(468b36de) SHA1(52817be9913a6938ce6add2834ba1a727b1d677e) )
+	ROM_LOAD16_BYTE( "xds1-mpr0.4b", 0x080001, 0x080000, CRC(83539aaa) SHA1(42d97bb2daaf5ff48efac70f0ff37869c5ba177d) ) /* 0xc00000 */
+	ROM_LOAD16_BYTE( "xds1-mpr1.8b", 0x080000, 0x080000, CRC(468b36de) SHA1(52817be9913a6938ce6add2834ba1a727b1d677e) )
 
-	ROM_LOAD16_BYTE( "xds1dat0.4b", 0x280001, 0x200000, CRC(42cecc8b) SHA1(7510f16b908dd0f7828887dcfa26c5e4643df66c) ) /* 0x400000 */
-	ROM_LOAD16_BYTE( "xds1dat1.8b", 0x280000, 0x200000, CRC(d250b7e8) SHA1(b99251ae8e25fae062d33e74ff800ab43fb308a2) )
-	ROM_LOAD16_BYTE( "xds1dat2.4c", 0x680001, 0x200000, CRC(99d72a08) SHA1(4615b43b9a81240ffee8b0f021037f554f4f1f24) )
-	ROM_LOAD16_BYTE( "xds1dat3.8c", 0x680000, 0x200000, CRC(8980acc4) SHA1(ecd94a3d3a38923e8e322cd8863671af26e30812) )
+	ROM_LOAD16_BYTE( "xds1-dat0.4b", 0x280001, 0x200000, CRC(42cecc8b) SHA1(7510f16b908dd0f7828887dcfa26c5e4643df66c) ) /* 0x400000 */
+	ROM_LOAD16_BYTE( "xds1-dat1.8b", 0x280000, 0x200000, CRC(d250b7e8) SHA1(b99251ae8e25fae062d33e74ff800ab43fb308a2) )
+	ROM_LOAD16_BYTE( "xds1-dat2.4c", 0x680001, 0x200000, CRC(99d72a08) SHA1(4615b43b9a81240ffee8b0f021037f554f4f1f24) )
+	ROM_LOAD16_BYTE( "xds1-dat3.8c", 0x680000, 0x200000, CRC(8980acc4) SHA1(ecd94a3d3a38923e8e322cd8863671af26e30812) )
+	/* M37702 BIOS - labeled as Namco custom C70 */
+//	ROM_REGION16_LE( 0x4000, REGION_CPU2, 0 )
+//		ROM_LOAD( "c70.bin",	  0x000000, 0x004000, NO_DUMP )
 ROM_END
 
-GAMEX( 1992,bkrtmaq,  0,        namcona1w, namcona1_quiz,	bkrtmaq,  ROT0, "Namco", "Bakuretsu Quiz Ma-Q Dai Bouken (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,cgangpzl, 0,        namcona1w, namcona1_joy,	cgangpzl, ROT0, "Namco", "Cosmo Gang the Puzzle (US)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,cgangpzj, cgangpzl, namcona1w, namcona1_joy,	cgangpzl, ROT0, "Namco", "Cosmo Gang the Puzzle (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,exvania,  0,        namcona1,  namcona1_joy,	exbania,  ROT0, "Namco", "Exvania (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,fghtatck, 0,        namcona1,  namcona1_joy,	fa,       ROT90,"Namco", "Fighter & Attacker (US)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,fa,       fghtatck, namcona1,  namcona1_joy,	fa,       ROT90,"Namco", "F/A (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,knckhead, 0,        namcona1,  namcona1_joy,	knckhead, ROT0, "Namco", "Knuckle Heads (World)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,knckhedj, knckhead, namcona1,  namcona1_joy,	knckhead, ROT0, "Namco", "Knuckle Heads (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1992,swcourt,  0,        namcona1w, namcona1_joy,	swcourt,  ROT0, "Namco", "Super World Court (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,emeralda, 0,        namcona1w, namcona1_joy,	emeralda, ROT0, "Namco", "Emeraldia (Japan Version B)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,emerldaa, emeralda, namcona1w, namcona1_joy,	emeralda, ROT0, "Namco", "Emeraldia (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,numanath, 0,        namcona1,  namcona1_joy,	numanath, ROT0, "Namco", "Numan Athletics (World)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,numanatj, numanath, namcona1,  namcona1_joy,	numanath, ROT0, "Namco", "Numan Athletics (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,quiztou,  0,        namcona1,  namcona1_quiz,	quiztou,  ROT0, "Namco", "Nettou! Gekitou! Quiztou!! (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1993,tinklpit, 0,        namcona1w, namcona1_joy,	tinklpit, ROT0, "Namco", "Tinkle Pit (Japan)", GAME_IMPERFECT_SOUND )
-GAMEX( 1995,xday2,    0,        namcona1,  namcona1_joy,        xday2,    ROT0, "Namco", "X-Day 2 (Japan)", GAME_IMPERFECT_SOUND|GAME_NOT_WORKING )
+// NA-1 (C69 MCU)
+GAMEX( 1992,bkrtmaq,  0,		na1w, na1_quiz,	bkrtmaq,  ROT0, "Namco", "1992 NA1 Bakuretsu Quiz Ma-Q Dai Bouken (Japan)" "爆裂クイズ 魔Ｑ大冒険"	, GAME_IMPERFECT_SOUND )
+GAMEX( 1992,cgangpzl, 0,		na1c, na1_joy,	cgangpzl, ROT0, "Namco", "1992 NA1 Cosmo Gang the Puzzle (US)", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,cgangpzj, cgangpzl, na1c, na1_joy,	cgangpzl, ROT0, "Namco", "1992 NA1 Cosmo Gang the Puzzle (Japan)" "コズモギャング ザ パズル", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,exvania,  0,		na1c, na1_joy,	exbania,  ROT0, "Namco", "1992 NA1 Exvania (Japan)""イクスバーニア", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,fghtatck, 0,		na1f, na1_joy,	fa, 	  ROT90,"Namco", "1992 NA1 Fighter & Attacker (US)", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,fa, 	  fghtatck, na1f, na1_joy,	fa, 	  ROT90,"Namco", "1992 NA1 F/A (Japan)", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,swcourt,  0, 	   	na1w, na1_joy,	swcourt,  ROT0, "Namco", "1992 NA1 Super World Court (World)", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,swcourtj, swcourt,	na1w, na1_joy,	swcourt,  ROT0, "Namco", "1992 NA1 Super World Court (Japan)""スーパー ワールドコート", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,emeraldj, emeralda,	na1w, na1_joy,	emeralda, ROT0, "Namco", "1993 NA1 Emeraldia (Japan Version B)", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,emerldja, emeralda, na1w, na1_joy,	emeralda, ROT0, "Namco", "1993 NA1 Emeraldia (Japan)""エメラルディア", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,tinklpit, 0,		na1w, na1_joy,	tinklpit, ROT0, "Namco", "1993 NA1 Tinkle Pit (Japan)""ティンクル ピット", GAME_IMPERFECT_SOUND )
+
+// NA-2 (C70 MCU)
+GAMEX( 1992,knckhead, 0,		na2,  na1_joy,	knckhead, ROT0, "Namco", "1992 NA2 Knuckle Heads (World)", GAME_IMPERFECT_SOUND )
+GAMEX( 1992,knckhedj, knckhead, na2,  na1_joy,	knckhead, ROT0, "Namco", "1992 NA2 Knuckle Heads (Japan)""ナックルヘッズ", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,emeralda, 0, 		na2,  na1_joy,	emeralda, ROT0, "Namco", "1993 NA2 Emeraldia (World)", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,numanath, 0,		na2,  na1_joy,	numanath, ROT0, "Namco", "1993 NA2 Numan Athletics (World)", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,numanatj, numanath, na2,  na1_joy,	numanath, ROT0, "Namco", "1993 NA2 Numan Athletics (Japan)""ニューマン アスレチック", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,quiztou,  0,		na2,  na1_quiz,	quiztou,  ROT0, "Namco", "1993 NA2 Nettou! Gekitou! Quiztou!! (Japan)" "熱闘!激闘!クイズ島", GAME_IMPERFECT_SOUND )
+GAMEX( 1993,xday,	  0,		na2,  na1_joy,	xday2,	  ROT0, "Namco", "1993 NA2 X-Day (Japan)" "エックス デイ", GAME_IMPERFECT_SOUND|GAME_NOT_WORKING )
+GAMEX( 1995,xday2,	  0,		na2,  na1_joy,	xday2,	  ROT0, "Namco", "1995 NA2 X-Day 2 (Japan)", GAME_IMPERFECT_SOUND|GAME_NOT_WORKING )

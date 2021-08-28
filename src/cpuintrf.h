@@ -50,6 +50,7 @@ enum
 	CPU_I188,
 	CPU_I286,
 	CPU_V20,
+	CPU_NEC30,	/*New V30 only */
 	CPU_V30,
 	CPU_V33,
 	CPU_V60,
@@ -77,12 +78,13 @@ enum
 	CPU_M6809,
 	CPU_M6809E,
 	CPU_KONAMI,
+	CPU_N68000,	/*New m68000 only */
 	CPU_M68000,
 	CPU_M68008,
 	CPU_M68010,
 	CPU_M68EC020,
 	CPU_M68020,
-	CPU_T11,
+//	CPU_T1 1,
 	CPU_S2650,
 	CPU_TMS34010,
 	CPU_TMS34020,
@@ -101,7 +103,7 @@ enum
 	CPU_TMS32025,
 	CPU_TMS32026,
 	CPU_TMS32031,
-	CPU_CCPU,
+//	CPU_CC PU,
 	CPU_ADSP2100,
  	CPU_ADSP2101,
 	CPU_ADSP2104,
@@ -109,11 +111,10 @@ enum
 	CPU_ADSP2115,
 	CPU_ADSP2181,
 	CPU_PSXCPU,
-	CPU_ASAP,
+//	CPU_AS AP,
 	CPU_UPD7810,
 	CPU_UPD7807,
-	CPU_JAGUARGPU,
-	CPU_JAGUARDSP,
+
 	CPU_R3000BE,
 	CPU_R3000LE,
 	CPU_R4600BE,
@@ -137,20 +138,7 @@ enum
 	CPU_PIC16C58,
 	CPU_G65816,
 	CPU_SPC700,
-	CPU_E116T,
-	CPU_E116XT,
-	CPU_E116XS,
-	CPU_E116XSR,
-	CPU_E132N,
-	CPU_E132T,
-	CPU_E132XN,
-	CPU_E132XT,
-	CPU_E132XS,
-	CPU_E132XSR,
-	CPU_GMS30C2116,
-	CPU_GMS30C2132,
-	CPU_GMS30C2216,
-	CPU_GMS30C2232,
+
 	CPU_I386,
 	CPU_I960,
 	CPU_H83002,
@@ -531,10 +519,10 @@ int cpunum_execute(int cpunum, int cycles);
 void cpunum_reset(int cpunum, void *param, int (*irqack)(int));
 
 /* read a byte from another CPU's memory space */
-data8_t cpunum_read_byte(int cpunum, offs_t address);
+UINT8 cpunum_read_byte(int cpunum, offs_t address);
 
 /* write a byte from another CPU's memory space */
-void cpunum_write_byte(int cpunum, offs_t address, data8_t data);
+void cpunum_write_byte(int cpunum, offs_t address, UINT8 data);
 
 /* return a pointer to the saved context of a given CPU, or NULL if the
    context is active (and contained within the CPU core */

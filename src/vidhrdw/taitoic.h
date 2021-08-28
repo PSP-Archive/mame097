@@ -2,6 +2,30 @@
                 Taito Custom Chips
 ***************************************************************************/
 
+// [for F2(chr have roz)]F2の場合、但しCHRダケROZとゆー変なフラグ。
+#if (0==PSP_F2_ROZ_TILE)
+/* 設定を反映 */
+	#if (0==PSP_FORCE_NO_ROZ)
+		#define MMM_FORCE_NO_ROZ 0
+	#else //(0==PSP_FORCE_NO_ROZ)
+		#define MMM_FORCE_NO_ROZ 1
+	#endif //(0==PSP_FORCE_NO_ROZ)
+//
+	#if (0==PSP_FORCE_NO_ZOOM)
+		#define MMM_FORCE_NO_ZOOM 0
+	#else //(0==PSP_FORCE_NO_ZOOM)
+		#define MMM_FORCE_NO_ZOOM 1
+	#endif //(0==PSP_FORCE_NO_ZOOM)
+#else //(0==PSP_F2_ROZ_TILE)
+/* F2はROZ有効 */
+	#define MMM_FORCE_NO_ROZ 0
+	#define MMM_FORCE_NO_ZOOM 0
+#endif //(0==PSP_F2_ROZ_TILE)
+
+
+
+
+
 extern const int TC0100SCN_SINGLE_VDU;	/* value set in taitoic.c */
 
 int number_of_TC0100SCN(void);
@@ -9,9 +33,17 @@ int has_TC0110PCR(void);
 int has_second_TC0110PCR(void);
 int has_third_TC0110PCR(void);
 int has_TC0150ROD(void);
+
+#if (0==MMM_FORCE_NO_ROZ)
 int has_TC0280GRD(void);
+#endif //(0==MMM_FORCE_NO_ROZ)
+
 int has_TC0360PRI(void);
+
+#if (0==MMM_FORCE_NO_ZOOM)
 int has_TC0430GRW(void);
+#endif //(0==MMM_FORCE_NO_ZOOM)
+
 int has_TC0480SCP(void);
 
 
@@ -40,7 +72,7 @@ void PC080SN_tilemap_update(void);
 void PC080SN_tilemap_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,UINT32 priority);
 
 /* For Topspeed */
-void PC080SN_tilemap_draw_special(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,UINT32 priority,data16_t *ram);
+void PC080SN_tilemap_draw_special(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int chip,int layer,int flags,UINT32 priority,UINT16 *ram);
 
 
 /***************************************************************************/
@@ -103,11 +135,13 @@ WRITE16_HANDLER( TC0100SCN_word_2_w );
 READ16_HANDLER ( TC0100SCN_ctrl_word_2_r );
 WRITE16_HANDLER( TC0100SCN_ctrl_word_2_w );
 
+#if (0==PSP_NO_CPU32)
 /* Functions for use with 68020 (Under Fire) */
 READ32_HANDLER ( TC0100SCN_long_r );
 WRITE32_HANDLER( TC0100SCN_long_w );
 READ32_HANDLER ( TC0100SCN_ctrl_long_r );
 WRITE32_HANDLER( TC0100SCN_ctrl_long_w );
+#endif //(0==PSP_NO_CPU32)
 
 /* Functions to write multiple TC0100SCNs with the same data */
 WRITE16_HANDLER( TC0100SCN_dual_screen_w );
@@ -150,11 +184,13 @@ WRITE16_HANDLER( TC0480SCP_word_w );
 READ16_HANDLER ( TC0480SCP_ctrl_word_r );
 WRITE16_HANDLER( TC0480SCP_ctrl_word_w );
 
+#if (0==PSP_NO_CPU32)
 /* Functions for use with 68020 (Super-Z system) */
 READ32_HANDLER ( TC0480SCP_long_r );
 WRITE32_HANDLER( TC0480SCP_long_w );
 READ32_HANDLER ( TC0480SCP_ctrl_long_r );
 WRITE32_HANDLER( TC0480SCP_ctrl_long_w );
+#endif //(0==PSP_NO_CPU32)
 
 void TC0480SCP_tilemap_update(void);
 void TC0480SCP_tilemap_draw(struct mame_bitmap *bitmap,const struct rectangle *cliprect,int layer,int flags,UINT32 priority);

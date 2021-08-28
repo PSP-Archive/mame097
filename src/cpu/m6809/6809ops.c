@@ -189,7 +189,7 @@ INLINE void sync( void )
 	m6809.int_state |= M6809_SYNC;	 /* HJB 990227 */
 	CHECK_IRQ_LINES;
 	/* if M6809_SYNC has not been cleared by CHECK_IRQ_LINES,
-     * stop execution until the interrupt lines change. */
+	 * stop execution until the interrupt lines change. */
 	if( m6809.int_state & M6809_SYNC )
 		if (m6809_ICount > 0) m6809_ICount = 0;
 }
@@ -277,7 +277,7 @@ INLINE void sex( void )
 	UINT16 t;
 	t = SIGNED(B);
 	D = t;
-//  CLR_NZV;    Tim Lindner 20020905: verified that V flag is not affected
+//	CLR_NZV;	Tim Lindner 20020905: verified that V flag is not affected
 	CLR_NZ;
 	SET_NZ16(t);
 }
@@ -321,7 +321,7 @@ INLINE void exg( void )
 			case 10: t2 = CC; break;
 			case 11: t2 = DP; break;
 			default: t2 = 0xff;
-        }
+		}
 	}
 	switch(tb>>4) {
 		case  0: D = t2;  break;
@@ -360,7 +360,7 @@ INLINE void tfr( void )
 	{
 		/* transfer $ff to register */
 		t = 0xff;
-    }
+	}
 	else
 	{
 		switch(tb>>4) {
@@ -375,7 +375,7 @@ INLINE void tfr( void )
 			case 10: t = CC; break;
 			case 11: t = DP; break;
 			default: t = 0xff;
-        }
+		}
 	}
 	switch(tb&15) {
 		case  0: D = t;  break;
@@ -388,7 +388,7 @@ INLINE void tfr( void )
 		case  9: B = t;  break;
 		case 10: CC = t; break;
 		case 11: DP = t; break;
-    }
+	}
 }
 
 #ifdef macintosh
@@ -401,7 +401,7 @@ INLINE void bra( void )
 	UINT8 t;
 	IMMBYTE(t);
 	PC += SIGNED(t);
-    CHANGE_PC;
+	CHANGE_PC;
 	/* JB 970823 - speed up busy loops */
 	if( t == 0xfe )
 		if( m6809_ICount > 0 ) m6809_ICount = 0;
@@ -596,7 +596,7 @@ INLINE void lble( void )
 INLINE void leax( void )
 {
 	fetch_effective_address();
-    X = EA;
+	X = EA;
 	CLR_Z;
 	SET_Z(X);
 }
@@ -605,7 +605,7 @@ INLINE void leax( void )
 INLINE void leay( void )
 {
 	fetch_effective_address();
-    Y = EA;
+	Y = EA;
 	CLR_Z;
 	SET_Z(Y);
 }
@@ -614,7 +614,7 @@ INLINE void leay( void )
 INLINE void leas( void )
 {
 	fetch_effective_address();
-    S = EA;
+	S = EA;
 	m6809.int_state |= M6809_LDS;
 }
 
@@ -622,7 +622,7 @@ INLINE void leas( void )
 INLINE void leau( void )
 {
 	fetch_effective_address();
-    U = EA;
+	U = EA;
 }
 
 /* $34 PSHS inherent ----- */
@@ -714,7 +714,7 @@ INLINE void rti( void )
 	t = CC & CC_E;		/* HJB 990225: entire state saved? */
 	if(t)
 	{
-        m6809_ICount -= 9;
+		m6809_ICount -= 9;
 		PULLBYTE(A);
 		PULLBYTE(B);
 		PULLBYTE(DP);
@@ -734,10 +734,10 @@ INLINE void cwai( void )
 	IMMBYTE(t);
 	CC &= t;
 	/*
-     * CWAI stacks the entire machine state on the hardware stack,
-     * then waits for an interrupt; when the interrupt is taken
-     * later, the state is *not* saved again after CWAI.
-     */
+	 * CWAI stacks the entire machine state on the hardware stack,
+	 * then waits for an interrupt; when the interrupt is taken
+	 * later, the state is *not* saved again after CWAI.
+	 */
 	CC |= CC_E; 		/* HJB 990225: save entire state */
 	PUSHWORD(pPC);
 	PUSHWORD(pU);
@@ -748,7 +748,7 @@ INLINE void cwai( void )
 	PUSHBYTE(A);
 	PUSHBYTE(CC);
 	m6809.int_state |= M6809_CWAI;	 /* HJB 990228 */
-    CHECK_IRQ_LINES;    /* HJB 990116 */
+	CHECK_IRQ_LINES;	/* HJB 990116 */
 	if( m6809.int_state & M6809_CWAI )
 		if( m6809_ICount > 0 )
 			m6809_ICount = 0;
@@ -793,7 +793,7 @@ INLINE void swi2( void )
 	PUSHBYTE(DP);
 	PUSHBYTE(B);
 	PUSHBYTE(A);
-    PUSHBYTE(CC);
+	PUSHBYTE(CC);
 	PCD = RM16(0xfff4);
 	CHANGE_PC;
 }
@@ -809,7 +809,7 @@ INLINE void swi3( void )
 	PUSHBYTE(DP);
 	PUSHBYTE(B);
 	PUSHBYTE(A);
-    PUSHBYTE(CC);
+	PUSHBYTE(CC);
 	PCD = RM16(0xfff2);
 	CHANGE_PC;
 }
@@ -1828,7 +1828,7 @@ INLINE void subd_ix( void )
 	UINT32 r,d;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	d = D;
 	r = d - b.d;
 	CLR_NZVC;
@@ -1842,7 +1842,7 @@ INLINE void cmpd_ix( void )
 	UINT32 r,d;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	d = D;
 	r = d - b.d;
 	CLR_NZVC;
@@ -1855,7 +1855,7 @@ INLINE void cmpu_ix( void )
 	UINT32 r;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	r = U - b.d;
 	CLR_NZVC;
 	SET_FLAGS16(U,b.d,r);
@@ -1893,7 +1893,7 @@ INLINE void lda_ix( void )
 INLINE void sta_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ8(A);
 	WM(EAD,A);
 }
@@ -1948,7 +1948,7 @@ INLINE void cmpx_ix( void )
 	UINT32 r,d;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	d = X;
 	r = d - b.d;
 	CLR_NZVC;
@@ -1961,7 +1961,7 @@ INLINE void cmpy_ix( void )
 	UINT32 r,d;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	d = Y;
 	r = d - b.d;
 	CLR_NZVC;
@@ -1974,7 +1974,7 @@ INLINE void cmps_ix( void )
 	UINT32 r,d;
 	PAIR b;
 	fetch_effective_address();
-    b.d=RM16(EAD);
+	b.d=RM16(EAD);
 	d = S;
 	r = d - b.d;
 	CLR_NZVC;
@@ -1985,7 +1985,7 @@ INLINE void cmps_ix( void )
 INLINE void jsr_ix( void )
 {
 	fetch_effective_address();
-    PUSHWORD(pPC);
+	PUSHWORD(pPC);
 	PCD = EAD;
 	CHANGE_PC;
 }
@@ -1994,7 +1994,7 @@ INLINE void jsr_ix( void )
 INLINE void ldx_ix( void )
 {
 	fetch_effective_address();
-    X=RM16(EAD);
+	X=RM16(EAD);
 	CLR_NZV;
 	SET_NZ16(X);
 }
@@ -2003,7 +2003,7 @@ INLINE void ldx_ix( void )
 INLINE void ldy_ix( void )
 {
 	fetch_effective_address();
-    Y=RM16(EAD);
+	Y=RM16(EAD);
 	CLR_NZV;
 	SET_NZ16(Y);
 }
@@ -2012,7 +2012,7 @@ INLINE void ldy_ix( void )
 INLINE void stx_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ16(X);
 	WM16(EAD,&pX);
 }
@@ -2021,7 +2021,7 @@ INLINE void stx_ix( void )
 INLINE void sty_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ16(Y);
 	WM16(EAD,&pY);
 }
@@ -2403,7 +2403,7 @@ INLINE void std_im( void )
 {
 	CLR_NZV;
 	SET_NZ16(D);
-    IMM16;
+	IMM16;
 	WM16(EAD,&pD);
 }
 
@@ -2430,7 +2430,7 @@ INLINE void stu_im( void )
 {
 	CLR_NZV;
 	SET_NZ16(U);
-    IMM16;
+	IMM16;
 	WM16(EAD,&pU);
 }
 
@@ -2440,7 +2440,7 @@ INLINE void sts_im( void )
 {
 	CLR_NZV;
 	SET_NZ16(S);
-    IMM16;
+	IMM16;
 	WM16(EAD,&pS);
 }
 
@@ -2588,7 +2588,7 @@ INLINE void std_di( void )
 {
 	CLR_NZV;
 	SET_NZ16(D);
-    DIRECT;
+	DIRECT;
 	WM16(EAD,&pD);
 }
 
@@ -2671,8 +2671,8 @@ INLINE void sbcb_ix( void )
 INLINE void addd_ix( void )
 {
 	UINT32 r,d;
-    PAIR b;
-    fetch_effective_address();
+	PAIR b;
+	fetch_effective_address();
 	b.d=RM16(EAD);
 	d = D;
 	r = d + b.d;
@@ -2713,7 +2713,7 @@ INLINE void ldb_ix( void )
 INLINE void stb_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ8(B);
 	WM(EAD,B);
 }
@@ -2766,7 +2766,7 @@ INLINE void addb_ix( void )
 INLINE void ldd_ix( void )
 {
 	fetch_effective_address();
-    D=RM16(EAD);
+	D=RM16(EAD);
 	CLR_NZV; SET_NZ16(D);
 }
 
@@ -2774,7 +2774,7 @@ INLINE void ldd_ix( void )
 INLINE void std_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ16(D);
 	WM16(EAD,&pD);
 }
@@ -2783,7 +2783,7 @@ INLINE void std_ix( void )
 INLINE void ldu_ix( void )
 {
 	fetch_effective_address();
-    U=RM16(EAD);
+	U=RM16(EAD);
 	CLR_NZV;
 	SET_NZ16(U);
 }
@@ -2792,7 +2792,7 @@ INLINE void ldu_ix( void )
 INLINE void lds_ix( void )
 {
 	fetch_effective_address();
-    S=RM16(EAD);
+	S=RM16(EAD);
 	CLR_NZV;
 	SET_NZ16(S);
 	m6809.int_state |= M6809_LDS;
@@ -2802,7 +2802,7 @@ INLINE void lds_ix( void )
 INLINE void stu_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ16(U);
 	WM16(EAD,&pU);
 }
@@ -2811,7 +2811,7 @@ INLINE void stu_ix( void )
 INLINE void sts_ix( void )
 {
 	fetch_effective_address();
-    CLR_NZV;
+	CLR_NZV;
 	SET_NZ16(S);
 	WM16(EAD,&pS);
 }
@@ -2959,7 +2959,7 @@ INLINE void std_ex( void )
 {
 	CLR_NZV;
 	SET_NZ16(D);
-    EXTENDED;
+	EXTENDED;
 	WM16(EAD,&pD);
 }
 

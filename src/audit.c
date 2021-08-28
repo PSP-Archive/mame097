@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "audit.h"
-#include "harddisk.h"
+#include "chd.h"//#include "hard disk.h"
 #include "sound/samples.h"
 
 static tAuditRecord *gAudits = NULL;
@@ -288,7 +288,7 @@ int AuditRomSet (int game, tAuditRecord **audit)
 			}
 			else if (ROMREGION_ISDISKDATA(region))
 			{
-				const UINT8 nullhash[HASH_BUF_SIZE] = { 0 };
+			//	const UINT8 nullhash[HASH_BUF_SIZE] = { 0 };
 				void *source;
 				struct chd_header header;
 
@@ -325,10 +325,10 @@ int AuditRomSet (int game, tAuditRecord **audit)
 				{
 					header = *chd_get_header(source);
 
-					if (memcmp(nullhash, header.md5, sizeof(header.md5)))
-						hash_data_insert_binary_checksum(aud->hash, HASH_MD5, header.md5);
-					if (memcmp(nullhash, header.sha1, sizeof(header.sha1)))
-						hash_data_insert_binary_checksum(aud->hash, HASH_SHA1, header.sha1);
+				//	if (memcmp(nullhash, header.md5, sizeof(header.md5)))
+				//		hash_data_insert_binary_checksum(aud->hash, HASH_MD5, header.md5);
+				//	if (memcmp(nullhash, header.sha1, sizeof(header.sha1)))
+				//		hash_data_insert_binary_checksum(aud->hash, HASH_SHA1, header.sha1);
 
 					 if (hash_data_has_info(aud->exphash, HASH_INFO_NO_DUMP))
 					{

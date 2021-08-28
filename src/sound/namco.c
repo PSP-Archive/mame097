@@ -14,6 +14,11 @@
 #include "driver.h"
 #include "namco.h"
 
+//#define HAS_POLEPOSITION 1
+  #define HAS_POLEPOSITION 0
+
+//#define HAS_PAC_MAN 1
+  #define HAS_PAC_MAN 0
 
 /* 8 voices max */
 #define MAX_VOICES 8
@@ -21,7 +26,9 @@
 #define MAX_VOLUME 16
 
 /* quality parameter: internal sample rate is 192 KHz, output is 48 KHz */
-#define INTERNAL_RATE	192000
+//#define INTERNAL_RATE	192000
+//#define INTERNAL_RATE	(4*48000)
+#define INTERNAL_RATE	(4*22050)
 
 /* 16 bits: sample bits of the stream buffer    */
 /* 4 bits:  volume                  */
@@ -50,8 +57,8 @@ typedef struct
 
 
 /* globals available to everyone */
-data8_t *namco_soundregs;
-data8_t *namco_wavedata;
+UINT8 *namco_soundregs;
+UINT8 *namco_wavedata;
 
 struct namco_sound
 {
@@ -75,7 +82,7 @@ struct namco_sound
 
 
 /* update the decoded waveform data */
-static void update_namco_waveform(struct namco_sound *chip, int offset, data8_t data)
+static void update_namco_waveform(struct namco_sound *chip, int offset, UINT8 data)
 {
 	if (chip->wave_size == 1)
 	{
@@ -405,6 +412,7 @@ static void *namco_start(int sndindex, int clock, const void *config)
     0x1f:       ch 2    volume
 */
 
+#if (1==HAS_PAC_MAN)
 WRITE8_HANDLER( pacman_sound_enable_w )
 {
 	struct namco_sound *chip = sndti_token(SOUND_NAMCO, 0);
@@ -464,7 +472,7 @@ WRITE8_HANDLER( pacman_sound_w )
 		break;
 	}
 }
-
+#endif //(1==HAS_PAC_MAN)
 
 /********************************************************************************/
 
@@ -501,6 +509,7 @@ it select the 54XX/52XX outputs on those channels
     0x3b        ch 6
     0x3f        ch 7
 */
+#if (1==HAS_POLEPOSITION)
 
 void polepos_sound_enable(int enable)
 {
@@ -558,7 +567,7 @@ WRITE8_HANDLER( polepos_sound_w )
 		break;
 	}
 }
-
+#endif //(1==HAS_POLEPOSITION)
 
 /********************************************************************************/
 
@@ -585,7 +594,7 @@ void mappy_sound_enable(int enable)
 	struct namco_sound *chip = sndti_token(SOUND_NAMCO_15XX, 0);
 	chip->sound_enable = enable;
 }
-
+#if (HAS_NAMCO_15XX)
 WRITE8_HANDLER( namco_15xx_w )
 {
 	struct namco_sound *chip = sndti_token(SOUND_NAMCO_15XX, 0);
@@ -624,7 +633,7 @@ WRITE8_HANDLER( namco_15xx_w )
 		break;
 	}
 }
-
+#endif //(HAS_NAMCO_15XX)
 
 /********************************************************************************/
 
@@ -710,7 +719,7 @@ static WRITE8_HANDLER( namcos1_sound_w )
 		break;
 	}
 }
-
+#if (HAS_NAMCO_CUS30)
 WRITE8_HANDLER( namcos1_cus30_w )
 {
 	if (offset < 0x100)
@@ -737,7 +746,7 @@ READ8_HANDLER( namcos1_cus30_r )
 {
 	return namco_wavedata[offset];
 }
-
+#endif //(HAS_NAMCO_CUS30)
 
 /********************************************************************************/
 
@@ -763,12 +772,10 @@ WRITE8_HANDLER( snkwave_w )
 }
 
 
-
-
 /**************************************************************************
  * Generic get_info
  **************************************************************************/
-
+#if (HAS_NAMCO)
 static void namco_set_info(void *token, UINT32 state, union sndinfo *info)
 {
 	switch (state)
@@ -776,7 +783,6 @@ static void namco_set_info(void *token, UINT32 state, union sndinfo *info)
 		/* no parameters to set */
 	}
 }
-
 
 void namco_get_info(void *token, UINT32 state, union sndinfo *info)
 {
@@ -798,11 +804,11 @@ void namco_get_info(void *token, UINT32 state, union sndinfo *info)
 		case SNDINFO_STR_CORE_CREDITS:					info->s = "Copyright (c) 2004, The MAME Team"; break;
 	}
 }
-
+#endif //(HAS_NAMCO)
 /**************************************************************************
  * Generic get_info
  **************************************************************************/
-
+#if (HAS_NAMCO_15XX)
 static void namco_15xx_set_info(void *token, UINT32 state, union sndinfo *info)
 {
 	switch (state)
@@ -810,7 +816,6 @@ static void namco_15xx_set_info(void *token, UINT32 state, union sndinfo *info)
 		/* no parameters to set */
 	}
 }
-
 
 void namco_15xx_get_info(void *token, UINT32 state, union sndinfo *info)
 {
@@ -832,11 +837,11 @@ void namco_15xx_get_info(void *token, UINT32 state, union sndinfo *info)
 		case SNDINFO_STR_CORE_CREDITS:					info->s = "Copyright (c) 2004, The MAME Team"; break;
 	}
 }
-
+#endif //(HAS_NAMCO_15XX)
 /**************************************************************************
  * Generic get_info
  **************************************************************************/
-
+#if (HAS_NAMCO_CUS30)
 static void namco_cus30_set_info(void *token, UINT32 state, union sndinfo *info)
 {
 	switch (state)
@@ -844,7 +849,6 @@ static void namco_cus30_set_info(void *token, UINT32 state, union sndinfo *info)
 		/* no parameters to set */
 	}
 }
-
 
 void namco_cus30_get_info(void *token, UINT32 state, union sndinfo *info)
 {
@@ -866,4 +870,4 @@ void namco_cus30_get_info(void *token, UINT32 state, union sndinfo *info)
 		case SNDINFO_STR_CORE_CREDITS:					info->s = "Copyright (c) 2004, The MAME Team"; break;
 	}
 }
-
+#endif //(HAS_NAMCO_CUS30)

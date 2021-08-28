@@ -182,7 +182,7 @@ TODO:
 #include "sound/namco.h"
 #include "sound/n63701x.h"
 
-extern data8_t *rthunder_videoram1, *rthunder_videoram2, *rthunder_spriteram;
+extern UINT8 *rthunder_videoram1, *rthunder_videoram2, *rthunder_spriteram;
 
 PALETTE_INIT( namcos86 );
 VIDEO_START( namcos86 );
@@ -201,7 +201,6 @@ WRITE8_HANDLER( rthunder_tilebank_select_w );
 READ8_HANDLER( rthunder_spriteram_r );
 WRITE8_HANDLER( rthunder_spriteram_w );
 
-
 static WRITE8_HANDLER( bankswitch1_w )
 {
 	unsigned char *base = memory_region(REGION_CPU1) + 0x10000;
@@ -210,7 +209,7 @@ static WRITE8_HANDLER( bankswitch1_w )
 	/* with bankswitch1_ext_w() in wndrmomo */
 	if (memory_region(REGION_USER1)) return;
 
-	cpu_setbank(1,base + ((data & 0x03) * 0x2000));
+	memory_set_bankptr(1,base + ((data & 0x03) * 0x2000));
 }
 
 static WRITE8_HANDLER( bankswitch1_ext_w )
@@ -219,14 +218,14 @@ static WRITE8_HANDLER( bankswitch1_ext_w )
 
 	if (base == 0) return;
 
-	cpu_setbank(1,base + ((data & 0x1f) * 0x2000));
+	memory_set_bankptr(1,base + ((data & 0x1f) * 0x2000));
 }
 
 static WRITE8_HANDLER( bankswitch2_w )
 {
 	unsigned char *base = memory_region(REGION_CPU2) + 0x10000;
 
-	cpu_setbank(2,base + ((data & 0x03) * 0x2000));
+	memory_set_bankptr(2,base + ((data & 0x03) * 0x2000));
 }
 
 /* Stubs to pass the correct Dip Switch setup to the MCU */
@@ -264,24 +263,15 @@ static READ8_HANDLER( dsw1_r )
 	return rhi | rlo;
 }
 
+static WRITE8_HANDLER( int_ack1_w ){	cpunum_set_input_line(0, 0, CLEAR_LINE);}
+static WRITE8_HANDLER( int_ack2_w ){	cpunum_set_input_line(1, 0, CLEAR_LINE);}
 
-static WRITE8_HANDLER( int_ack1_w )
-{
-	cpunum_set_input_line(0, 0, CLEAR_LINE);
-}
-
-static WRITE8_HANDLER( int_ack2_w )
-{
-	cpunum_set_input_line(1, 0, CLEAR_LINE);
-}
-
-
-static int wdog;
+static UINT8 wdog;
 
 static WRITE8_HANDLER( watchdog1_w )
 {
 	wdog |= 1;
-	if (wdog == 3)
+	if(wdog == 3)
 	{
 		wdog = 0;
 		watchdog_reset_w(0,0);
@@ -291,7 +281,7 @@ static WRITE8_HANDLER( watchdog1_w )
 static WRITE8_HANDLER( watchdog2_w )
 {
 	wdog |= 2;
-	if (wdog == 3)
+	if(wdog == 3)
 	{
 		wdog = 0;
 		watchdog_reset_w(0,0);
@@ -321,7 +311,7 @@ static WRITE8_HANDLER( cus115_w )
 		usrintf_showmessage("expansion board not present");
 		return;
 	}
-
+#if 00
 	switch ((offset & 0x1e00) >> 9)
 	{
 		case 0:
@@ -330,27 +320,28 @@ static WRITE8_HANDLER( cus115_w )
 		case 3:
 			namco_63701x_write((offset & 0x1e00) >> 9,data);
 			break;
-
 		case 4:
 			bankswitch1_ext_w(0,data);
 			break;
-
 		case 5:	// not used?
 		case 6:	// ? cleared on startup
 		case 7:	// ? cleared on startup
 		default:	// 8-15 not used?
 			break;
 	}
+#else
+	offset>>=9;
+	offset &=0x0f;
+	if(0==(offset & 0xc)){	namco_63701x_write(offset,data);	}
+	else if(0x04==offset){	bankswitch1_ext_w(0,data);	}
+#endif
 }
-
 
 static MACHINE_INIT( namco86 )
 {
 	unsigned char *base = memory_region(REGION_CPU1) + 0x10000;
-
-	cpu_setbank(1,base);
+	memory_set_bankptr(1,base);
 }
-
 
 
 static ADDRESS_MAP_START( cpu1_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -597,7 +588,7 @@ INPUT_PORTS_START( skykiddx )
 	PORT_DIPNAME( 0x02, 0x02, DEF_STR( Unknown ) )
 	PORT_DIPSETTING(    0x02, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x01, 0x01, DEF_STR( Flip_Screen ) )
+	PORT_DIPNAME( 0x01, 0x00, DEF_STR( Flip_Screen ) )
 	PORT_DIPSETTING(    0x01, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
@@ -1012,7 +1003,7 @@ INPUT_PORTS_END
 
 /*******************************************************************/
 
-static struct GfxLayout tilelayout =
+static const struct GfxLayout tilelayout =
 {
 	8,8,
 	RGN_FRAC(1,3),
@@ -1023,7 +1014,7 @@ static struct GfxLayout tilelayout =
 	8*8
 };
 
-static struct GfxLayout spritelayout =
+static const struct GfxLayout spritelayout =
 {
 	32,32,
 	RGN_FRAC(1,1),
@@ -1040,7 +1031,7 @@ static struct GfxLayout spritelayout =
 	64*64
 };
 
-static struct GfxDecodeInfo gfxdecodeinfo[] =
+static const struct GfxDecodeInfo gfxdecodeinfo[] =
 {
 	{ REGION_GFX1, 0, &tilelayout,   2048*0, 256 },
 	{ REGION_GFX2, 0, &tilelayout,   2048*0, 256 },
@@ -1056,34 +1047,45 @@ static struct namco_interface namco_interface =
 	-1,		/* memory region */
 	0		/* stereo */
 };
-
-static struct namco_63701x_interface namco_63701x_interface =
+//#define S86_XTAL_BASE 3510858.0
+static const struct namco_63701x_interface namco_63701x_interface =
 {
 	REGION_SOUND1	/* memory region */
 };
+//#define S86_MASTER_XTAL (49152000.0)	/*MAME*/
+//#define S86_MASTER_XTAL (49152012.0)
+//#define S86_MASTER_XTAL (S86_XTAL_BASE*14)
 
-
+//#define S86_VIDEO_HZ     (49152000.0/819200.0)
+  #define S86_VIDEO_HZ     (60.0)
+//#define S86_VIDEO_HZ     (60.606060)		/* fake in MAME (was say less 60.6060 the calc) */
 
 static MACHINE_DRIVER_START( hopmappy )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD_TAG("cpu1", M6809, 49152000/32)
+//	MDRV_CPU_ADD_TAG("cpu1", M6809, 6000000/4)	/*49152000/32, rthunder doesn't work with this */
+//	MDRV_CPU_ADD_TAG("cpu1", M6809, 49152000.0/32.0)	/* 1536000.0 */
+//	MDRV_CPU_ADD_TAG("cpu1", M6809, (1536000.0))
+	MDRV_CPU_ADD_TAG("cpu1", M6809, (1500000.0))
 	MDRV_CPU_PROGRAM_MAP(cpu1_map,0)
 	MDRV_CPU_VBLANK_INT(irq0_line_assert,1)
 
-	MDRV_CPU_ADD_TAG("cpu2", M6809, 49152000/32)
+//	MDRV_CPU_ADD_TAG("cpu2", M6809, (49152000.0/32.0))	/* 1536000.0 */
+	MDRV_CPU_ADD_TAG("cpu2", M6809, (1536000.0))
 	MDRV_CPU_PROGRAM_MAP(hopmappy_cpu2_map,0)
 	MDRV_CPU_VBLANK_INT(irq0_line_assert,1)
 
-	MDRV_CPU_ADD_TAG("mcu", HD63701, 49152000/32)	/* or compatible 6808 with extra instructions */
+	/* HD63701 or compatible 6808 with extra instructions */
+//	MDRV_CPU_ADD_TAG("mcu", HD63701, (49152000.0/32.0) )	/* 1536000.0 */
+	MDRV_CPU_ADD_TAG("mcu", HD63701, (1536000.0) )
 	MDRV_CPU_PROGRAM_MAP(hopmappy_mcu_map,0)
 	MDRV_CPU_IO_MAP(mcu_port_map,0)
 	MDRV_CPU_VBLANK_INT(irq0_line_hold,1)	/* ??? */
 
-	MDRV_FRAMES_PER_SECOND(60.606060)
+	MDRV_FRAMES_PER_SECOND(S86_VIDEO_HZ)
 	MDRV_VBLANK_DURATION(DEFAULT_60HZ_VBLANK_DURATION)
-	MDRV_INTERLEAVE(800)	/* heavy interleaving needed to avoid hangs in rthunder */
-
+//	MDRV_INTERLEAVE(800)	/* heavy interleaving needed to avoid hangs in rthunder */
+//	MDRV_INTERLEAVE(9)	/* heavy interleaving needed to avoid hangs in rthunder */
 	MDRV_MACHINE_INIT(namco86)
 
 	/* video hardware */
@@ -1102,18 +1104,17 @@ static MACHINE_DRIVER_START( hopmappy )
 	/* sound hardware */
 	MDRV_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD(YM2151, 3579580)
+	MDRV_SOUND_ADD(YM2151, 3579575.0)	/* labeled 3.57958 */
 	MDRV_SOUND_ROUTE(0, "mono", 0.0)
-	MDRV_SOUND_ROUTE(1, "mono", 0.60)	/* only right channel is connected */
+	MDRV_SOUND_ROUTE(1, "mono", 0.50)	/* 0.50 <-(0.60) only right channel is connected */
 
-	MDRV_SOUND_ADD(NAMCO_CUS30, 49152000/2048)
+	MDRV_SOUND_ADD(NAMCO_CUS30, 49152000.0/2048.0)
 	MDRV_SOUND_CONFIG(namco_interface)
 	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_DRIVER_END
 
 
-static MACHINE_DRIVER_START( skykiddx )
-
+static MACHINE_DRIVER_START( skykiddx_new )
 	/* basic machine hardware */
 	MDRV_IMPORT_FROM(hopmappy)
 	MDRV_CPU_MODIFY("cpu2")
@@ -1123,21 +1124,29 @@ static MACHINE_DRIVER_START( skykiddx )
 	MDRV_CPU_PROGRAM_MAP(skykiddx_mcu_map,0)
 MACHINE_DRIVER_END
 
+static MACHINE_DRIVER_START( skykiddx_old )
+	/* basic machine hardware */
+	MDRV_IMPORT_FROM(hopmappy)
+	MDRV_CPU_MODIFY("cpu2")
+	MDRV_CPU_PROGRAM_MAP(skykiddx_cpu2_map,0)
+	MDRV_INTERLEAVE(34)	/*  */
+	MDRV_CPU_MODIFY("mcu")
+	MDRV_CPU_PROGRAM_MAP(skykiddx_mcu_map,0)
+MACHINE_DRIVER_END
+
 
 static MACHINE_DRIVER_START( roishtar )
-
 	/* basic machine hardware */
 	MDRV_IMPORT_FROM(hopmappy)
 	MDRV_CPU_MODIFY("cpu2")
 	MDRV_CPU_PROGRAM_MAP(roishtar_cpu2_map,0)
-
+	MDRV_INTERLEAVE(34)	/*  */
 	MDRV_CPU_MODIFY("mcu")
 	MDRV_CPU_PROGRAM_MAP(roishtar_mcu_map,0)
 MACHINE_DRIVER_END
 
 
 static MACHINE_DRIVER_START( genpeitd )
-
 	/* basic machine hardware */
 	MDRV_IMPORT_FROM(hopmappy)
 	MDRV_CPU_MODIFY("cpu2")
@@ -1153,8 +1162,7 @@ static MACHINE_DRIVER_START( genpeitd )
 MACHINE_DRIVER_END
 
 
-static MACHINE_DRIVER_START( rthunder )
-
+static MACHINE_DRIVER_START( rthunder_new )
 	/* basic machine hardware */
 	MDRV_IMPORT_FROM(hopmappy)
 	MDRV_CPU_MODIFY("cpu2")
@@ -1162,16 +1170,47 @@ static MACHINE_DRIVER_START( rthunder )
 
 	MDRV_CPU_MODIFY("mcu")
 	MDRV_CPU_PROGRAM_MAP(rthunder_mcu_map,0)
-
+//	MDRV_INTERLEAVE(800)	/* heavy interleaving needed to avoid hangs in rthunder */
+	MDRV_INTERLEAVE(100)	/* heavy interleaving needed to avoid hangs in rthunder */
+//	MDRV_INTERLEAVE(40)	/* heavy interleaving needed to avoid hangs in rthunder */
+//	MDRV_INTERLEAVE(33)	/* heavy interleaving needed to avoid hangs in rthunder */
 	/* sound hardware */
 	MDRV_SOUND_ADD(NAMCO_63701X, 6000000)
 	MDRV_SOUND_CONFIG(namco_63701x_interface)
 	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_DRIVER_END
 
+static MACHINE_DRIVER_START( rthunder_old )
+	/* basic machine hardware */
+	MDRV_IMPORT_FROM(hopmappy)
+	MDRV_CPU_MODIFY("cpu2")
+	MDRV_CPU_PROGRAM_MAP(rthunder_cpu2_map,0)
+
+	MDRV_CPU_MODIFY("mcu")
+	MDRV_CPU_PROGRAM_MAP(rthunder_mcu_map,0)
+//	MDRV_INTERLEAVE(800)	/* heavy interleaving needed to avoid hangs in rthunder */
+//	MDRV_INTERLEAVE(100)
+//	MDRV_INTERLEAVE(65)	/* [1xx] */
+//	MDRV_INTERLEAVE(64)	/* [1xx] */
+//	MDRV_INTERLEAVE(60)	/* [1xx] */
+//	MDRV_INTERLEAVE(58)	/* */
+//	MDRV_INTERLEAVE(56)	/* [1xx] */
+//	MDRV_INTERLEAVE(55)	/* [1x2x] */
+//	MDRV_INTERLEAVE(54)	/* [1xx] */
+//	MDRV_INTERLEAVE(34)	/*  */
+	MDRV_INTERLEAVE(31)	/*  */
+//	MDRV_INTERLEAVE(17)	/* xx */
+//	MDRV_INTERLEAVE(3)	/* xx */
+//	MDRV_INTERLEAVE(2)	/* xx */
+	/* sound hardware */
+	MDRV_SOUND_ADD(NAMCO_63701X, 6000000)
+//	MDRV_SOUND_ADD(NAMCO_63701X, 6144000)
+	MDRV_SOUND_CONFIG(namco_63701x_interface)
+	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_DRIVER_END
+
 
 static MACHINE_DRIVER_START( wndrmomo )
-
 	/* basic machine hardware */
 	MDRV_IMPORT_FROM(hopmappy)
 	MDRV_CPU_MODIFY("cpu2")
@@ -1609,13 +1648,12 @@ static DRIVER_INIT( namco86 )
 	}
 }
 
+GAME( 1986, skykiddx, 0,		skykiddx_new,	skykiddx, namco86, ROT0,   "Namco", "Sky Kid Deluxe (set 1)(new)<bit light少し軽め> スカイキッドDX" )
+GAME( 1986, skykiddo, skykiddx, skykiddx_old,	skykiddx, namco86, ROT0,   "Namco", "Sky Kid Deluxe (set 2)(old)<bit hevy少し重め> スカイキッドDX" )
+GAME( 1986, hopmappy, 0,		hopmappy,		hopmappy, namco86, ROT0,   "Namco", "Hopping Mappy ホッピングマッピー" )
+GAME( 1986, roishtar, 0,		roishtar,		roishtar, namco86, ROT0,   "Namco", "[The Return of Ishtar]<not support非サポート>" )
+GAME( 1986, genpeitd, 0,		genpeitd,		genpeitd, namco86, ROT0,   "Namco", "Genpei ToumaDen 源平討魔伝" )
+GAME( 1986, rthunder, 0,		rthunder_new,	rthunder, namco86, ROT0,   "Namco", "[Rolling Thunder (new version)]<<hevy重い>>" )
+GAME( 1986, rthundro, rthunder, rthunder_old,	rthundro, namco86, ROT0,   "Namco", "[Rolling Thunder (old version)]<<stopped死ぬ>>" )
+GAME( 1987, wndrmomo, 0,		wndrmomo,		wndrmomo, namco86, ROT0,   "Namco", "Wonder Momo ワンダーモモ" )
 
-
-GAME( 1986, skykiddx, 0,        skykiddx, skykiddx, namco86, ROT180, "Namco", "Sky Kid Deluxe (set 1)" )
-GAME( 1986, skykiddo, skykiddx, skykiddx, skykiddx, namco86, ROT180, "Namco", "Sky Kid Deluxe (set 2)" )
-GAME( 1986, hopmappy, 0,        hopmappy, hopmappy, namco86, ROT0,   "Namco", "Hopping Mappy" )
-GAME( 1986, roishtar, 0,        roishtar, roishtar, namco86, ROT0,   "Namco", "The Return of Ishtar" )
-GAME( 1986, genpeitd, 0,        genpeitd, genpeitd, namco86, ROT0,   "Namco", "Genpei ToumaDen" )
-GAME( 1986, rthunder, 0,        rthunder, rthunder, namco86, ROT0,   "Namco", "Rolling Thunder (new version)" )
-GAME( 1986, rthundro, rthunder, rthunder, rthundro, namco86, ROT0,   "Namco", "Rolling Thunder (old version)" )
-GAMEX(1987, wndrmomo, 0,        wndrmomo, wndrmomo, namco86, ROT0,   "Namco", "Wonder Momo", GAME_IMPERFECT_GRAPHICS )

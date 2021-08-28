@@ -10,8 +10,8 @@
 #include "driver.h"
 #include "timer.h"
 #include "state.h"
-#include "mamedbg.h"
-#include "hiscore.h"
+#include "mame.h"//#include "mamedbg.h"
+//#include "hiscore.h"
 #if defined(MAME_DEBUG) && defined(NEW_DEBUGGER)
 #include "debugcpu.h"
 #endif
@@ -318,8 +318,8 @@ static void cpu_pre_run(void)
 	begin_resource_tracking();
 
 	/* read hi scores information from hiscore.dat */
-	hs_open(Machine->gamedrv->name);
-	hs_init();
+//	hs_open(Machine->gamedrv->name);
+//	hs_init();
 
 	/* initialize the various timers (suspends all CPUs at startup) */
 	cpu_inittimers();
@@ -373,7 +373,7 @@ static void cpu_pre_run(void)
 static void cpu_post_run(void)
 {
 	/* write hi scores to disk - No scores saving if cheat */
-	hs_close();
+//	hs_close();
 
 	/* stop the machine */
 	if (Machine->drv->machine_stop)
@@ -392,11 +392,11 @@ static void cpu_post_run(void)
 
 void cpu_run(void)
 {
-#ifdef MAME_DEBUG
-	/* initialize the debugger */
-	if (mame_debug)
-		mame_debug_init();
-#endif
+//#ifdef MAME_DEBUG
+//	/* initialize the debugger */
+//	if (mame_debug)
+//		mame_debug_init();
+//#endif
 
 	/* loop over multiple resets, until the user quits */
 	time_to_quit = 0;
@@ -425,11 +425,11 @@ void cpu_run(void)
 		cpu_post_run();
 	}
 
-#ifdef MAME_DEBUG
-	/* shut down the debugger */
-	if (mame_debug)
-		mame_debug_exit();
-#endif
+//#ifdef MAME_DEBUG
+//	/* shut down the debugger */
+//	if (mame_debug)
+//		mame_debug_exit();
+//#endif
 }
 
 
@@ -802,7 +802,7 @@ READ16_HANDLER( watchdog_reset16_r )
 	return 0xffff;
 }
 
-
+#if (0==PSP_NO_CPU32)
 WRITE32_HANDLER( watchdog_reset32_w )
 {
 	watchdog_reset();
@@ -814,7 +814,7 @@ READ32_HANDLER( watchdog_reset32_r )
 	watchdog_reset();
 	return 0xffffffff;
 }
-
+#endif //(0==PSP_NO_CPU32)
 
 
 #if 0
@@ -1682,7 +1682,7 @@ static void cpu_vblankreset(void)
 	int cpunum;
 
 	/* read hi scores from disk */
-	hs_update();
+//	hs_update();
 
 	/* read keyboard & update the status of the input ports */
 	inputport_vblank_start();
@@ -1876,7 +1876,8 @@ static mame_time cpu_computerate(int value)
 
 	/* values greater than 50000 are in nanoseconds */
 	else
-		return double_to_mame_time(TIME_IN_NSEC(value));
+//		return double_to_mame_time(TIME_IN_NSEC(value));
+		return double_to_mame_time(1.0 / 50000);
 }
 
 

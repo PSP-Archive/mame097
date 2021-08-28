@@ -1,134 +1,134 @@
 /***************************************************************************
 
-    mame.c
+	mame.c
 
-    Controls execution of the core MAME system.
+	Controls execution of the core MAME system.
 
 ****************************************************************************
 
-    Since there has been confusion in the past over the order of
-    initialization and other such things, here it is, all spelled out
-    as of March, 2005:
+	Since there has been confusion in the past over the order of
+	initialization and other such things, here it is, all spelled out
+	as of March, 2005:
 
-    main()
-        - does platform-specific init
-        - calls run_game() [mame.c]
+	main()
+		- does platform-specific init
+		- calls run_game() [mame.c]
 
-        run_game() [mame.c]
-            - begins resource tracking (level 1)
-            - calls mame_validitychecks() [mame.c] to perform validity checks on all compiled drivers
-            - calls expand_machine_driver() [mame.c] to construct the machine driver
-            - calls cpuintrf_init() [cpuintrf.c] to determine which CPUs are available
-            - calls init_game_options() [mame.c] to compute parameters based on global options struct
-            - initializes the savegame system
-            - calls osd_init() [osdepend.h] to do platform-specific initialization
+		run_game() [mame.c]
+			- begins resource tracking (level 1)
+			- calls mame_validitychecks() [mame.c] to perform validity checks on all compiled drivers
+			- calls expand_machine_driver() [mame.c] to construct the machine driver
+			- calls cpuintrf_init() [cpuintrf.c] to determine which CPUs are available
+			- calls init_game_options() [mame.c] to compute parameters based on global options struct
+			- initializes the savegame system
+			- calls osd_init() [osdepend.h] to do platform-specific initialization
 
-            - begins resource tracking (level 2)
-            - calls init_machine() [mame.c]
+			- begins resource tracking (level 2)
+			- calls init_machine() [mame.c]
 
-            init_machine() [mame.c]
-                - calls uistring_init() [ui_text.c] to initialize the localized strings
-                - calls code_init() [input.c] to initialize the input system
-                - calls input_port_alloc() [inptport.c] to construct the game's input ports
-                - calls chd_set_interface() [chd.c] to initialize the hard disk system
-                - calls rom_load() [common.c] to load the game's ROMs
-                - calls timer_init() [timer.c] to reset the timer system
-                - calls cpu_init_refresh_timer() [cpuexec.c] to start the refresh timer
-                - calls cpu_init() [cpuexec.c] to initialize the CPUs
-                - calls load_input_port_settings() [input.c] to load the configuration file
-                - calls memory_init() [memory.c] to process the game's memory maps
-                - calls the driver's DRIVER_INIT callback
+			init_machine() [mame.c]
+				- calls uistring_init() [ui_text.c] to initialize the localized strings
+				- calls code_init() [input.c] to initialize the input system
+				- calls input_port_alloc() [inptport.c] to construct the game's input ports
+				- calls chd_set_interface() [chd.c] to initialize the hard disk system
+				- calls rom_load() [common.c] to load the game's ROMs
+				- calls timer_init() [timer.c] to reset the timer system
+				- calls cpu_init_refresh_timer() [cpuexec.c] to start the refresh timer
+				- calls cpu_init() [cpuexec.c] to initialize the CPUs
+				- calls load_input_port_settings() [input.c] to load the configuration file
+				- calls memory_init() [memory.c] to process the game's memory maps
+				- calls the driver's DRIVER_INIT callback
 
-            - calls run_machine() [mame.c]
+			- calls run_machine() [mame.c]
 
-            run_machine() [mame.c]
-                - calls vh_open() [mame.c]
+			run_machine() [mame.c]
+				- calls vh_open() [mame.c]
 
-                vh_open() [mame.c]
-                    - calls palette_start() [palette.c] to allocate the palette
-                    - calls decode_graphics() [mame.c] to decode the graphics
-                    - computes game resolution and aspect ratio
-                    - calls artwork_create_display() [artwork.c] to set up the artwork and init the display
-                    - allocates the scrbitmap
-                    - sets the initial refresh rate and visible area
-                    - calls init_buffered_spriteram() [mame.c] to set up buffered spriteram
-                    - calls builduifont() [usrintrf.c] to create the user interface font
-                    - creates the debugger bitmap and font (old debugger only)
-                    - calls palette_init() [palette.c] to finish palette initialization
-                    - resets the performance tracking variables
+				vh_open() [mame.c]
+					- calls palette_start() [palette.c] to allocate the palette
+					- calls decode_graphics() [mame.c] to decode the graphics
+					- computes game resolution and aspect ratio
+					- calls artwork_create_display() [artwork.c] to set up the artwork and init the display
+					- allocates the scrbitmap
+					- sets the initial refresh rate and visible area
+					- calls init_buffered_spriteram() [mame.c] to set up buffered spriteram
+					- calls builduifont() [usrintrf.c] to create the user interface font
+					- creates the debugger bitmap and font (old debugger only)
+					- calls palette_init() [palette.c] to finish palette initialization
+					- resets the performance tracking variables
 
-                - calls tilemap_init() [tilemap.c] to initialize the tilemap system
-                - calls the driver's VIDEO_START callback
-                - calls sound_start() [sndintrf.c] to start the audio system
-                - disposes of regions marked as disposable
-                - calls run_machine_core() [mame.c]
+				- calls tilemap_init() [tilemap.c] to initialize the tilemap system
+				- calls the driver's VIDEO_START callback
+				- calls sound_start() [sndintrf.c] to start the audio system
+				- disposes of regions marked as disposable
+				- calls run_machine_core() [mame.c]
 
-                run_machine_core() [mame.c]
-                    - shows the copyright screen
-                    - shows the game warnings
-                    - shows the game info screen
-                    - calls init_user_interface() [usrintrf.c] to initialize the user interface
-                    - calls InitCheat() [cheat.c] to initialize the cheat system
-                    - calls the driver's NVRAM_HANDLER to load NVRAM
-                    - calls cpu_run() [cpuexec.c]
+				run_machine_core() [mame.c]
+					- shows the copyright screen
+					- shows the game warnings
+					- shows the game info screen
+					- calls init_user_interface() [usrintrf.c] to initialize the user interface
+					- calls InitCheat() [cheat.c] to initialize the cheat system
+					- calls the driver's NVRAM_HANDLER to load NVRAM
+					- calls cpu_run() [cpuexec.c]
 
-                    cpu_run() [cpuexec.c]
-                        - calls mame_debug_init() [mamedbg.c] to init the debugger (old debugger only)
-                        - calls cpu_pre_run() [cpuexec.c]
+					cpu_run() [cpuexec.c]
+						- calls mame_debug_init() [mamedbg.c] to init the debugger (old debugger only)
+						- calls cpu_pre_run() [cpuexec.c]
 
-                        cpu_pre_run() [cpuexec.c]
-                            - begins resource tracking (level 3)
-                            - calls hs_open() and hs_init() [hiscore.c] to set up high score hacks
-                            - calls cpu_inittimers() [cpuexec.c] to set up basic system timers
-                            - calls watchdog_setup() [cpuexec.c] to set up watchdog timers
-                            - calls sound_reset() [sndintrf.c] to reset all the sound chips
-                            - loops over each CPU and initializes its internal state
-                            - calls the driver's MACHINE_INIT callback
-                            - loops over each CPU and calls cpunum_reset() [cpuintrf.c] to reset it
-                            - calls cpu_vblankreset() [cpuexec.c] to set up the first VBLANK callback
+						cpu_pre_run() [cpuexec.c]
+							- begins resource tracking (level 3)
+							- calls hs_open() and hs_init() [hiscore.c] to set up high score hacks
+							- calls cpu_inittimers() [cpuexec.c] to set up basic system timers
+							- calls watchdog_setup() [cpuexec.c] to set up watchdog timers
+							- calls sound_reset() [sndintrf.c] to reset all the sound chips
+							- loops over each CPU and initializes its internal state
+							- calls the driver's MACHINE_INIT callback
+							- loops over each CPU and calls cpunum_reset() [cpuintrf.c] to reset it
+							- calls cpu_vblankreset() [cpuexec.c] to set up the first VBLANK callback
 
-                        --------------( at this point, we're up and running )---------------------------
+						--------------( at this point, we're up and running )---------------------------
 
-                        - calls cpu_post_run() [cpuexec.c]
+						- calls cpu_post_run() [cpuexec.c]
 
-                        cpu_post_run() [cpuexec.c]
-                            - calls hs_close() [hiscore.c] to flush high score data
-                            - calls the driver's MACHINE_STOP callback
-                            - ends resource tracking (level 3), freeing all auto_mallocs and timers
+						cpu_post_run() [cpuexec.c]
+							- calls hs_close() [hiscore.c] to flush high score data
+							- calls the driver's MACHINE_STOP callback
+							- ends resource tracking (level 3), freeing all auto_mallocs and timers
 
-                        - if the machine is just being reset, loops back to the cpu_pre_run() step above
-                        - calls mame_debug_exit() [mamedbg.c] to shut down the debugger (old debugger only)
+						- if the machine is just being reset, loops back to the cpu_pre_run() step above
+						- calls mame_debug_exit() [mamedbg.c] to shut down the debugger (old debugger only)
 
-                    - calls the driver's NVRAM_HANDLER to save NVRAM
-                    - calls StopCheat() [cheat.c] to tear down the cheat system
-                    - calls save_input_port_settings() [inptport.c] to save the game's configuration
+					- calls the driver's NVRAM_HANDLER to save NVRAM
+					- calls StopCheat() [cheat.c] to tear down the cheat system
+					- calls save_input_port_settings() [inptport.c] to save the game's configuration
 
-                - calls sound_stop() [sndintrf.c] to stop the audio system
-                - calls the driver's VIDEO_STOP callback
-                - calls tilemap_close() [tilemap.c] to tear down the tilemap system
-                - calls vh_close() [mame.c]
+				- calls sound_stop() [sndintrf.c] to stop the audio system
+				- calls the driver's VIDEO_STOP callback
+				- calls tilemap_close() [tilemap.c] to tear down the tilemap system
+				- calls vh_close() [mame.c]
 
-                vh_close() [mame.c]
-                    - frees the decoded graphics
-                    - frees the fonts
-                    - calls osd_close_display() [osdepend.h] to shut down the display
+				vh_close() [mame.c]
+					- frees the decoded graphics
+					- frees the fonts
+					- calls osd_close_display() [osdepend.h] to shut down the display
 
-            - calls shutdown_machine() [mame.c]
+			- calls shutdown_machine() [mame.c]
 
-            shutdown_machine() [mame.c]
-                - calls memory_shutdown() [memory.c] to tear down the memory system
-                - frees all the memory regions
-                - calls chd_close_all() [chd.c] to tear down the hard disks
-                - calls cpu_exit() [cpuexec.c] to tear down the CPU system
-                - calls code_close() [input.c] to tear down the input system
-                - calls state_save_reset() [state.c] to reset the saved state system
-                - calls coin_counter_reset() [common.c] to reset coin counters
+			shutdown_machine() [mame.c]
+				- calls memory_shutdown() [memory.c] to tear down the memory system
+				- frees all the memory regions
+				- calls chd_close_all() [chd.c] to tear down the hard disks
+				- calls cpu_exit() [cpuexec.c] to tear down the CPU system
+				- calls code_close() [input.c] to tear down the input system
+				- calls state_save_reset() [state.c] to reset the saved state system
+				- calls coin_counter_reset() [common.c] to reset coin counters
 
-            - ends resource tracking (level 2), freeing all auto_mallocs and timers
-            - calls osd_exit() [osdepend.h] to do platform-specific cleanup
-            - ends resource tracking (level 1), freeing all auto_mallocs and timers
+			- ends resource tracking (level 2), freeing all auto_mallocs and timers
+			- calls osd_exit() [osdepend.h] to do platform-specific cleanup
+			- ends resource tracking (level 1), freeing all auto_mallocs and timers
 
-        - exits the program
+		- exits the program
 
 ***************************************************************************/
 
@@ -136,36 +136,38 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include "ui_text.h"
-#include "mamedbg.h"
-#include "artwork.h"
+#include "mame.h"//#include "mamedbg.h"
+//#include "artwork.h"
 #include "state.h"
 #include "unzip.h"
 #include "vidhrdw/generic.h"
-#include "vidhrdw/vector.h"
+//#include "vidhrdw/vector.h"
 #include "palette.h"
-#include "harddisk.h"
+#include "chd.h"//#include "hard disk.h"
 
+#include "psp/pg.h"
 
 /***************************************************************************
 
-    Constants
+	Constants
 
 ***************************************************************************/
 
-#define FRAMES_PER_FPS_UPDATE		12
+//#define FRAMES_PER_FPS_UPDATE 	12
+#define FRAMES_PER_FPS_UPDATE		60
 
 
 
 /***************************************************************************
 
-    Global variables
+	Global variables
 
 ***************************************************************************/
 
 /* handy globals for other parts of the system */
 void *record;	/* for -record */
 void *playback; /* for -playback */
-int mame_debug; /* !0 when -debug option is specified */
+//int mame_debug; /* !0 when -debug option is specified */
 int bailing;	/* set to 1 if the startup is aborted to prevent multiple error messages */
 
 /* the active machine */
@@ -192,28 +194,18 @@ static int last_partial_scanline;
 static cycles_t last_fps_time;
 static int frames_since_last_fps;
 static int rendered_frames_since_last_fps;
-static int vfcount;
+//static int vfcount;
 static struct performance_info performance;
 
 /* misc other statics */
 static int settingsloaded;
-static int leds_status;
-
-/* artwork callbacks */
-#ifndef MESS
-static struct artwork_callbacks mame_artwork_callbacks =
-{
-	NULL,
-	artwork_load_artwork_file
-};
-#endif
-
+//static int leds_status;
 
 
 
 /***************************************************************************
 
-    Hard disk interface prototype
+	Hard disk interface prototype
 
 ***************************************************************************/
 
@@ -236,7 +228,7 @@ static struct chd_interface mame_chd_interface =
 
 /***************************************************************************
 
-    Other function prototypes
+	Other function prototypes
 
 ***************************************************************************/
 
@@ -251,7 +243,7 @@ static void vh_close(void);
 static int init_game_options(void);
 static int decode_graphics(const struct GfxDecodeInfo *gfxdecodeinfo);
 static void compute_aspect_ratio(const struct InternalMachineDriver *drv, int *aspect_x, int *aspect_y);
-static void scale_vectorgames(int gfx_width, int gfx_height, int *width, int *height);
+//static void scale_vectorgames(int gfx_width, int gfx_height, int *width, int *height);
 static int init_buffered_spriteram(void);
 
 #ifdef MESS
@@ -262,14 +254,14 @@ static int init_buffered_spriteram(void);
 
 /***************************************************************************
 
-    Inline functions
+	Inline functions
 
 ***************************************************************************/
 
 /*-------------------------------------------------
-    bail_and_print - set the bailing flag and
-    print a message if one hasn't already been
-    printed
+	bail_and_print - set the bailing flag and
+	print a message if one hasn't already been
+	printed
 -------------------------------------------------*/
 
 INLINE void bail_and_print(const char *message)
@@ -286,12 +278,12 @@ INLINE void bail_and_print(const char *message)
 
 /***************************************************************************
 
-    Core system management
+	Core system management
 
 ***************************************************************************/
 
 /*-------------------------------------------------
-    run_game - run the given game in a session
+	run_game - run the given game in a session
 -------------------------------------------------*/
 
 int run_game(int game)
@@ -301,7 +293,7 @@ int run_game(int game)
 	begin_resource_tracking();
 
 	/* validity checks -- the default is to perform these in all builds now
-     * due to the number of incorrect submissions */
+	 * due to the number of incorrect submissions */
 	if (!options.skip_validitychecks)
 		if (mame_validitychecks())
 			return 1;
@@ -374,13 +366,13 @@ int run_game(int game)
 
 
 /*-------------------------------------------------
-    init_machine - initialize the emulated machine
+	init_machine - initialize the emulated machine
 -------------------------------------------------*/
 
 static int init_machine(void)
 {
 	/* load the localization file */
-	if (uistring_init(options.language_file) != 0)
+	if (uistring_init(0/*options.language_file*/) != 0)
 	{
 		logerror("uistring_init failed\n");
 		goto cant_load_language_file;
@@ -486,9 +478,9 @@ cant_load_language_file:
 
 
 /*-------------------------------------------------
-    run_machine - start the various subsystems
-    and the CPU emulation; returns non zero in
-    case of error
+	run_machine - start the various subsystems
+	and the CPU emulation; returns non zero in
+	case of error
 -------------------------------------------------*/
 
 static int run_machine(void)
@@ -496,19 +488,23 @@ static int run_machine(void)
 	int res = 1;
 
 	/* start the video hardware */
+printfnw_("vh_open");	//TMK
 	if (vh_open())
 		bail_and_print("Unable to start video emulation");
 	else
 	{
 		/* initialize tilemaps */
+printfnw_("tilemap_init");	//TMK
 		tilemap_init();
 		flip_screen_set(0);
 
 		/* start up the driver's video */
+printfnw_("video_start");	//TMK
 		if (Machine->drv->video_start && (*Machine->drv->video_start)())
 			bail_and_print("Unable to start video emulation");
 		else
 		{
+printfnw_("sound_start");	//TMK
 			/* start the audio system */
 			if (sound_start())
 				bail_and_print("Unable to start audio emulation");
@@ -529,6 +525,7 @@ static int run_machine(void)
 						Machine->memory_region[region].base = 0;
 					}
 
+printfnw_("run_machine_core");	//TMK
 				/* now do the core execution */
 				run_machine_core();
 				res = 0;
@@ -553,27 +550,33 @@ static int run_machine(void)
 
 
 /*-------------------------------------------------
-    run_machine_core - core execution loop
+	run_machine_core - core execution loop
 -------------------------------------------------*/
 
+extern int input_port_settings_modify;
 void run_machine_core(void)
 {
+	input_port_settings_modify =0;
+
+	pgFillvram(0); pgScreenFlipV(); //TMK ADD
+	pgFillvram(0); pgScreenFlipV();
+
 	/* disable artwork for the start */
-	artwork_enable(0);
+	//artwork_enable(0);
 
 	/* if we didn't find a settings file, show the disclaimer */
-	if (settingsloaded || options.skip_disclaimer || showcopyright(artwork_get_ui_bitmap()) == 0)
+	if (settingsloaded || options.skip_disclaimer || showcopyright() == 0)
 	{
 		/* show info about incorrect behaviour (wrong colors etc.) */
-		if (options.skip_warnings || showgamewarnings(artwork_get_ui_bitmap()) == 0)
+		if (options.skip_warnings || showgamewarnings() == 0)
 		{
 			/* show info about the game */
-			if (options.skip_gameinfo || showgameinfo(artwork_get_ui_bitmap()) == 0)
+			if (options.skip_gameinfo || showgameinfo() == 0)
 			{
 				init_user_interface();
 
 				/* enable artwork now */
-				artwork_enable(1);
+				//artwork_enable(1);
 
 				/* disable cheat if no roms */
 				if (!gamedrv->rom)
@@ -610,8 +613,11 @@ void run_machine_core(void)
 				if (options.cheat)
 					StopCheat();
 
+				osd_sound_enable( 0 ); //TMK
+
 				/* save input ports settings */
-				save_input_port_settings();
+				if (input_port_settings_modify) // TMK
+					save_input_port_settings();
 			}
 		}
 	}
@@ -620,8 +626,8 @@ void run_machine_core(void)
 
 
 /*-------------------------------------------------
-    shutdown_machine - tear down the emulated
-    machine
+	shutdown_machine - tear down the emulated
+	machine
 -------------------------------------------------*/
 
 static void shutdown_machine(void)
@@ -659,22 +665,22 @@ static void shutdown_machine(void)
 
 
 /*-------------------------------------------------
-    mame_pause - pause or resume the system
+	mame_pause - pause or resume the system
 -------------------------------------------------*/
-
+#if 1
 void mame_pause(int pause)
 {
-	osd_pause(pause);
+	//osd_pause(pause);
 	osd_sound_enable(!pause);
-	palette_set_global_brightness_adjust(pause ? options.pause_bright : 1.00);
+	//palette_set_global_brightness_adjust(pause ? options.pause_bright : 1.00);
 	schedule_full_refresh();
 }
-
+#endif
 
 
 /*-------------------------------------------------
-    expand_machine_driver - construct a machine
-    driver from the macroized state
+	expand_machine_driver - construct a machine
+	driver from the macroized state
 -------------------------------------------------*/
 
 void expand_machine_driver(void (*constructor)(struct InternalMachineDriver *), struct InternalMachineDriver *output)
@@ -687,14 +693,14 @@ void expand_machine_driver(void (*constructor)(struct InternalMachineDriver *), 
 
 
 /*-------------------------------------------------
-    vh_open - start up the video system
+	vh_open - start up the video system
 -------------------------------------------------*/
 
 static int vh_open(void)
 {
 	struct osd_create_params params;
-	struct artwork_callbacks *artcallbacks;
-	int bmwidth = Machine->drv->screen_width;
+	//struct artwork_callbacks *artcallbacks;
+	int bmwidth  = Machine->drv->screen_width;
 	int bmheight = Machine->drv->screen_height;
 
 	/* first allocate the necessary palette structures */
@@ -707,42 +713,38 @@ static int vh_open(void)
 		if (decode_graphics(Machine->drv->gfxdecodeinfo))
 			goto cant_decode_graphics;
 
-	/* if we're a vector game, override the screen width and height */
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-		scale_vectorgames(options.vector_width, options.vector_height, &bmwidth, &bmheight);
+//	/* if we're a vector game, override the screen width and height */
+//	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
+//		scale_vectorgames(options.vector_width, options.vector_height, &bmwidth, &bmheight);
 
-	/* compute the visible area for raster games */
-	if (!(Machine->drv->video_attributes & VIDEO_TYPE_VECTOR))
-	{
-		params.width = Machine->drv->default_visible_area.max_x - Machine->drv->default_visible_area.min_x + 1;
+//	/* compute the visible area for raster games */
+//	if (!(Machine->drv->video_attributes & VIDEO_TYPE_VECTOR))
+//	{
+		params.width  = Machine->drv->default_visible_area.max_x - Machine->drv->default_visible_area.min_x + 1;
 		params.height = Machine->drv->default_visible_area.max_y - Machine->drv->default_visible_area.min_y + 1;
-	}
-	else
-	{
-		params.width = bmwidth;
-		params.height = bmheight;
-	}
+//	}
+//	else
+//	{
+//		params.width = bmwidth;
+//		params.height = bmheight;
+//	}
 
 	/* fill in the rest of the display parameters */
 	compute_aspect_ratio(Machine->drv, &params.aspect_x, &params.aspect_y);
-	params.depth = Machine->color_depth;
+	params.depth  = Machine->color_depth;
 	params.colors = palette_get_total_colors_with_ui();
-	params.fps = Machine->drv->frames_per_second;
+	params.fps	  = Machine->drv->frames_per_second;
 	params.video_attributes = Machine->drv->video_attributes;
 
-#ifdef MESS
-	artcallbacks = &mess_artwork_callbacks;
-#else
-	artcallbacks = &mame_artwork_callbacks;
-#endif
+	//artcallbacks = &mame_artwork_callbacks;
 
 	/* initialize the display through the artwork (and eventually the OSD) layer */
-	if (artwork_create_display(&params, direct_rgb_components, artcallbacks))
+	if (/*artwork*/osd_create_display(&params, direct_rgb_components/*, artcallbacks*/))
 		goto cant_create_display;
 
-	/* the create display process may update the vector width/height, so recompute */
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-		scale_vectorgames(options.vector_width, options.vector_height, &bmwidth, &bmheight);
+//	/* the create display process may update the vector width/height, so recompute */
+//	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
+//		scale_vectorgames(options.vector_width, options.vector_height, &bmwidth, &bmheight);
 
 	/* now allocate the screen bitmap */
 	Machine->scrbitmap = auto_bitmap_alloc_depth(bmwidth, bmheight, Machine->color_depth);
@@ -774,23 +776,21 @@ static int vh_open(void)
 	if (Machine->uifont == NULL)
 		goto cant_build_uifont;
 
-#if defined(MAME_DEBUG) && !defined(NEW_DEBUGGER)
-	/* if the debugger is enabled, initialize its bitmap and font */
-	if (mame_debug)
-	{
-		int depth = options.debug_depth ? options.debug_depth : Machine->color_depth;
-
-		/* first allocate the debugger bitmap */
-		Machine->debug_bitmap = auto_bitmap_alloc_depth(options.debug_width, options.debug_height, depth);
-		if (!Machine->debug_bitmap)
-			goto cant_create_debug_bitmap;
-
-		/* then create the debugger font */
-		Machine->debugger_font = build_debugger_font();
-		if (Machine->debugger_font == NULL)
-			goto cant_build_debugger_font;
-	}
-#endif
+//#if defined(MAME_DEBUG) && !defined(NEW_DEBUGGER)
+//	/* if the debugger is enabled, initialize its bitmap and font */
+//	if (mame_debug)
+//	{
+//		int depth = options.debug_depth ? options.debug_depth : Machine->color_depth;
+//		/* first allocate the debugger bitmap */
+//		Machine->debug_bitmap = auto_bitmap_alloc_depth(options.debug_width, options.debug_height, depth);
+//		if (!Machine->debug_bitmap)
+//			goto cant_create_debug_bitmap;
+//		/* then create the debugger font */
+//		Machine->debugger_font = build_debugger_font();
+//		if (Machine->debugger_font == NULL)
+//			goto cant_build_debugger_font;
+//	}
+//#endif
 
 	/* initialize the palette - must be done after osd_create_display() */
 	if (palette_init())
@@ -804,11 +804,11 @@ static int vh_open(void)
 	rendered_frames_since_last_fps = frames_since_last_fps = 0;
 	performance.game_speed_percent = 100;
 	performance.frames_per_second = Machine->refresh_rate;
-	performance.vector_updates_last_second = 0;
+//	performance.vector_updates_last_second = 0;
 
 	/* reset video statics and get out of here */
 	pdrawgfx_shadow_lowpri = 0;
-	leds_status = 0;
+	//leds_status = 0;
 
 	return 0;
 
@@ -832,7 +832,7 @@ cant_start_palette:
 
 
 /*-------------------------------------------------
-    vh_close - close down the video system
+	vh_close - close down the video system
 -------------------------------------------------*/
 
 static void vh_close(void)
@@ -857,11 +857,11 @@ static void vh_close(void)
 		freegfx(Machine->uirotfont);
 		Machine->uirotfont = NULL;
 	}
-	if (Machine->debugger_font)
-	{
-		freegfx(Machine->debugger_font);
-		Machine->debugger_font = NULL;
-	}
+//	if (Machine->debugger_font)
+//	{
+//		freegfx(Machine->debugger_font);
+//		Machine->debugger_font = NULL;
+//	}
 
 	/* close down the OSD layer's display */
 	osd_close_display();
@@ -870,8 +870,8 @@ static void vh_close(void)
 
 
 /*-------------------------------------------------
-    compute_aspect_ratio - determine the aspect
-    ratio encoded in the video attributes
+	compute_aspect_ratio - determine the aspect
+	ratio encoded in the video attributes
 -------------------------------------------------*/
 
 static void compute_aspect_ratio(const struct InternalMachineDriver *drv, int *aspect_x, int *aspect_y)
@@ -894,8 +894,8 @@ static void compute_aspect_ratio(const struct InternalMachineDriver *drv, int *a
 
 
 /*-------------------------------------------------
-    init_game_options - initialize the various
-    game options
+	init_game_options - initialize the various
+	game options
 -------------------------------------------------*/
 
 static int init_game_options(void)
@@ -903,7 +903,7 @@ static int init_game_options(void)
 	/* copy some settings into easier-to-handle variables */
 	record	   = options.record;
 	playback   = options.playback;
-	mame_debug = options.mame_debug;
+//	mame_debug = options.mame_debug;
 
 	/* determine the color depth */
 	Machine->color_depth = 16;
@@ -922,8 +922,8 @@ static int init_game_options(void)
 	}
 
 	/* update the vector width/height with defaults */
-	if (options.vector_width == 0) options.vector_width = 640;
-	if (options.vector_height == 0) options.vector_height = 480;
+//	if (options.vector_width == 0) options.vector_width = 640;
+//	if (options.vector_height == 0) options.vector_height = 480;
 
 	/* initialize the samplerate */
 	Machine->sample_rate = options.samplerate;
@@ -937,7 +937,7 @@ static int init_game_options(void)
 
 
 /*-------------------------------------------------
-    decode_graphics - decode the graphics
+	decode_graphics - decode the graphics
 -------------------------------------------------*/
 
 static int decode_graphics(const struct GfxDecodeInfo *gfxdecodeinfo)
@@ -1017,35 +1017,33 @@ static int decode_graphics(const struct GfxDecodeInfo *gfxdecodeinfo)
 
 
 /*-------------------------------------------------
-    scale_vectorgames - scale the vector games
-    to a given resolution
+	scale_vectorgames - scale the vector games
+	to a given resolution
 -------------------------------------------------*/
-
-static void scale_vectorgames(int gfx_width, int gfx_height, int *width, int *height)
-{
-	double x_scale, y_scale, scale;
-
-	/* compute the scale values */
-	x_scale = (double)gfx_width  / *width;
-	y_scale = (double)gfx_height / *height;
-
-	/* pick the smaller scale factor */
-	scale = (x_scale < y_scale) ? x_scale : y_scale;
-
-	/* compute the new size */
-	*width  = *width  * scale + 0.5;
-	*height = *height * scale + 0.5;
-
-	/* round to the nearest 4 pixel value */
-	*width  &= ~3;
-	*height &= ~3;
-}
+//static void scale_vectorgames(int gfx_width, int gfx_height, int *width, int *height)
+//{
+//	float x_scale, y_scale, scale;
+//	/* compute the scale values */
+//	x_scale = (float)gfx_width  / *width;
+//	y_scale = (float)gfx_height / *height;
+//
+//	/* pick the smaller scale factor */
+//	scale = (x_scale < y_scale) ? x_scale : y_scale;
+//
+//	/* compute the new size */
+//	*width	= *width  * scale + 0.5;
+//	*height = *height * scale + 0.5;
+//
+//	/* round to the nearest 4 pixel value */
+//	*width	&= ~3;
+//	*height &= ~3;
+//}
 
 
 
 /*-------------------------------------------------
-    init_buffered_spriteram - initialize the
-    double-buffered spriteram
+	init_buffered_spriteram - initialize the
+	double-buffered spriteram
 -------------------------------------------------*/
 
 static int init_buffered_spriteram(void)
@@ -1078,10 +1076,12 @@ static int init_buffered_spriteram(void)
 	}
 
 	/* make 16-bit and 32-bit pointer variants */
-	buffered_spriteram16 = (data16_t *)buffered_spriteram;
-	buffered_spriteram32 = (data32_t *)buffered_spriteram;
-	buffered_spriteram16_2 = (data16_t *)buffered_spriteram_2;
-	buffered_spriteram32_2 = (data32_t *)buffered_spriteram_2;
+	buffered_spriteram16 = (UINT16 *)buffered_spriteram;
+	buffered_spriteram16_2 = (UINT16 *)buffered_spriteram_2;
+#if (0==PSP_NO_CPU32)
+	buffered_spriteram32 = (UINT32 *)buffered_spriteram;
+	buffered_spriteram32_2 = (UINT32 *)buffered_spriteram_2;
+#endif //(0==PSP_NO_CPU32)
 	return 0;
 }
 
@@ -1089,18 +1089,18 @@ static int init_buffered_spriteram(void)
 
 /***************************************************************************
 
-    Screen rendering and management.
+	Screen rendering and management.
 
 ***************************************************************************/
 
 /*-------------------------------------------------
-    set_visible_area - adjusts the visible portion
-    of the bitmap area dynamically
+	set_visible_area - adjusts the visible portion
+	of the bitmap area dynamically
 -------------------------------------------------*/
 
 void set_visible_area(int min_x, int max_x, int min_y, int max_y)
 {
-	if (       Machine->visible_area.min_x == min_x
+	if (	   Machine->visible_area.min_x == min_x
 			&& Machine->visible_area.max_x == max_x
 			&& Machine->visible_area.min_y == min_y
 			&& Machine->visible_area.max_y == max_y)
@@ -1115,17 +1115,17 @@ void set_visible_area(int min_x, int max_x, int min_y, int max_y)
 	Machine->visible_area.min_y = min_y;
 	Machine->visible_area.max_y = max_y;
 
-	/* vector games always use the whole bitmap */
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-	{
-		Machine->absolute_visible_area.min_x = 0;
-		Machine->absolute_visible_area.max_x = Machine->scrbitmap->width - 1;
-		Machine->absolute_visible_area.min_y = 0;
-		Machine->absolute_visible_area.max_y = Machine->scrbitmap->height - 1;
-	}
+//	/* vector games always use the whole bitmap */
+//	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
+//	{
+//		Machine->absolute_visible_area.min_x = 0;
+//		Machine->absolute_visible_area.max_x = Machine->scrbitmap->width - 1;
+//		Machine->absolute_visible_area.min_y = 0;
+//		Machine->absolute_visible_area.max_y = Machine->scrbitmap->height - 1;
+//	}
 
 	/* raster games need to use the visible area */
-	else
+//	else
 		Machine->absolute_visible_area = Machine->visible_area;
 
 	/* recompute scanline timing */
@@ -1135,8 +1135,8 @@ void set_visible_area(int min_x, int max_x, int min_y, int max_y)
 
 
 /*-------------------------------------------------
-    set_refresh_rate - adjusts the refresh rate
-    of the video mode dynamically
+	set_refresh_rate - adjusts the refresh rate
+	of the video mode dynamically
 -------------------------------------------------*/
 
 void set_refresh_rate(float fps)
@@ -1158,8 +1158,8 @@ void set_refresh_rate(float fps)
 
 
 /*-------------------------------------------------
-    schedule_full_refresh - force a full erase
-    and refresh the next frame
+	schedule_full_refresh - force a full erase
+	and refresh the next frame
 -------------------------------------------------*/
 
 void schedule_full_refresh(void)
@@ -1170,8 +1170,8 @@ void schedule_full_refresh(void)
 
 
 /*-------------------------------------------------
-    reset_partial_updates - reset the partial
-    updating mechanism for a new frame
+	reset_partial_updates - reset the partial
+	updating mechanism for a new frame
 -------------------------------------------------*/
 
 void reset_partial_updates(void)
@@ -1183,9 +1183,9 @@ void reset_partial_updates(void)
 
 
 /*-------------------------------------------------
-    force_partial_update - perform a partial
-    update from the last scanline up to and
-    including the specified scanline
+	force_partial_update - perform a partial
+	update from the last scanline up to and
+	including the specified scanline
 -------------------------------------------------*/
 
 void force_partial_update(int scanline)
@@ -1229,8 +1229,8 @@ void force_partial_update(int scanline)
 
 
 /*-------------------------------------------------
-    draw_screen - render the final screen bitmap
-    and update any artwork
+	draw_screen - render the final screen bitmap
+	and update any artwork
 -------------------------------------------------*/
 int gbPriorityBitmapIsDirty;
 
@@ -1247,8 +1247,8 @@ void draw_screen(void)
 
 
 /*-------------------------------------------------
-    update_video_and_audio - actually call the
-    OSD layer to perform an update
+	update_video_and_audio - actually call the
+	OSD layer to perform an update
 -------------------------------------------------*/
 
 void update_video_and_audio(void)
@@ -1279,12 +1279,12 @@ void update_video_and_audio(void)
 		current_display.changed_flags |= GAME_REFRESH_RATE_CHANGED;
 
 	/* set the vector dirty list */
-	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
-		if (!full_refresh_pending && !ui_dirty && !skipped_it)
-		{
-			current_display.vector_dirty_pixels = vector_dirty_list;
-			current_display.changed_flags |= VECTOR_PIXELS_CHANGED;
-		}
+//	if (Machine->drv->video_attributes & VIDEO_TYPE_VECTOR)
+//		if (!full_refresh_pending && !ui_dirty && !skipped_it)
+//		{
+//			current_display.vector_dirty_pixels = vector_dirty_list;
+//			current_display.changed_flags |= VECTOR_PIXELS_CHANGED;
+//		}
 
 #if defined(MAME_DEBUG) && !defined(NEW_DEBUGGER)
 	/* set the debugger bitmap */
@@ -1302,17 +1302,17 @@ void update_video_and_audio(void)
 #endif
 
 	/* set the LED status */
-	if (leds_status != current_display.led_state)
-	{
-		current_display.led_state = leds_status;
-		current_display.changed_flags |= LED_STATE_CHANGED;
-	}
+//	if (leds_status != current_display.led_state)
+//	{
+//		current_display.led_state = leds_status;
+//		current_display.changed_flags |= LED_STATE_CHANGED;
+//	}
 
 	/* update with data from other parts of the system */
 	palette_update_display(&current_display);
 
 	/* render */
-	artwork_update_video_and_audio(&current_display);
+	/*artwork*/osd_update_video_and_audio(&current_display);
 
 	/* update FPS */
 	recompute_fps(skipped_it);
@@ -1326,10 +1326,10 @@ void update_video_and_audio(void)
 
 
 /*-------------------------------------------------
-    recompute_fps - recompute the frame rate
+	recompute_fps - recompute the frame rate
 -------------------------------------------------*/
 
-int vector_updates = 0;
+//int vector_updates = 0;
 
 static void recompute_fps(int skipped_it)
 {
@@ -1343,12 +1343,12 @@ static void recompute_fps(int skipped_it)
 	{
 		cycles_t cps = osd_cycles_per_second();
 		cycles_t curr = osd_cycles();
-		double seconds_elapsed = (double)(curr - last_fps_time) * (1.0 / (double)cps);
-		double frames_per_sec = (double)frames_since_last_fps / seconds_elapsed;
+		float seconds_elapsed = (float)(curr - last_fps_time) * (1.0 / (float)cps);
+		float frames_per_sec = (float)frames_since_last_fps / seconds_elapsed;
 
 		/* compute the performance data */
 		performance.game_speed_percent = 100.0 * frames_per_sec / Machine->refresh_rate;
-		performance.frames_per_second = (double)rendered_frames_since_last_fps / seconds_elapsed;
+		performance.frames_per_second = (float)rendered_frames_since_last_fps / seconds_elapsed;
 
 		/* reset the info */
 		last_fps_time = curr;
@@ -1357,24 +1357,22 @@ static void recompute_fps(int skipped_it)
 	}
 
 	/* for vector games, compute the vector update count once/second */
-	vfcount++;
-	if (vfcount >= (int)Machine->refresh_rate)
-	{
-		performance.vector_updates_last_second = vector_updates;
-		vector_updates = 0;
-
-		vfcount -= (int)Machine->refresh_rate;
-	}
+//	vfcount++;
+//	if (vfcount >= (int)Machine->refresh_rate)
+//	{
+//		performance.vector_updates_last_second = vector_updates;
+//		vector_updates = 0;
+//		vfcount -= (int)Machine->refresh_rate;
+//	}
 }
 
 
-
+extern int psp_exit;	//TMK
 /*-------------------------------------------------
-    updatescreen - handle frameskipping and UI,
-    plus updating the screen during normal
-    operations
+	updatescreen - handle frameskipping and UI,
+	plus updating the screen during normal
+	operations
 -------------------------------------------------*/
-
 int updatescreen(void)
 {
 	/* update sound */
@@ -1388,16 +1386,18 @@ int updatescreen(void)
 		profiler_mark(PROFILER_END);
 	}
 
+
+	if (psp_exit)		return 1;		/* quit if the user asked to */
+
 	/* the user interface must be called between vh_update() and osd_update_video_and_audio(), */
 	/* to allow it to overlay things on the game display. We must call it even */
 	/* if the frame is skipped, to keep a consistent timing. */
-	if (handle_user_interface(artwork_get_ui_bitmap()))
-		/* quit if the user asked to */
-		return 1;
+	if (handle_user_interface())	return 1;	/* quit if the user asked to */
 
 	/* blit to the screen */
 	update_video_and_audio();
 
+/* [MAME0.97_m72 use video_eof] */
 	/* call the end-of-frame callback */
 	if (Machine->drv->video_eof)
 	{
@@ -1413,13 +1413,13 @@ int updatescreen(void)
 
 /***************************************************************************
 
-    Miscellaneous bits & pieces
+	Miscellaneous bits & pieces
 
 ***************************************************************************/
 
 /*-------------------------------------------------
-    mame_highscore_enabled - return 1 if high
-    scores are enabled
+	mame_highscore_enabled - return 1 if high
+	scores are enabled
 -------------------------------------------------*/
 
 int mame_highscore_enabled(void)
@@ -1438,22 +1438,22 @@ int mame_highscore_enabled(void)
 
 
 /*-------------------------------------------------
-    set_led_status - set the state of a given LED
+	set_led_status - set the state of a given LED
 -------------------------------------------------*/
 
 void set_led_status(int num, int on)
 {
-	if (on)
-		leds_status |=	(1 << num);
-	else
-		leds_status &= ~(1 << num);
+//	if (on)
+//		leds_status |=	(1 << num);
+//	else
+//		leds_status &= ~(1 << num);
 }
 
 
 
 /*-------------------------------------------------
-    mame_get_performance_info - return performance
-    info
+	mame_get_performance_info - return performance
+	info
 -------------------------------------------------*/
 
 const struct performance_info *mame_get_performance_info(void)
@@ -1464,8 +1464,8 @@ const struct performance_info *mame_get_performance_info(void)
 
 
 /*-------------------------------------------------
-    mame_find_cpu_index - return the index of the
-    given CPU, or -1 if not found
+	mame_find_cpu_index - return the index of the
+	given CPU, or -1 if not found
 -------------------------------------------------*/
 
 int mame_find_cpu_index(const char *tag)
@@ -1482,8 +1482,8 @@ int mame_find_cpu_index(const char *tag)
 
 
 /*-------------------------------------------------
-    machine_add_cpu - add a CPU during machine
-    driver expansion
+	machine_add_cpu - add a CPU during machine
+	driver expansion
 -------------------------------------------------*/
 
 struct MachineCPU *machine_add_cpu(struct InternalMachineDriver *machine, const char *tag, int type, int cpuclock)
@@ -1506,8 +1506,8 @@ struct MachineCPU *machine_add_cpu(struct InternalMachineDriver *machine, const 
 
 
 /*-------------------------------------------------
-    machine_find_cpu - find a tagged CPU during
-    machine driver expansion
+	machine_find_cpu - find a tagged CPU during
+	machine driver expansion
 -------------------------------------------------*/
 
 struct MachineCPU *machine_find_cpu(struct InternalMachineDriver *machine, const char *tag)
@@ -1525,8 +1525,8 @@ struct MachineCPU *machine_find_cpu(struct InternalMachineDriver *machine, const
 
 
 /*-------------------------------------------------
-    machine_remove_cpu - remove a tagged CPU
-    during machine driver expansion
+	machine_remove_cpu - remove a tagged CPU
+	during machine driver expansion
 -------------------------------------------------*/
 
 void machine_remove_cpu(struct InternalMachineDriver *machine, const char *tag)
@@ -1547,8 +1547,8 @@ void machine_remove_cpu(struct InternalMachineDriver *machine, const char *tag)
 
 
 /*-------------------------------------------------
-    machine_add_speaker - add a speaker during
-    machine driver expansion
+	machine_add_speaker - add a speaker during
+	machine driver expansion
 -------------------------------------------------*/
 
 struct MachineSpeaker *machine_add_speaker(struct InternalMachineDriver *machine, const char *tag, float x, float y, float z)
@@ -1572,8 +1572,8 @@ struct MachineSpeaker *machine_add_speaker(struct InternalMachineDriver *machine
 
 
 /*-------------------------------------------------
-    machine_find_speaker - find a tagged speaker
-    system during machine driver expansion
+	machine_find_speaker - find a tagged speaker
+	system during machine driver expansion
 -------------------------------------------------*/
 
 struct MachineSpeaker *machine_find_speaker(struct InternalMachineDriver *machine, const char *tag)
@@ -1591,8 +1591,8 @@ struct MachineSpeaker *machine_find_speaker(struct InternalMachineDriver *machin
 
 
 /*-------------------------------------------------
-    machine_remove_speaker - remove a tagged speaker
-    system during machine driver expansion
+	machine_remove_speaker - remove a tagged speaker
+	system during machine driver expansion
 -------------------------------------------------*/
 
 void machine_remove_speaker(struct InternalMachineDriver *machine, const char *tag)
@@ -1613,8 +1613,8 @@ void machine_remove_speaker(struct InternalMachineDriver *machine, const char *t
 
 
 /*-------------------------------------------------
-    machine_add_sound - add a sound system during
-    machine driver expansion
+	machine_add_sound - add a sound system during
+	machine driver expansion
 -------------------------------------------------*/
 
 struct MachineSound *machine_add_sound(struct InternalMachineDriver *machine, const char *tag, int type, int clock)
@@ -1640,8 +1640,8 @@ struct MachineSound *machine_add_sound(struct InternalMachineDriver *machine, co
 
 
 /*-------------------------------------------------
-    machine_find_sound - find a tagged sound
-    system during machine driver expansion
+	machine_find_sound - find a tagged sound
+	system during machine driver expansion
 -------------------------------------------------*/
 
 struct MachineSound *machine_find_sound(struct InternalMachineDriver *machine, const char *tag)
@@ -1659,8 +1659,8 @@ struct MachineSound *machine_find_sound(struct InternalMachineDriver *machine, c
 
 
 /*-------------------------------------------------
-    machine_remove_sound - remove a tagged sound
-    system during machine driver expansion
+	machine_remove_sound - remove a tagged sound
+	system during machine driver expansion
 -------------------------------------------------*/
 
 void machine_remove_sound(struct InternalMachineDriver *machine, const char *tag)
@@ -1681,8 +1681,8 @@ void machine_remove_sound(struct InternalMachineDriver *machine, const char *tag
 
 
 /*-------------------------------------------------
-    mame_chd_open - interface for opening
-    a hard disk image
+	mame_chd_open - interface for opening
+	a hard disk image
 -------------------------------------------------*/
 
 struct chd_interface_file *mame_chd_open(const char *filename, const char *mode)
@@ -1711,8 +1711,8 @@ struct chd_interface_file *mame_chd_open(const char *filename, const char *mode)
 
 
 /*-------------------------------------------------
-    mame_chd_close - interface for closing
-    a hard disk image
+	mame_chd_close - interface for closing
+	a hard disk image
 -------------------------------------------------*/
 
 void mame_chd_close(struct chd_interface_file *file)
@@ -1723,8 +1723,8 @@ void mame_chd_close(struct chd_interface_file *file)
 
 
 /*-------------------------------------------------
-    mame_chd_read - interface for reading
-    from a hard disk image
+	mame_chd_read - interface for reading
+	from a hard disk image
 -------------------------------------------------*/
 
 UINT32 mame_chd_read(struct chd_interface_file *file, UINT64 offset, UINT32 count, void *buffer)
@@ -1736,8 +1736,8 @@ UINT32 mame_chd_read(struct chd_interface_file *file, UINT64 offset, UINT32 coun
 
 
 /*-------------------------------------------------
-    mame_chd_write - interface for writing
-    to a hard disk image
+	mame_chd_write - interface for writing
+	to a hard disk image
 -------------------------------------------------*/
 
 UINT32 mame_chd_write(struct chd_interface_file *file, UINT64 offset, UINT32 count, const void *buffer)
@@ -1748,8 +1748,8 @@ UINT32 mame_chd_write(struct chd_interface_file *file, UINT64 offset, UINT32 cou
 
 
 /*-------------------------------------------------
-    mame_chd_length - interface for getting
-    the length a hard disk image
+	mame_chd_length - interface for getting
+	the length a hard disk image
 -------------------------------------------------*/
 
 UINT64 mame_chd_length(struct chd_interface_file *file)
@@ -1761,7 +1761,7 @@ UINT64 mame_chd_length(struct chd_interface_file *file)
 
 /***************************************************************************
 
-    Huge bunch of validity checks for the debug build
+	Huge bunch of validity checks for the debug build
 
 ***************************************************************************/
 
@@ -1810,7 +1810,7 @@ int mame_validitychecks(void)
 		}
 
 #if 0
-//      if (drivers[i]->drv->color_table_len == drivers[i]->drv->total_colors &&
+//		if (drivers[i]->drv->color_table_len == drivers[i]->drv->total_colors &&
 		if (drivers[i]->drv->color_table_len && drivers[i]->drv->total_colors &&
 				drivers[i]->drv->vh_init_palette == 0)
 		{
@@ -2084,11 +2084,11 @@ int mame_validitychecks(void)
 
 
 /*
-                    if (type && (type >= REGION_MAX || type <= REGION_INVALID))
-                    {
-                        printf("%s: %s has invalid memory region for gfx[%d]\n",drivers[i]->source_file,drivers[i]->name,j);
-                        error = 1;
-                    }
+					if (type && (type >= REGION_MAX || type <= REGION_INVALID))
+					{
+						printf("%s: %s has invalid memory region for gfx[%d]\n",drivers[i]->source_file,drivers[i]->name,j);
+						error = 1;
+					}
 */
 
 					if (!IS_FRAC(drv.gfxdecodeinfo[j].gfxlayout->total))

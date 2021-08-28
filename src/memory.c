@@ -1,103 +1,103 @@
 /***************************************************************************
 
-    memory.c
+	memory.c
 
-    Functions which handle the CPU memory access.
+	Functions which handle the CPU memory access.
 
-    Caveats:
+	Caveats:
 
-    * If your driver executes an opcode which crosses a bank-switched
-    boundary, it will pull the wrong data out of memory. Although not
-    a common case, you may need to revert to memcpy to work around this.
-    See machine/tnzs.c for an example.
+	* If your driver executes an opcode which crosses a bank-switched
+	boundary, it will pull the wrong data out of memory. Although not
+	a common case, you may need to revert to memcpy to work around this.
+	See machine/tnzs.c for an example.
 
-    To do:
+	To do:
 
-    - Add local banks for RAM/ROM to reduce pressure on banking
-    - Always mirror everything out to 32 bits so we don't have to mask the address?
-    - Add the ability to start with another memory map and modify it
-    - Add fourth memory space for encrypted opcodes
-    - Automatically mirror program space into data space if no data space
-    - Get rid of association between memory_regions and RAM
-    - Get rid of opcode/data separation by using address spaces?
-    - Add support for internal addressing (maybe just accessors - see TMS3202x)
-    - Fix debugger issues
-    - Evaluate min/max opcode ranges and do we include a check in cpu_readop?
+	- Add local banks for RAM/ROM to reduce pressure on banking
+	- Always mirror everything out to 32 bits so we don't have to mask the address?
+	- Add the ability to start with another memory map and modify it
+	- Add fourth memory space for encrypted opcodes
+	- Automatically mirror program space into data space if no data space
+	- Get rid of association between memory_regions and RAM
+	- Get rid of opcode/data separation by using address spaces?
+	- Add support for internal addressing (maybe just accessors - see TMS3202x)
+	- Fix debugger issues
+	- Evaluate min/max opcode ranges and do we include a check in cpu_readop?
 
 ****************************************************************************
 
-    Address map fields and restrictions:
+	Address map fields and restrictions:
 
-    AM_RANGE(start, end)
-        Specifies a range of consecutive addresses beginning with 'start' and
-        ending with 'end' inclusive. An address hits in this bucket if the
-        'address' >= 'start' and 'address' <= 'end'.
+	AM_RANGE(start, end)
+		Specifies a range of consecutive addresses beginning with 'start' and
+		ending with 'end' inclusive. An address hits in this bucket if the
+		'address' >= 'start' and 'address' <= 'end'.
 
-    AM_SPACE(match, mask)
-        Specifies at the bit level (closer to real hardware) how to determine
-        if an address matches a given bit pattern. An address hits in this
-        bucket if 'address' & 'mask' == 'match'
+	AM_SPACE(match, mask)
+		Specifies at the bit level (closer to real hardware) how to determine
+		if an address matches a given bit pattern. An address hits in this
+		bucket if 'address' & 'mask' == 'match'
 
-    AM_MASK(mask)
-        Specifies a mask for the addresses in the current bucket. This mask
-        is applied after a positive hit in the bucket specified by AM_RANGE
-        or AM_SPACE, and is computed before accessing the RAM or calling
-        through to the read/write handler. If you use AM_SPACE, the mask
-        is implicitly set equal to the logical NOT of the mask specified in
-        the AM_SPACE macro. If you use AM_MIRROR, below, the mask is ANDed
-        implicitly with the logical NOT of the mirror. The mask specified
-        by this macro is ANDed against any implicit masks.
+	AM_MASK(mask)
+		Specifies a mask for the addresses in the current bucket. This mask
+		is applied after a positive hit in the bucket specified by AM_RANGE
+		or AM_SPACE, and is computed before accessing the RAM or calling
+		through to the read/write handler. If you use AM_SPACE, the mask
+		is implicitly set equal to the logical NOT of the mask specified in
+		the AM_SPACE macro. If you use AM_MIRROR, below, the mask is ANDed
+		implicitly with the logical NOT of the mirror. The mask specified
+		by this macro is ANDed against any implicit masks.
 
-    AM_MIRROR(mirror)
-        Specifies mirror addresses for the given bucket. The current bucket
-        is mapped repeatedly according to the mirror mask, once where each
-        mirror bit is 0, and once where it is 1. For example, a 'mirror'
-        value of 0x14000 would map the bucket at 0x00000, 0x04000, 0x10000,
-        and 0x14000.
+	AM_MIRROR(mirror)
+		Specifies mirror addresses for the given bucket. The current bucket
+		is mapped repeatedly according to the mirror mask, once where each
+		mirror bit is 0, and once where it is 1. For example, a 'mirror'
+		value of 0x14000 would map the bucket at 0x00000, 0x04000, 0x10000,
+		and 0x14000.
 
-    AM_READ(read)
-        Specifies the read handler for this bucket. All reads will pass
-        through the given callback handler. Special static values representing
-        RAM, ROM, or BANKs are also allowed here.
+	AM_READ(read)
+		Specifies the read handler for this bucket. All reads will pass
+		through the given callback handler. Special static values representing
+		RAM, ROM, or BANKs are also allowed here.
 
-    AM_WRITE(write)
-        Specifies the write handler for this bucket. All writes will pass
-        through the given callback handler. Special static values representing
-        RAM, ROM, or BANKs are also allowed here.
+	AM_WRITE(write)
+		Specifies the write handler for this bucket. All writes will pass
+		through the given callback handler. Special static values representing
+		RAM, ROM, or BANKs are also allowed here.
 
-    AM_REGION(region, offs)
-        Only useful if AM_READ/WRITE point to RAM, ROM, or BANK memory. By
-        default, memory is allocated to back each bucket. By specifying
-        AM_REGION, you can tell the memory system to point the base of the
-        memory backing this bucket to a given memory 'region' at the
-        specified 'offs'.
+	AM_REGION(region, offs)
+		Only useful if AM_READ/WRITE point to RAM, ROM, or BANK memory. By
+		default, memory is allocated to back each bucket. By specifying
+		AM_REGION, you can tell the memory system to point the base of the
+		memory backing this bucket to a given memory 'region' at the
+		specified 'offs'.
 
-    AM_SHARE(index)
-        Similar to AM_REGION, this specifies that the memory backing the
-        current bucket is shared with other buckets. The first bucket to
-        specify the share 'index' will use its memory as backing for all
-        future buckets that specify AM_SHARE with the same 'index'.
+	AM_SHARE(index)
+		Similar to AM_REGION, this specifies that the memory backing the
+		current bucket is shared with other buckets. The first bucket to
+		specify the share 'index' will use its memory as backing for all
+		future buckets that specify AM_SHARE with the same 'index'.
 
-    AM_BASE(base)
-        Specifies a pointer to a pointer to the base of the memory backing
-        the current bucket.
+	AM_BASE(base)
+		Specifies a pointer to a pointer to the base of the memory backing
+		the current bucket.
 
-    AM_SIZE(size)
-        Specifies a pointer to a size_t variable which will be filled in
-        with the size, in bytes, of the current bucket.
+	AM_SIZE(size)
+		Specifies a pointer to a size_t variable which will be filled in
+		with the size, in bytes, of the current bucket.
 
 ***************************************************************************/
 
 #include "driver.h"
 #include "osd_cpu.h"
 #include "state.h"
-#include "debugcpu.h"
+//#include "debugcpu.h"
 
 #include <stdarg.h>
 
 
 #define MEM_DUMP		(0)
-#define VERBOSE			(0)
+#define VERBOSE 		(0)
 
 
 #if VERBOSE
@@ -110,32 +110,32 @@
 
 /***************************************************************************
 
-    Basic theory of memory handling:
+	Basic theory of memory handling:
 
-    An address with up to 32 bits is passed to a memory handler. First,
-    an address mask is applied to the address, removing unused bits.
+	An address with up to 32 bits is passed to a memory handler. First,
+	an address mask is applied to the address, removing unused bits.
 
-    Next, the address is broken into two halves, an upper half and a
-    lower half. The number of bits in each half can be controlled via
-    macros in memory.h, but they default to the upper 18 bits and the
-    lower 14 bits. The upper half is then used as an index into the
-    base_lookup table.
+	Next, the address is broken into two halves, an upper half and a
+	lower half. The number of bits in each half can be controlled via
+	macros in memory.h, but they default to the upper 18 bits and the
+	lower 14 bits. The upper half is then used as an index into the
+	base_lookup table.
 
-    If the value pulled from the table is within the range 192-255, then
-    the lower half of the address is needed to resolve the final handler.
-    The value from the table (192-255) is combined with the lower address
-    bits to form an index into a subtable.
+	If the value pulled from the table is within the range 192-255, then
+	the lower half of the address is needed to resolve the final handler.
+	The value from the table (192-255) is combined with the lower address
+	bits to form an index into a subtable.
 
-    Table values in the range 0-63 are reserved for internal handling
-    (such as RAM, ROM, NOP, and banking). Table values between 64 and 192
-    are assigned dynamically at startup.
+	Table values in the range 0-63 are reserved for internal handling
+	(such as RAM, ROM, NOP, and banking). Table values between 64 and 192
+	are assigned dynamically at startup.
 
 ***************************************************************************/
 
 /* macros for the profiler */
 #define MEMREADSTART()			do { profiler_mark(PROFILER_MEMREAD); } while (0)
-#define MEMREADEND(ret)			do { profiler_mark(PROFILER_END); return ret; } while (0)
-#define MEMWRITESTART()			do { profiler_mark(PROFILER_MEMWRITE); } while (0)
+#define MEMREADEND(ret) 		do { profiler_mark(PROFILER_END); return ret; } while (0)
+#define MEMWRITESTART() 		do { profiler_mark(PROFILER_MEMWRITE); } while (0)
 #define MEMWRITEEND(ret)		do { (ret); profiler_mark(PROFILER_END); return; } while (0)
 
 /* helper macros */
@@ -163,25 +163,25 @@
 
 
 /*-------------------------------------------------
-    TYPE DEFINITIONS
+	TYPE DEFINITIONS
 -------------------------------------------------*/
 
 struct memory_block_t
 {
-	UINT8					cpunum;					/* which CPU are we associated with? */
+	UINT8					cpunum; 				/* which CPU are we associated with? */
 	UINT8					spacenum;				/* which address space are we associated with? */
 	UINT8					isallocated;			/* did we allocate this ourselves? */
-	offs_t 					start, end;				/* start/end or match/mask for verifying a match */
-    UINT8 *					data;					/* pointer to the data for this block */
+	offs_t					start, end; 			/* start/end or match/mask for verifying a match */
+	UINT8 * 				data;					/* pointer to the data for this block */
 };
 
 struct bank_data_t
 {
-	UINT8 					used;					/* is this bank used? */
-	UINT8 					dynamic;				/* is this bank allocated dynamically? */
-	UINT8 					cpunum;					/* the CPU it is used for */
-	UINT8 					spacenum;				/* the address space it is used for */
-	offs_t 					base;					/* the base offset */
+	UINT8					used;					/* is this bank used? */
+	UINT8					dynamic;				/* is this bank allocated dynamically? */
+	UINT8					cpunum; 				/* the CPU it is used for */
+	UINT8					spacenum;				/* the address space it is used for */
+	offs_t					base;					/* the base offset */
 };
 
 union rwhandlers_t
@@ -194,55 +194,55 @@ union rwhandlers_t
 struct handler_data_t
 {
 	union rwhandlers_t		handler;				/* function pointer for handler */
-	offs_t					offset;					/* base offset for handler */
+	offs_t					offset; 				/* base offset for handler */
 	offs_t					top;					/* maximum offset for handler */
 	offs_t					mask;					/* mask against the final address */
 };
 
 struct subtable_data_t
 {
-	UINT8					checksum_valid;			/* is the checksum valid */
+	UINT8					checksum_valid; 		/* is the checksum valid */
 	UINT32					checksum;				/* checksum over all the bytes */
 	UINT32					usecount;				/* number of times this has been used */
 };
 
 struct table_data_t
 {
-	UINT8 *					table;					/* pointer to base of table */
-	UINT8 					subtable_alloc;			/* number of subtables allocated */
+	UINT8 * 				table;					/* pointer to base of table */
+	UINT8					subtable_alloc; 		/* number of subtables allocated */
 	struct subtable_data_t	subtable[SUBTABLE_COUNT]; /* info about each subtable */
 	struct handler_data_t	handlers[ENTRY_COUNT];	/* array of user-installed handlers */
 };
 
 struct addrspace_data_t
 {
-	UINT8					cpunum;					/* CPU index */
+	UINT8					cpunum; 				/* CPU index */
 	UINT8					spacenum;				/* address space index */
-	INT8					ashift;					/* address shift */
+	INT8					ashift; 				/* address shift */
 	UINT8					abits;					/* address bits */
-	UINT8 					dbits;					/* data bits */
+	UINT8					dbits;					/* data bits */
 	offs_t					rawmask;				/* raw address mask, before adjusting to bytes */
 	offs_t					mask;					/* address mask */
-	data64_t				unmap;					/* unmapped value */
-	struct table_data_t		read;					/* memory read lookup table */
-	struct table_data_t		write;					/* memory write lookup table */
-	struct data_accessors_t *accessors;				/* pointer to the memory accessors */
+/*	data64_t*/UINT32		unmap;					/* unmapped value */
+	struct table_data_t 	read;					/* memory read lookup table */
+	struct table_data_t 	write;					/* memory write lookup table */
+	struct data_accessors_t *accessors; 			/* pointer to the memory accessors */
 	struct address_map_t *	map;					/* original memory map */
-	struct address_map_t *	adjmap;					/* adjusted memory map */
+	struct address_map_t *	adjmap; 				/* adjusted memory map */
 };
 
 struct cpu_data_t
 {
 	void *					rambase;				/* RAM base pointer */
 	size_t					ramlength;				/* RAM length pointer */
-	opbase_handler 			opbase;					/* opcode base handler */
+	opbase_handler			opbase; 				/* opcode base handler */
 
-	void *					op_ram;					/* dynamic RAM base pointer */
-	void *					op_rom;					/* dynamic ROM base pointer */
+	void *					op_ram; 				/* dynamic RAM base pointer */
+	void *					op_rom; 				/* dynamic ROM base pointer */
 	offs_t					op_mask;				/* dynamic ROM address mask */
-	offs_t					op_mem_min;				/* dynamic ROM/RAM min */
-	offs_t					op_mem_max;				/* dynamic ROM/RAM max */
-	UINT8		 			opcode_entry;			/* opcode base handler */
+	offs_t					op_mem_min; 			/* dynamic ROM/RAM min */
+	offs_t					op_mem_max; 			/* dynamic ROM/RAM max */
+	UINT8					opcode_entry;			/* opcode base handler */
 
 	UINT8					spacemask;				/* mask of which address spaces are used */
 	struct addrspace_data_t space[ADDRESS_SPACES];	/* info about each address space */
@@ -250,104 +250,211 @@ struct cpu_data_t
 
 
 /*-------------------------------------------------
-    GLOBAL VARIABLES
+	GLOBAL VARIABLES
 -------------------------------------------------*/
 
-UINT8 *						opcode_base;					/* opcode base */
-UINT8 *						opcode_arg_base;				/* opcode argument base */
+UINT8 * 					opcode_base;					/* opcode base */
+UINT8 * 					opcode_arg_base;				/* opcode argument base */
 offs_t						opcode_mask;					/* mask to apply to the opcode address */
 offs_t						opcode_memory_min;				/* opcode memory minimum */
 offs_t						opcode_memory_max;				/* opcode memory maximum */
-UINT8		 				opcode_entry;					/* opcode readmem entry */
+UINT8						opcode_entry;					/* opcode readmem entry */
 
 struct address_space_t		address_space[ADDRESS_SPACES];	/* address space data */
 
-static UINT8 *				bank_ptr[STATIC_COUNT];			/* array of bank pointers */
+static UINT8 *				bank_ptr[STATIC_COUNT]; 		/* array of bank pointers */
 static void *				shared_ptr[MAX_SHARED_POINTERS];/* array of shared pointers */
 
 static struct memory_block_t memory_block[MAX_MEMORY_BLOCKS];/* array of memory blocks we are tracking */
-static int 					memory_block_count = 0;			/* number of memory_block[] entries used */
+static int					memory_block_count = 0; 		/* number of memory_block[] entries used */
 
 static int					cur_context;					/* current CPU context */
 
-static opbase_handler		opbasefunc;						/* opcode base override */
+static opbase_handler		opbasefunc; 					/* opcode base override */
 
 static int					debugger_access;				/* treat accesses as coming from the debugger */
 
 static struct cpu_data_t	cpudata[MAX_CPU];				/* data gathered for each CPU */
-static struct bank_data_t 	bankdata[STATIC_COUNT];			/* data gathered for each bank */
+static struct bank_data_t	bankdata[STATIC_COUNT]; 		/* data gathered for each bank */
 
 #if defined(MAME_DEBUG) && defined(NEW_DEBUGGER)
 static const int *			watchpoint_count;				/* pointer to the count of watchpoints */
 #endif
 
-static struct data_accessors_t memory_accessors[ADDRESS_SPACES][4][2] =
+static struct data_accessors_t memory_accessors[ADDRESS_SPACES][(
+3
+#if (0==PSP_NO_CPU32)
++1
+#endif //(0==PSP_NO_CPU32)
+)][2] =
 {
 	/* program accessors */
 	{
 		{
-			{ program_read_byte_8, NULL, NULL, NULL, program_write_byte_8, NULL, NULL, NULL },
-			{ program_read_byte_8, NULL, NULL, NULL, program_write_byte_8, NULL, NULL, NULL }
-		},
-		{
-			{ program_read_byte_16le, program_read_word_16le, NULL, NULL, program_write_byte_16le, program_write_word_16le, NULL, NULL },
-			{ program_read_byte_16be, program_read_word_16be, NULL, NULL, program_write_byte_16be, program_write_word_16be, NULL, NULL }
-		},
-		{
-			{ program_read_byte_32le, program_read_word_32le, program_read_dword_32le, NULL, program_write_byte_32le, program_write_word_32le, program_write_dword_32le, NULL },
-			{ program_read_byte_32be, program_read_word_32be, program_read_dword_32be, NULL, program_write_byte_32be, program_write_word_32be, program_write_dword_32be, NULL }
-		},
-		{
-			{ program_read_byte_64le, program_read_word_64le, program_read_dword_64le, program_read_qword_64le, program_write_byte_64le, program_write_word_64le, program_write_dword_64le, program_write_qword_64le },
-			{ program_read_byte_64be, program_read_word_64be, program_read_dword_64be, program_read_qword_64be, program_write_byte_64be, program_write_word_64be, program_write_dword_64be, program_write_qword_64be }
+			{ program_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ program_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ program_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ program_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
 		}
+		,{
+			{ program_read_byte_16le, program_read_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ program_write_byte_16le, program_write_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ program_read_byte_16be, program_read_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ program_write_byte_16be, program_write_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
+		}
+#if (0==PSP_NO_CPU32)
+		,{
+			{ program_read_byte_32le, program_read_word_32le, program_read_dword_32le, /*NULL,*/ program_write_byte_32le, program_write_word_32le, program_write_dword_32le/*, NULL*/ },
+			{ program_read_byte_32be, program_read_word_32be, program_read_dword_32be, /*NULL,*/ program_write_byte_32be, program_write_word_32be, program_write_dword_32be/*, NULL*/ }
+		}
+#endif //(0==PSP_NO_CPU32)
+		//,{
+		//	{ program_read_byte_64le, program_read_word_64le, program_read_dword_64le, program_read_qword_64le, program_write_byte_64le, program_write_word_64le, program_write_dword_64le, program_write_qword_64le },
+		//	{ program_read_byte_64be, program_read_word_64be, program_read_dword_64be, program_read_qword_64be, program_write_byte_64be, program_write_word_64be, program_write_dword_64be, program_write_qword_64be }
+		//}
 	},
 
 	/* data accessors */
 	{
 		{
-			{ data_read_byte_8, NULL, NULL, NULL, data_write_byte_8, NULL, NULL, NULL },
-			{ data_read_byte_8, NULL, NULL, NULL, data_write_byte_8, NULL, NULL, NULL }
+			{ data_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ data_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ data_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ data_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
 		},
 		{
-			{ data_read_byte_16le, data_read_word_16le, NULL, NULL, data_write_byte_16le, data_write_word_16le, NULL, NULL },
-			{ data_read_byte_16be, data_read_word_16be, NULL, NULL, data_write_byte_16be, data_write_word_16be, NULL, NULL }
-		},
-		{
-			{ data_read_byte_32le, data_read_word_32le, data_read_dword_32le, NULL, data_write_byte_32le, data_write_word_32le, data_write_dword_32le, NULL },
-			{ data_read_byte_32be, data_read_word_32be, data_read_dword_32be, NULL, data_write_byte_32be, data_write_word_32be, data_write_dword_32be, NULL }
-		},
-		{
-			{ data_read_byte_64le, data_read_word_64le, data_read_dword_64le, data_read_qword_64le, data_write_byte_64le, data_write_word_64le, data_write_dword_64le, data_write_qword_64le },
-			{ data_read_byte_64be, data_read_word_64be, data_read_dword_64be, data_read_qword_64be, data_write_byte_64be, data_write_word_64be, data_write_dword_64be, data_write_qword_64be }
+			{ data_read_byte_16le, data_read_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ data_write_byte_16le, data_write_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ data_read_byte_16be, data_read_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ data_write_byte_16be, data_write_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
 		}
+#if (0==PSP_NO_CPU32)
+		,{
+			{ data_read_byte_32le, data_read_word_32le, data_read_dword_32le, /*NULL,*/ data_write_byte_32le, data_write_word_32le, data_write_dword_32le/*, NULL*/ },
+			{ data_read_byte_32be, data_read_word_32be, data_read_dword_32be, /*NULL,*/ data_write_byte_32be, data_write_word_32be, data_write_dword_32be/*, NULL*/ }
+		}
+#endif //(0==PSP_NO_CPU32)
+		//,{
+		//	{ data_read_byte_64le, data_read_word_64le, data_read_dword_64le, data_read_qword_64le, data_write_byte_64le, data_write_word_64le, data_write_dword_64le, data_write_qword_64le },
+		//	{ data_read_byte_64be, data_read_word_64be, data_read_dword_64be, data_read_qword_64be, data_write_byte_64be, data_write_word_64be, data_write_dword_64be, data_write_qword_64be }
+		//}
 	},
 
 	/* I/O accessors */
 	{
 		{
-			{ io_read_byte_8, NULL, NULL, NULL, io_write_byte_8, NULL, NULL, NULL },
-			{ io_read_byte_8, NULL, NULL, NULL, io_write_byte_8, NULL, NULL, NULL }
-		},
-		{
-			{ io_read_byte_16le, io_read_word_16le, NULL, NULL, io_write_byte_16le, io_write_word_16le, NULL, NULL },
-			{ io_read_byte_16be, io_read_word_16be, NULL, NULL, io_write_byte_16be, io_write_word_16be, NULL, NULL }
-		},
-		{
-			{ io_read_byte_32le, io_read_word_32le, io_read_dword_32le, NULL, io_write_byte_32le, io_write_word_32le, io_write_dword_32le, NULL },
-			{ io_read_byte_32be, io_read_word_32be, io_read_dword_32be, NULL, io_write_byte_32be, io_write_word_32be, io_write_dword_32be, NULL }
-		},
-		{
-			{ io_read_byte_64le, io_read_word_64le, io_read_dword_64le, io_read_qword_64le, io_write_byte_64le, io_write_word_64le, io_write_dword_64le, io_write_qword_64le },
-			{ io_read_byte_64be, io_read_word_64be, io_read_dword_64be, io_read_qword_64be, io_write_byte_64be, io_write_word_64be, io_write_dword_64be, io_write_qword_64be }
+			{ io_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					,/*NULL,*/ io_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ io_read_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ io_write_byte_8, NULL
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
 		}
+		,{
+			{ io_read_byte_16le, io_read_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ io_write_byte_16le, io_write_word_16le
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ },
+			{ io_read_byte_16be, io_read_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					, /*NULL,*/ io_write_byte_16be, io_write_word_16be
+					#if (0==PSP_NO_CPU32)
+						,NULL
+					#endif //(0==PSP_NO_CPU32)
+					/*, NULL*/ }
+		}
+#if (0==PSP_NO_CPU32)
+		,{
+			{ io_read_byte_32le, io_read_word_32le, io_read_dword_32le, /*NULL,*/ io_write_byte_32le, io_write_word_32le, io_write_dword_32le/*, NULL*/ },
+			{ io_read_byte_32be, io_read_word_32be, io_read_dword_32be, /*NULL,*/ io_write_byte_32be, io_write_word_32be, io_write_dword_32be/*, NULL*/ }
+		}
+#endif //(0==PSP_NO_CPU32)
+		//,{
+		//	{ io_read_byte_64le, io_read_word_64le, io_read_dword_64le, io_read_qword_64le, io_write_byte_64le, io_write_word_64le, io_write_dword_64le, io_write_qword_64le },
+		//	{ io_read_byte_64be, io_read_word_64be, io_read_dword_64be, io_read_qword_64be, io_write_byte_64be, io_write_word_64be, io_write_dword_64be, io_write_qword_64be }
+		//}
 	},
 };
 
 
 
 /*-------------------------------------------------
-    PROTOTYPES
+	PROTOTYPES
 -------------------------------------------------*/
 
 static int init_cpudata(void);
@@ -391,7 +498,7 @@ static void mem_dump(void)
 
 
 /*-------------------------------------------------
-    memory_init - initialize the memory system
+	memory_init - initialize the memory system
 -------------------------------------------------*/
 
 int memory_init(void)
@@ -434,7 +541,7 @@ int memory_init(void)
 
 
 /*-------------------------------------------------
-    memory_shutdown - free memory
+	memory_shutdown - free memory
 -------------------------------------------------*/
 
 void memory_shutdown(void)
@@ -463,7 +570,7 @@ void memory_shutdown(void)
 
 
 /*-------------------------------------------------
-    memory_set_context - set the memory context
+	memory_set_context - set the memory context
 -------------------------------------------------*/
 
 void memory_set_context(int activecpu)
@@ -527,8 +634,8 @@ void memory_set_context(int activecpu)
 
 
 /*-------------------------------------------------
-    memory_get_map - return a pointer to a CPU's
-    memory map
+	memory_get_map - return a pointer to a CPU's
+	memory map
 -------------------------------------------------*/
 
 const struct address_map_t *memory_get_map(int cpunum, int spacenum)
@@ -538,8 +645,8 @@ const struct address_map_t *memory_get_map(int cpunum, int spacenum)
 
 
 /*-------------------------------------------------
-    memory_set_opbase_handler - change op-code
-    memory base
+	memory_set_opbase_handler - change op-code
+	memory base
 -------------------------------------------------*/
 
 opbase_handler memory_set_opbase_handler(int cpunum, opbase_handler function)
@@ -553,7 +660,7 @@ opbase_handler memory_set_opbase_handler(int cpunum, opbase_handler function)
 
 
 /*-------------------------------------------------
-    memory_set_opbase - generic opcode base changer
+	memory_set_opbase - generic opcode base changer
 -------------------------------------------------*/
 
 void memory_set_opbase(offs_t pc)
@@ -604,8 +711,8 @@ void memory_set_opbase(offs_t pc)
 
 
 /*-------------------------------------------------
-    memory_set_opcode_base - set the base of
-    ROM
+	memory_set_opcode_base - set the base of
+	ROM
 -------------------------------------------------*/
 
 void memory_set_opcode_base(int cpunum, void *base)
@@ -626,9 +733,9 @@ void memory_set_opcode_base(int cpunum, void *base)
 
 
 /*-------------------------------------------------
-    memory_get_read_ptr - return a pointer to the
-    base of RAM associated with the given CPU
-    and offset
+	memory_get_read_ptr - return a pointer to the
+	base of RAM associated with the given CPU
+	and offset
 -------------------------------------------------*/
 
 void *memory_get_read_ptr(int cpunum, int spacenum, offs_t offset)
@@ -651,9 +758,9 @@ void *memory_get_read_ptr(int cpunum, int spacenum, offs_t offset)
 
 
 /*-------------------------------------------------
-    memory_get_write_ptr - return a pointer to the
-    base of RAM associated with the given CPU
-    and offset
+	memory_get_write_ptr - return a pointer to the
+	base of RAM associated with the given CPU
+	and offset
 -------------------------------------------------*/
 
 void *memory_get_write_ptr(int cpunum, int spacenum, offs_t offset)
@@ -676,9 +783,9 @@ void *memory_get_write_ptr(int cpunum, int spacenum, offs_t offset)
 
 
 /*-------------------------------------------------
-    memory_get_op_ptr - return a pointer to the
-    base of opcode RAM associated with the given
-    CPU and offset
+	memory_get_op_ptr - return a pointer to the
+	base of opcode RAM associated with the given
+	CPU and offset
 -------------------------------------------------*/
 
 void *memory_get_op_ptr(int cpunum, offs_t offset)
@@ -727,7 +834,7 @@ void *memory_get_op_ptr(int cpunum, offs_t offset)
 
 
 /*-------------------------------------------------
-    memory_set_bankptr - set the base of a bank
+	memory_set_bankptr - set the base of a bank
 -------------------------------------------------*/
 
 void memory_set_bankptr(int banknum, void *base)
@@ -751,7 +858,7 @@ void memory_set_bankptr(int banknum, void *base)
 
 
 /*-------------------------------------------------
-    memory_set_bankptr - set the base of a bank
+	memory_set_bankptr - set the base of a bank
 -------------------------------------------------*/
 
 void memory_set_debugger_access(int debugger)
@@ -761,11 +868,11 @@ void memory_set_debugger_access(int debugger)
 
 
 /*-------------------------------------------------
-    memory_install_readX_handler - install dynamic
-    read handler for X-bit case
+	memory_install_readX_handler - install dynamic
+	read handler for X-bit case
 -------------------------------------------------*/
 
-data8_t *memory_install_read8_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read8_handler handler)
+UINT8 *memory_install_read8_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read8_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 8, 0, start, end, mask, mirror, (genf *)handler, 0);
@@ -773,7 +880,7 @@ data8_t *memory_install_read8_handler(int cpunum, int spacenum, offs_t start, of
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, start));
 }
 
-data16_t *memory_install_read16_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read16_handler handler)
+UINT16 *memory_install_read16_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read16_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 16, 0, start, end, mask, mirror, (genf *)handler, 0);
@@ -781,29 +888,31 @@ data16_t *memory_install_read16_handler(int cpunum, int spacenum, offs_t start, 
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, start));
 }
 
-data32_t *memory_install_read32_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read32_handler handler)
+#if (0==PSP_NO_CPU32)
+UINT32 *memory_install_read32_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read32_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 32, 0, start, end, mask, mirror, (genf *)handler, 0);
 	mem_dump();
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, start));
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t *memory_install_read64_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read64_handler handler)
-{
-	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
-	install_mem_handler(space, 0, 64, 0, start, end, mask, mirror, (genf *)handler, 0);
-	mem_dump();
-	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, start));
-}
+//data64_t *memory_install_read64_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, read64_handler handler)
+//{
+//	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
+//	install_mem_handler(space, 0, 64, 0, start, end, mask, mirror, (genf *)handler, 0);
+//	mem_dump();
+//	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, start));
+//}
 
 
 /*-------------------------------------------------
-    memory_install_writeX_handler - install dynamic
-    write handler for X-bit case
+	memory_install_writeX_handler - install dynamic
+	write handler for X-bit case
 -------------------------------------------------*/
 
-data8_t *memory_install_write8_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write8_handler handler)
+UINT8 *memory_install_write8_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write8_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 8, 0, start, end, mask, mirror, (genf *)handler, 0);
@@ -811,7 +920,7 @@ data8_t *memory_install_write8_handler(int cpunum, int spacenum, offs_t start, o
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, start));
 }
 
-data16_t *memory_install_write16_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write16_handler handler)
+UINT16 *memory_install_write16_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write16_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 16, 0, start, end, mask, mirror, (genf *)handler, 0);
@@ -819,30 +928,32 @@ data16_t *memory_install_write16_handler(int cpunum, int spacenum, offs_t start,
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, start));
 }
 
-data32_t *memory_install_write32_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write32_handler handler)
+#if (0==PSP_NO_CPU32)
+UINT32 *memory_install_write32_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write32_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 32, 0, start, end, mask, mirror, (genf *)handler, 0);
 	mem_dump();
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, start));
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t *memory_install_write64_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write64_handler handler)
-{
-	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
-	install_mem_handler(space, 1, 64, 0, start, end, mask, mirror, (genf *)handler, 0);
-	mem_dump();
-	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, start));
-}
+//data64_t *memory_install_write64_handler(int cpunum, int spacenum, offs_t start, offs_t end, offs_t mask, offs_t mirror, write64_handler handler)
+//{
+//	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
+//	install_mem_handler(space, 1, 64, 0, start, end, mask, mirror, (genf *)handler, 0);
+//	mem_dump();
+//	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, start));
+//}
 
 
 /*-------------------------------------------------
-    memory_install_readX_matchmask_handler -
-    install dynamic match/mask read handler for
-    X-bit case
+	memory_install_readX_matchmask_handler -
+	install dynamic match/mask read handler for
+	X-bit case
 -------------------------------------------------*/
 
-data8_t *memory_install_read8_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read8_handler handler)
+UINT8 *memory_install_read8_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read8_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 8, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
@@ -850,7 +961,7 @@ data8_t *memory_install_read8_matchmask_handler(int cpunum, int spacenum, offs_t
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, matchval));
 }
 
-data16_t *memory_install_read16_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read16_handler handler)
+UINT16 *memory_install_read16_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read16_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 16, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
@@ -858,30 +969,32 @@ data16_t *memory_install_read16_matchmask_handler(int cpunum, int spacenum, offs
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, matchval));
 }
 
-data32_t *memory_install_read32_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read32_handler handler)
+#if (0==PSP_NO_CPU32)
+UINT32 *memory_install_read32_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read32_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 0, 32, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
 	mem_dump();
 	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, matchval));
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t *memory_install_read64_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read64_handler handler)
-{
-	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
-	install_mem_handler(space, 0, 64, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
-	mem_dump();
-	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, matchval));
-}
+//data64_t *memory_install_read64_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, read64_handler handler)
+//{
+//	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
+//	install_mem_handler(space, 0, 64, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
+//	mem_dump();
+//	return memory_find_base(cpunum, spacenum, 0, SPACE_SHIFT(space, matchval));
+//}
 
 
 /*-------------------------------------------------
-    memory_install_writeX_matchmask_handler -
-    install dynamic match/mask write handler for
-    X-bit case
+	memory_install_writeX_matchmask_handler -
+	install dynamic match/mask write handler for
+	X-bit case
 -------------------------------------------------*/
 
-data8_t *memory_install_write8_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write8_handler handler)
+UINT8 *memory_install_write8_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write8_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 8, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
@@ -889,7 +1002,7 @@ data8_t *memory_install_write8_matchmask_handler(int cpunum, int spacenum, offs_
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, matchval));
 }
 
-data16_t *memory_install_write16_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write16_handler handler)
+UINT16 *memory_install_write16_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write16_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 16, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
@@ -897,25 +1010,27 @@ data16_t *memory_install_write16_matchmask_handler(int cpunum, int spacenum, off
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, matchval));
 }
 
-data32_t *memory_install_write32_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write32_handler handler)
+#if (0==PSP_NO_CPU32)
+UINT32 *memory_install_write32_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write32_handler handler)
 {
 	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
 	install_mem_handler(space, 1, 32, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
 	mem_dump();
 	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, matchval));
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t *memory_install_write64_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write64_handler handler)
-{
-	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
-	install_mem_handler(space, 1, 64, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
-	mem_dump();
-	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, matchval));
-}
+//data64_t *memory_install_write64_matchmask_handler(int cpunum, int spacenum, offs_t matchval, offs_t maskval, offs_t mask, offs_t mirror, write64_handler handler)
+//{
+//	struct addrspace_data_t *space = &cpudata[cpunum].space[spacenum];
+//	install_mem_handler(space, 1, 64, 1, matchval, maskval, mask, mirror, (genf *)handler, 0);
+//	mem_dump();
+//	return memory_find_base(cpunum, spacenum, 1, SPACE_SHIFT(space, matchval));
+//}
 
 
 /*-------------------------------------------------
-    construct_map_0 - NULL memory map
+	construct_map_0 - NULL memory map
 -------------------------------------------------*/
 
 struct address_map_t *construct_map_0(struct address_map_t *map)
@@ -926,8 +1041,8 @@ struct address_map_t *construct_map_0(struct address_map_t *map)
 
 
 /*-------------------------------------------------
-    init_cpudata - initialize the cpudata
-    structure for each CPU
+	init_cpudata - initialize the cpudata
+	structure for each CPU
 -------------------------------------------------*/
 
 static int init_cpudata(void)
@@ -959,8 +1074,8 @@ static int init_cpudata(void)
 
 
 /*-------------------------------------------------
-    adjust_addresses - adjust addresses for a
-    given address space in a standard fashion
+	adjust_addresses - adjust addresses for a
+	given address space in a standard fashion
 -------------------------------------------------*/
 
 INLINE void adjust_addresses(struct addrspace_data_t *space, int ismatchmask, offs_t *start, offs_t *end, offs_t *mask, offs_t *mirror)
@@ -968,7 +1083,7 @@ INLINE void adjust_addresses(struct addrspace_data_t *space, int ismatchmask, of
 	/* adjust start/end/mask values */
 	if (!*mask) *mask = space->rawmask;
 /* ASG - I think this is wrong - it prevents using a mask to mirror match/mask cases
-    if (ismatchmask) *mask |= *end & space->rawmask; */
+	if (ismatchmask) *mask |= *end & space->rawmask; */
 	*mask &= ~*mirror;
 	*start &= ~*mirror & space->rawmask;
 	*end &= ~*mirror & space->rawmask;
@@ -982,8 +1097,8 @@ INLINE void adjust_addresses(struct addrspace_data_t *space, int ismatchmask, of
 
 
 /*-------------------------------------------------
-    init_addrspace - initialize the address space
-    data structure
+	init_addrspace - initialize the address space
+	data structure
 -------------------------------------------------*/
 
 static int init_addrspace(UINT8 cpunum, UINT8 spacenum)
@@ -1079,8 +1194,8 @@ static int init_addrspace(UINT8 cpunum, UINT8 spacenum)
 
 
 /*-------------------------------------------------
-    preflight_memory - verify the memory structs
-    and track which banks are referenced
+	preflight_memory - verify the memory structs
+	and track which banks are referenced
 -------------------------------------------------*/
 
 static int preflight_memory(void)
@@ -1139,7 +1254,7 @@ static int preflight_memory(void)
 
 						/* if we specify an unmap value, set it */
 						if (flags & AMEF_SPECIFIES_UNMAP)
-							space->unmap = ((flags & AMEF_UNMAP_MASK) == 0) ? (data64_t)0 : (data64_t)-1;
+							space->unmap = ((flags & AMEF_UNMAP_MASK) == 0) ? (/*data64_t*/UINT32)0 : (/*data64_t*/UINT32)-1;
 					}
 
 					/* otherwise, just track banks and hardcoded memory pointers */
@@ -1178,8 +1293,8 @@ static int preflight_memory(void)
 
 
 /*-------------------------------------------------
-    populate_memory - populate the memory mapping
-    tables with entries
+	populate_memory - populate the memory mapping
+	tables with entries
 -------------------------------------------------*/
 
 static int populate_memory(void)
@@ -1219,8 +1334,8 @@ static int populate_memory(void)
 
 
 /*-------------------------------------------------
-    install_mem_handler - installs a handler for
-    memory operations
+	install_mem_handler - installs a handler for
+	memory operations
 -------------------------------------------------*/
 
 static void install_mem_handler(struct addrspace_data_t *space, int iswrite, int databits, int ismatchmask, offs_t start, offs_t end, offs_t mask, offs_t mirror, genf *handler, int isfixed)
@@ -1294,8 +1409,8 @@ static void install_mem_handler(struct addrspace_data_t *space, int iswrite, int
 				hmirrorbase |= hmirrorbit[i];
 
 		/* if this is not our first time through, and the level 2 entry matches the previous
-           level 2 entry, just do a quick map and get out; note that this only works for entries
-           which don't span multiple level 1 table entries */
+		   level 2 entry, just do a quick map and get out; note that this only works for entries
+		   which don't span multiple level 1 table entries */
 		cur_index = LEVEL1_INDEX(start + hmirrorbase);
 		if (cur_index == LEVEL1_INDEX(end + hmirrorbase))
 		{
@@ -1343,8 +1458,8 @@ static void install_mem_handler(struct addrspace_data_t *space, int iswrite, int
 
 
 /*-------------------------------------------------
-    assign_dynamic_bank - finds a free or exact
-    matching bank
+	assign_dynamic_bank - finds a free or exact
+	matching bank
 -------------------------------------------------*/
 
 static genf *assign_dynamic_bank(int cpunum, int spacenum, offs_t start, offs_t mirror, int isfixed, int ismasked)
@@ -1382,8 +1497,8 @@ static genf *assign_dynamic_bank(int cpunum, int spacenum, offs_t start, offs_t 
 
 
 /*-------------------------------------------------
-    get_handler_index - finds the index of a
-    handler, or allocates a new one as necessary
+	get_handler_index - finds the index of a
+	handler, or allocates a new one as necessary
 -------------------------------------------------*/
 
 static UINT8 get_handler_index(struct handler_data_t *table, genf *handler, offs_t start, offs_t end, offs_t mask)
@@ -1424,8 +1539,8 @@ static UINT8 get_handler_index(struct handler_data_t *table, genf *handler, offs
 
 
 /*-------------------------------------------------
-    populate_table_range - assign a memory handler
-    to a range of addresses
+	populate_table_range - assign a memory handler
+	to a range of addresses
 -------------------------------------------------*/
 
 static void populate_table_range(struct addrspace_data_t *space, int iswrite, offs_t start, offs_t stop, UINT8 handler)
@@ -1488,8 +1603,8 @@ static void populate_table_range(struct addrspace_data_t *space, int iswrite, of
 
 
 /*-------------------------------------------------
-    populate_table_match - assign a memory handler
-    to a range of addresses
+	populate_table_match - assign a memory handler
+	to a range of addresses
 -------------------------------------------------*/
 
 static void populate_table_match(struct addrspace_data_t *space, int iswrite, offs_t matchval, offs_t matchmask, UINT8 handler)
@@ -1544,8 +1659,8 @@ static void populate_table_match(struct addrspace_data_t *space, int iswrite, of
 
 
 /*-------------------------------------------------
-    allocate_subtable - allocate a fresh subtable
-    and set its usecount to 1
+	allocate_subtable - allocate a fresh subtable
+	and set its usecount to 1
 -------------------------------------------------*/
 
 static UINT8 allocate_subtable(struct table_data_t *tabledata)
@@ -1584,8 +1699,8 @@ static UINT8 allocate_subtable(struct table_data_t *tabledata)
 
 
 /*-------------------------------------------------
-    reallocate_subtable - increment the usecount on
-    a subtable
+	reallocate_subtable - increment the usecount on
+	a subtable
 -------------------------------------------------*/
 
 static void reallocate_subtable(struct table_data_t *tabledata, UINT8 subentry)
@@ -1602,8 +1717,8 @@ static void reallocate_subtable(struct table_data_t *tabledata, UINT8 subentry)
 
 
 /*-------------------------------------------------
-    merge_subtables - merge any duplicate
-    subtables
+	merge_subtables - merge any duplicate
+	subtables
 -------------------------------------------------*/
 
 static int merge_subtables(struct table_data_t *tabledata)
@@ -1662,8 +1777,8 @@ static int merge_subtables(struct table_data_t *tabledata)
 
 
 /*-------------------------------------------------
-    release_subtable - decrement the usecount on
-    a subtable and free it if we're done
+	release_subtable - decrement the usecount on
+	a subtable and free it if we're done
 -------------------------------------------------*/
 
 static void release_subtable(struct table_data_t *tabledata, UINT8 subentry)
@@ -1682,8 +1797,8 @@ static void release_subtable(struct table_data_t *tabledata, UINT8 subentry)
 
 
 /*-------------------------------------------------
-    open_subtable - gain access to a subtable for
-    modification
+	open_subtable - gain access to a subtable for
+	modification
 -------------------------------------------------*/
 
 static UINT8 *open_subtable(struct table_data_t *tabledata, offs_t l1index)
@@ -1720,7 +1835,7 @@ static UINT8 *open_subtable(struct table_data_t *tabledata, offs_t l1index)
 
 
 /*-------------------------------------------------
-    close_subtable - stop access to a subtable
+	close_subtable - stop access to a subtable
 -------------------------------------------------*/
 
 static void close_subtable(struct table_data_t *tabledata, offs_t l1index)
@@ -1730,8 +1845,8 @@ static void close_subtable(struct table_data_t *tabledata, offs_t l1index)
 
 
 /*-------------------------------------------------
-    Return whether a given memory map entry implies
-    the need of allocating and registering memory
+	Return whether a given memory map entry implies
+	the need of allocating and registering memory
 -------------------------------------------------*/
 
 static int amentry_needs_backing_store(int cpunum, int spacenum, const struct address_map_t *map)
@@ -1769,8 +1884,8 @@ static int amentry_needs_backing_store(int cpunum, int spacenum, const struct ad
 
 
 /*-------------------------------------------------
-    allocate_memory - allocate memory for
-    CPU address spaces
+	allocate_memory - allocate memory for
+	CPU address spaces
 -------------------------------------------------*/
 
 static int allocate_memory(void)
@@ -1872,8 +1987,8 @@ static int allocate_memory(void)
 
 
 /*-------------------------------------------------
-    allocate_memory_block - allocate a single
-    memory block of data
+	allocate_memory_block - allocate a single
+	memory block of data
 -------------------------------------------------*/
 
 static void *allocate_memory_block(int cpunum, int spacenum, offs_t start, offs_t end, void *memory)
@@ -1911,8 +2026,8 @@ static void *allocate_memory_block(int cpunum, int spacenum, offs_t start, offs_
 
 
 /*-------------------------------------------------
-    register_for_save - register a block of
-    memory for save states
+	register_for_save - register a block of
+	memory for save states
 -------------------------------------------------*/
 
 static void register_for_save(int cpunum, int spacenum, offs_t start, void *base, size_t numbytes)
@@ -1928,19 +2043,21 @@ static void register_for_save(int cpunum, int spacenum, offs_t start, void *base
 		case 16:
 			state_save_register_UINT16("memory", cpunum, name, base, numbytes/2);
 			break;
+#if (0==PSP_NO_CPU32)
 		case 32:
 			state_save_register_UINT32("memory", cpunum, name, base, numbytes/4);
 			break;
-		case 64:
-			state_save_register_UINT64("memory", cpunum, name, base, numbytes/8);
-			break;
+#endif //(0==PSP_NO_CPU32)
+		//case 64:
+		//	state_save_register_UINT64("memory", cpunum, name, base, numbytes/8);
+		//	break;
 	}
 }
 
 
 /*-------------------------------------------------
-    assign_intersecting_blocks - find all
-    intersecting blocks and assign their pointers
+	assign_intersecting_blocks - find all
+	intersecting blocks and assign their pointers
 -------------------------------------------------*/
 
 static struct address_map_t *assign_intersecting_blocks(struct addrspace_data_t *space, offs_t start, offs_t end, UINT8 *base)
@@ -1958,8 +2075,8 @@ static struct address_map_t *assign_intersecting_blocks(struct addrspace_data_t 
 				if (map->share && shared_ptr[map->share])
 				{
 					map->memory = shared_ptr[map->share];
-	 				VPRINTF(("memory range %08X-%08X -> shared_ptr[%d] [%08X]\n", map->start, map->end, map->share, (UINT32)map->memory));
-	 			}
+					VPRINTF(("memory range %08X-%08X -> shared_ptr[%d] [%08X]\n", map->start, map->end, map->share, (UINT32)map->memory));
+				}
 
 				/* otherwise, look for a match in this block */
 				else
@@ -1969,16 +2086,16 @@ static struct address_map_t *assign_intersecting_blocks(struct addrspace_data_t 
 						if (map->start >= start && map->end <= end)
 						{
 							map->memory = base + (map->start - start);
-	 						VPRINTF(("memory range %08X-%08X -> found in block from %08X-%08X [%08X]\n", map->start, map->end, start, end, (UINT32)map->memory));
-	 					}
+							VPRINTF(("memory range %08X-%08X -> found in block from %08X-%08X [%08X]\n", map->start, map->end, start, end, (UINT32)map->memory));
+						}
 					}
 					else
 					{
 						if (map->start >= start && map->start + map->mask <= end)
 						{
 							map->memory = base + (map->start - start);
-	 						VPRINTF(("memory range %08X-%08X -> found in block from %08X-%08X [%08X]\n", map->start, map->end, start, end, (UINT32)map->memory));
-	 					}
+							VPRINTF(("memory range %08X-%08X -> found in block from %08X-%08X [%08X]\n", map->start, map->end, start, end, (UINT32)map->memory));
+						}
 					}
 				}
 			}
@@ -1997,8 +2114,8 @@ static struct address_map_t *assign_intersecting_blocks(struct addrspace_data_t 
 
 
 /*-------------------------------------------------
-    find_memory - find all the requested pointers
-    into the final allocated memory
+	find_memory - find all the requested pointers
+	into the final allocated memory
 -------------------------------------------------*/
 
 static int find_memory(void)
@@ -2038,7 +2155,7 @@ static int find_memory(void)
 				if (!IS_AMENTRY_EXTENDED(map) && map->start == bankdata[banknum].base)
 				{
 					bank_ptr[banknum] = map->memory;
-	 				VPRINTF(("assigned bank %d pointer to memory from range %08X-%08X [%08X]\n", banknum, map->start, map->end, (UINT32)map->memory));
+					VPRINTF(("assigned bank %d pointer to memory from range %08X-%08X [%08X]\n", banknum, map->start, map->end, (UINT32)map->memory));
 					break;
 				}
 		}
@@ -2048,9 +2165,9 @@ static int find_memory(void)
 
 
 /*-------------------------------------------------
-    memory_find_base - return a pointer to the
-    base of RAM associated with the given CPU
-    and offset
+	memory_find_base - return a pointer to the
+	base of RAM associated with the given CPU
+	and offset
 -------------------------------------------------*/
 
 static void *memory_find_base(int cpunum, int spacenum, int readwrite, offs_t offset)
@@ -2099,26 +2216,26 @@ static void *memory_find_base(int cpunum, int spacenum, int readwrite, offs_t of
 
 
 /*-------------------------------------------------
-    PERFORM_LOOKUP - common lookup procedure
+	PERFORM_LOOKUP - common lookup procedure
 -------------------------------------------------*/
 
 #define PERFORM_LOOKUP(lookup,space,extraand)											\
 	/* perform lookup */																\
 	address &= space.addrmask & extraand;												\
 	entry = space.lookup[LEVEL1_INDEX(address)];										\
-	if (entry >= SUBTABLE_BASE)															\
+	if (entry >= SUBTABLE_BASE) 														\
 		entry = space.lookup[LEVEL2_INDEX(entry,address)];								\
 
 
 /*-------------------------------------------------
-    READBYTE - generic byte-sized read handler
+	READBYTE - generic byte-sized read handler
 -------------------------------------------------*/
 
 #define READBYTE8(name,spacenum)														\
-data8_t name(offs_t address)															\
+UINT8 name(offs_t address)															\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~0);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 1, 0);			\
 																						\
@@ -2133,18 +2250,18 @@ data8_t name(offs_t address)															\
 	return 0;																			\
 }																						\
 
-#define READBYTE(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)		\
-data8_t name(offs_t address)															\
+#define READBYTE(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype) 	\
+UINT8 name(offs_t address)															\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~0);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 1, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(bank_ptr[entry][xormacro(address)]);									\
+		MEMREADEND(bank_ptr[entry][xormacro(address)]); 								\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2155,31 +2272,31 @@ data8_t name(offs_t address)															\
 	return 0;																			\
 }																						\
 
-#define READBYTE16BE(name,space)	READBYTE(name,space,BYTE_XOR_BE, handler16,1,~address & 1,data16_t)
-#define READBYTE16LE(name,space)	READBYTE(name,space,BYTE_XOR_LE, handler16,1, address & 1,data16_t)
-#define READBYTE32BE(name,space)	READBYTE(name,space,BYTE4_XOR_BE,handler32,2,~address & 3,data32_t)
-#define READBYTE32LE(name,space)	READBYTE(name,space,BYTE4_XOR_LE,handler32,2, address & 3,data32_t)
-#define READBYTE64BE(name,space)	READBYTE(name,space,BYTE8_XOR_BE,handler64,3,~address & 7,data64_t)
-#define READBYTE64LE(name,space)	READBYTE(name,space,BYTE8_XOR_LE,handler64,3, address & 7,data64_t)
+#define READBYTE16BE(name,space)	READBYTE(name,space,BYTE_XOR_BE, handler16,1,~address & 1,UINT16)
+#define READBYTE16LE(name,space)	READBYTE(name,space,BYTE_XOR_LE, handler16,1, address & 1,UINT16)
+#define READBYTE32BE(name,space)	READBYTE(name,space,BYTE4_XOR_BE,handler32,2,~address & 3,UINT32)
+#define READBYTE32LE(name,space)	READBYTE(name,space,BYTE4_XOR_LE,handler32,2, address & 3,UINT32)
+//#define READBYTE64BE(name,space)	READBYTE(name,space,BYTE8_XOR_BE,handler64,3,~address & 7,data64_t)
+//#define READBYTE64LE(name,space)	READBYTE(name,space,BYTE8_XOR_LE,handler64,3, address & 7,data64_t)
 
 
 /*-------------------------------------------------
-    READWORD - generic word-sized read handler
-    (16-bit, 32-bit and 64-bit aligned only!)
+	READWORD - generic word-sized read handler
+	(16-bit, 32-bit and 64-bit aligned only!)
 -------------------------------------------------*/
 
 #define READWORD16(name,spacenum)														\
-data16_t name(offs_t address)															\
+UINT16 name(offs_t address) 														\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~1);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 2, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(*(data16_t *)&bank_ptr[entry][address]);								\
+		MEMREADEND(*(UINT16 *)&bank_ptr[entry][address]);								\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2187,18 +2304,18 @@ data16_t name(offs_t address)															\
 	return 0;																			\
 }																						\
 
-#define READWORD(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)		\
-data16_t name(offs_t address)															\
+#define READWORD(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype) 	\
+UINT16 name(offs_t address) 														\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~1);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 2, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(*(data16_t *)&bank_ptr[entry][xormacro(address)]);					\
+		MEMREADEND(*(UINT16 *)&bank_ptr[entry][xormacro(address)]); 				\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2209,29 +2326,29 @@ data16_t name(offs_t address)															\
 	return 0;																			\
 }																						\
 
-#define READWORD32BE(name,space)	READWORD(name,space,WORD_XOR_BE, handler32,2,~address & 2,data32_t)
-#define READWORD32LE(name,space)	READWORD(name,space,WORD_XOR_LE, handler32,2, address & 2,data32_t)
-#define READWORD64BE(name,space)	READWORD(name,space,WORD2_XOR_BE,handler64,3,~address & 6,data64_t)
-#define READWORD64LE(name,space)	READWORD(name,space,WORD2_XOR_LE,handler64,3, address & 6,data64_t)
+#define READWORD32BE(name,space)	READWORD(name,space,WORD_XOR_BE, handler32,2,~address & 2,UINT32)
+#define READWORD32LE(name,space)	READWORD(name,space,WORD_XOR_LE, handler32,2, address & 2,UINT32)
+//#define READWORD64BE(name,space)	READWORD(name,space,WORD2_XOR_BE,handler64,3,~address & 6,data64_t)
+//#define READWORD64LE(name,space)	READWORD(name,space,WORD2_XOR_LE,handler64,3, address & 6,data64_t)
 
 
 /*-------------------------------------------------
-    READDWORD - generic dword-sized read handler
-    (32-bit and 64-bit aligned only!)
+	READDWORD - generic dword-sized read handler
+	(32-bit and 64-bit aligned only!)
 -------------------------------------------------*/
 
 #define READDWORD32(name,spacenum)														\
-data32_t name(offs_t address)															\
+UINT32 name(offs_t address) 														\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~3);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 4, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(*(data32_t *)&bank_ptr[entry][address]);								\
+		MEMREADEND(*(UINT32 *)&bank_ptr[entry][address]);								\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2240,17 +2357,17 @@ data32_t name(offs_t address)															\
 }																						\
 
 #define READDWORD(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)	\
-data32_t name(offs_t address)															\
+UINT32 name(offs_t address) 														\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~3);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 4, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(*(data32_t *)&bank_ptr[entry][xormacro(address)]);					\
+		MEMREADEND(*(UINT32 *)&bank_ptr[entry][xormacro(address)]); 				\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2261,27 +2378,27 @@ data32_t name(offs_t address)															\
 	return 0;																			\
 }																						\
 
-#define READDWORD64BE(name,space)	READDWORD(name,space,DWORD_XOR_BE,handler64,3,~address & 4,data64_t)
-#define READDWORD64LE(name,space)	READDWORD(name,space,DWORD_XOR_LE,handler64,3, address & 4,data64_t)
+//#define READDWORD64BE(name,space) READDWORD(name,space,DWORD_XOR_BE,handler64,3,~address & 4,data64_t)
+//#define READDWORD64LE(name,space) READDWORD(name,space,DWORD_XOR_LE,handler64,3, address & 4,data64_t)
 
 
 /*-------------------------------------------------
-    READQWORD - generic qword-sized read handler
-    (64-bit aligned only!)
+	READQWORD - generic qword-sized read handler
+	(64-bit aligned only!)
 -------------------------------------------------*/
 
 #define READQWORD64(name,spacenum)														\
 data64_t name(offs_t address)															\
 {																						\
 	UINT32 entry;																		\
-	MEMREADSTART();																		\
+	MEMREADSTART(); 																	\
 	PERFORM_LOOKUP(readlookup,address_space[spacenum],~7);								\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_READ, address, 8, 0);			\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].readhandlers[entry].offset) & address_space[spacenum].readhandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMREADEND(*(data64_t *)&bank_ptr[entry][address]);								\
+		MEMREADEND(*(data64_t *)&bank_ptr[entry][address]); 							\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2291,15 +2408,15 @@ data64_t name(offs_t address)															\
 
 
 /*-------------------------------------------------
-    WRITEBYTE - generic byte-sized write handler
+	WRITEBYTE - generic byte-sized write handler
 -------------------------------------------------*/
 
 #define WRITEBYTE8(name,spacenum)														\
-void name(offs_t address, data8_t data)													\
+void name(offs_t address, UINT8 data)													\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~0);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~0); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 1, data);		\
 																						\
 	/* handle banks inline */															\
@@ -2313,17 +2430,17 @@ void name(offs_t address, data8_t data)													\
 }																						\
 
 #define WRITEBYTE(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)	\
-void name(offs_t address, data8_t data)													\
+void name(offs_t address, UINT8 data)													\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~0);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~0); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 1, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(bank_ptr[entry][xormacro(address)] = data);							\
+		MEMWRITEEND(bank_ptr[entry][xormacro(address)] = data); 						\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2333,31 +2450,31 @@ void name(offs_t address, data8_t data)													\
 	}																					\
 }																						\
 
-#define WRITEBYTE16BE(name,space)	WRITEBYTE(name,space,BYTE_XOR_BE, handler16,1,~address & 1,data16_t)
-#define WRITEBYTE16LE(name,space)	WRITEBYTE(name,space,BYTE_XOR_LE, handler16,1, address & 1,data16_t)
-#define WRITEBYTE32BE(name,space)	WRITEBYTE(name,space,BYTE4_XOR_BE,handler32,2,~address & 3,data32_t)
-#define WRITEBYTE32LE(name,space)	WRITEBYTE(name,space,BYTE4_XOR_LE,handler32,2, address & 3,data32_t)
-#define WRITEBYTE64BE(name,space)	WRITEBYTE(name,space,BYTE8_XOR_BE,handler64,3,~address & 7,data64_t)
-#define WRITEBYTE64LE(name,space)	WRITEBYTE(name,space,BYTE8_XOR_LE,handler64,3, address & 7,data64_t)
+#define WRITEBYTE16BE(name,space)	WRITEBYTE(name,space,BYTE_XOR_BE, handler16,1,~address & 1,UINT16)
+#define WRITEBYTE16LE(name,space)	WRITEBYTE(name,space,BYTE_XOR_LE, handler16,1, address & 1,UINT16)
+#define WRITEBYTE32BE(name,space)	WRITEBYTE(name,space,BYTE4_XOR_BE,handler32,2,~address & 3,UINT32)
+#define WRITEBYTE32LE(name,space)	WRITEBYTE(name,space,BYTE4_XOR_LE,handler32,2, address & 3,UINT32)
+//#define WRITEBYTE64BE(name,space) WRITEBYTE(name,space,BYTE8_XOR_BE,handler64,3,~address & 7,data64_t)
+//#define WRITEBYTE64LE(name,space) WRITEBYTE(name,space,BYTE8_XOR_LE,handler64,3, address & 7,data64_t)
 
 
 /*-------------------------------------------------
-    WRITEWORD - generic word-sized write handler
-    (16-bit, 32-bit and 64-bit aligned only!)
+	WRITEWORD - generic word-sized write handler
+	(16-bit, 32-bit and 64-bit aligned only!)
 -------------------------------------------------*/
 
 #define WRITEWORD16(name,spacenum)														\
-void name(offs_t address, data16_t data)												\
+void name(offs_t address, UINT16 data)												\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~1);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~1); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 2, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(*(data16_t *)&bank_ptr[entry][address] = data);						\
+		MEMWRITEEND(*(UINT16 *)&bank_ptr[entry][address] = data);						\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2365,17 +2482,17 @@ void name(offs_t address, data16_t data)												\
 }																						\
 
 #define WRITEWORD(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)	\
-void name(offs_t address, data16_t data)												\
+void name(offs_t address, UINT16 data)												\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~1);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~1); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 2, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(*(data16_t *)&bank_ptr[entry][xormacro(address)] = data);			\
+		MEMWRITEEND(*(UINT16 *)&bank_ptr[entry][xormacro(address)] = data); 		\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2385,29 +2502,29 @@ void name(offs_t address, data16_t data)												\
 	}																					\
 }																						\
 
-#define WRITEWORD32BE(name,space)	WRITEWORD(name,space,WORD_XOR_BE, handler32,2,~address & 2,data32_t)
-#define WRITEWORD32LE(name,space)	WRITEWORD(name,space,WORD_XOR_LE, handler32,2, address & 2,data32_t)
-#define WRITEWORD64BE(name,space)	WRITEWORD(name,space,WORD2_XOR_BE,handler64,3,~address & 6,data64_t)
-#define WRITEWORD64LE(name,space)	WRITEWORD(name,space,WORD2_XOR_LE,handler64,3, address & 6,data64_t)
+#define WRITEWORD32BE(name,space)	WRITEWORD(name,space,WORD_XOR_BE, handler32,2,~address & 2,UINT32)
+#define WRITEWORD32LE(name,space)	WRITEWORD(name,space,WORD_XOR_LE, handler32,2, address & 2,UINT32)
+//#define WRITEWORD64BE(name,space) WRITEWORD(name,space,WORD2_XOR_BE,handler64,3,~address & 6,data64_t)
+//#define WRITEWORD64LE(name,space) WRITEWORD(name,space,WORD2_XOR_LE,handler64,3, address & 6,data64_t)
 
 
 /*-------------------------------------------------
-    WRITEDWORD - dword-sized write handler
-    (32-bit and 64-bit aligned only!)
+	WRITEDWORD - dword-sized write handler
+	(32-bit and 64-bit aligned only!)
 -------------------------------------------------*/
 
-#define WRITEDWORD32(name,spacenum)														\
-void name(offs_t address, data32_t data)												\
+#define WRITEDWORD32(name,spacenum) 													\
+void name(offs_t address, UINT32 data)												\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~3);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~3); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 4, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(*(data32_t *)&bank_ptr[entry][address] = data);						\
+		MEMWRITEEND(*(UINT32 *)&bank_ptr[entry][address] = data);						\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2415,17 +2532,17 @@ void name(offs_t address, data32_t data)												\
 }																						\
 
 #define WRITEDWORD(name,spacenum,xormacro,handlertype,ignorebits,shiftbytes,masktype)	\
-void name(offs_t address, data32_t data)												\
+void name(offs_t address, UINT32 data)												\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~3);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~3); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 4, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(*(data32_t *)&bank_ptr[entry][xormacro(address)] = data);			\
+		MEMWRITEEND(*(UINT32 *)&bank_ptr[entry][xormacro(address)] = data); 		\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2435,27 +2552,27 @@ void name(offs_t address, data32_t data)												\
 	}																					\
 }																						\
 
-#define WRITEDWORD64BE(name,space)	WRITEDWORD(name,space,DWORD_XOR_BE,handler64,3,~address & 4,data64_t)
-#define WRITEDWORD64LE(name,space)	WRITEDWORD(name,space,DWORD_XOR_LE,handler64,3, address & 4,data64_t)
+//#define WRITEDWORD64BE(name,space)	WRITEDWORD(name,space,DWORD_XOR_BE,handler64,3,~address & 4,data64_t)
+//#define WRITEDWORD64LE(name,space)	WRITEDWORD(name,space,DWORD_XOR_LE,handler64,3, address & 4,data64_t)
 
 
 /*-------------------------------------------------
-    WRITEQWORD - qword-sized write handler
-    (64-bit aligned only!)
+	WRITEQWORD - qword-sized write handler
+	(64-bit aligned only!)
 -------------------------------------------------*/
 
-#define WRITEQWORD64(name,spacenum)														\
+#define WRITEQWORD64(name,spacenum) 													\
 void name(offs_t address, data64_t data)												\
 {																						\
 	UINT32 entry;																		\
 	MEMWRITESTART();																	\
-	PERFORM_LOOKUP(writelookup,address_space[spacenum],~7);								\
+	PERFORM_LOOKUP(writelookup,address_space[spacenum],~7); 							\
 	CHECK_WATCHPOINTS(cur_context, spacenum, WATCHPOINT_WRITE, address, 8, data);		\
 																						\
 	/* handle banks inline */															\
 	address = (address - address_space[spacenum].writehandlers[entry].offset) & address_space[spacenum].writehandlers[entry].mask;\
 	if (entry <= STATIC_RAM)															\
-		MEMWRITEEND(*(data64_t *)&bank_ptr[entry][address] = data);						\
+		MEMWRITEEND(*(data64_t *)&bank_ptr[entry][address] = data); 					\
 																						\
 	/* fall back to the handler */														\
 	else																				\
@@ -2464,72 +2581,75 @@ void name(offs_t address, data64_t data)												\
 
 
 /*-------------------------------------------------
-    Program memory handlers
+	Program memory handlers
 -------------------------------------------------*/
 
-     READBYTE8(program_read_byte_8,      ADDRESS_SPACE_PROGRAM)
-    WRITEBYTE8(program_write_byte_8,     ADDRESS_SPACE_PROGRAM)
+	 READBYTE8(program_read_byte_8, 	 ADDRESS_SPACE_PROGRAM)
+	WRITEBYTE8(program_write_byte_8,	 ADDRESS_SPACE_PROGRAM)
 
-  READBYTE16BE(program_read_byte_16be,   ADDRESS_SPACE_PROGRAM)
-    READWORD16(program_read_word_16be,   ADDRESS_SPACE_PROGRAM)
+  READBYTE16BE(program_read_byte_16be,	 ADDRESS_SPACE_PROGRAM)
+	READWORD16(program_read_word_16be,	 ADDRESS_SPACE_PROGRAM)
  WRITEBYTE16BE(program_write_byte_16be,  ADDRESS_SPACE_PROGRAM)
    WRITEWORD16(program_write_word_16be,  ADDRESS_SPACE_PROGRAM)
 
-  READBYTE16LE(program_read_byte_16le,   ADDRESS_SPACE_PROGRAM)
-    READWORD16(program_read_word_16le,   ADDRESS_SPACE_PROGRAM)
+  READBYTE16LE(program_read_byte_16le,	 ADDRESS_SPACE_PROGRAM)
+	READWORD16(program_read_word_16le,	 ADDRESS_SPACE_PROGRAM)
  WRITEBYTE16LE(program_write_byte_16le,  ADDRESS_SPACE_PROGRAM)
    WRITEWORD16(program_write_word_16le,  ADDRESS_SPACE_PROGRAM)
 
-  READBYTE32BE(program_read_byte_32be,   ADDRESS_SPACE_PROGRAM)
-  READWORD32BE(program_read_word_32be,   ADDRESS_SPACE_PROGRAM)
+#if (0==PSP_NO_CPU32)
+  READBYTE32BE(program_read_byte_32be,	 ADDRESS_SPACE_PROGRAM)
+  READWORD32BE(program_read_word_32be,	 ADDRESS_SPACE_PROGRAM)
    READDWORD32(program_read_dword_32be,  ADDRESS_SPACE_PROGRAM)
  WRITEBYTE32BE(program_write_byte_32be,  ADDRESS_SPACE_PROGRAM)
  WRITEWORD32BE(program_write_word_32be,  ADDRESS_SPACE_PROGRAM)
   WRITEDWORD32(program_write_dword_32be, ADDRESS_SPACE_PROGRAM)
 
-  READBYTE32LE(program_read_byte_32le,   ADDRESS_SPACE_PROGRAM)
-  READWORD32LE(program_read_word_32le,   ADDRESS_SPACE_PROGRAM)
+  READBYTE32LE(program_read_byte_32le,	 ADDRESS_SPACE_PROGRAM)
+  READWORD32LE(program_read_word_32le,	 ADDRESS_SPACE_PROGRAM)
    READDWORD32(program_read_dword_32le,  ADDRESS_SPACE_PROGRAM)
  WRITEBYTE32LE(program_write_byte_32le,  ADDRESS_SPACE_PROGRAM)
  WRITEWORD32LE(program_write_word_32le,  ADDRESS_SPACE_PROGRAM)
   WRITEDWORD32(program_write_dword_32le, ADDRESS_SPACE_PROGRAM)
+#endif //(0==PSP_NO_CPU32)
 
-  READBYTE64BE(program_read_byte_64be,   ADDRESS_SPACE_PROGRAM)
-  READWORD64BE(program_read_word_64be,   ADDRESS_SPACE_PROGRAM)
- READDWORD64BE(program_read_dword_64be,  ADDRESS_SPACE_PROGRAM)
-   READQWORD64(program_read_qword_64be,  ADDRESS_SPACE_PROGRAM)
- WRITEBYTE64BE(program_write_byte_64be,  ADDRESS_SPACE_PROGRAM)
- WRITEWORD64BE(program_write_word_64be,  ADDRESS_SPACE_PROGRAM)
-WRITEDWORD64BE(program_write_dword_64be, ADDRESS_SPACE_PROGRAM)
-  WRITEQWORD64(program_write_qword_64be, ADDRESS_SPACE_PROGRAM)
+//	READBYTE64BE(program_read_byte_64be,   ADDRESS_SPACE_PROGRAM)
+//	READWORD64BE(program_read_word_64be,   ADDRESS_SPACE_PROGRAM)
+// READDWORD64BE(program_read_dword_64be,  ADDRESS_SPACE_PROGRAM)
+//	 READQWORD64(program_read_qword_64be,  ADDRESS_SPACE_PROGRAM)
+// WRITEBYTE64BE(program_write_byte_64be,  ADDRESS_SPACE_PROGRAM)
+// WRITEWORD64BE(program_write_word_64be,  ADDRESS_SPACE_PROGRAM)
+//WRITEDWORD64BE(program_write_dword_64be, ADDRESS_SPACE_PROGRAM)
+//	WRITEQWORD64(program_write_qword_64be, ADDRESS_SPACE_PROGRAM)
 
-  READBYTE64LE(program_read_byte_64le,   ADDRESS_SPACE_PROGRAM)
-  READWORD64LE(program_read_word_64le,   ADDRESS_SPACE_PROGRAM)
- READDWORD64LE(program_read_dword_64le,  ADDRESS_SPACE_PROGRAM)
-   READQWORD64(program_read_qword_64le,  ADDRESS_SPACE_PROGRAM)
- WRITEBYTE64LE(program_write_byte_64le,  ADDRESS_SPACE_PROGRAM)
- WRITEWORD64LE(program_write_word_64le,  ADDRESS_SPACE_PROGRAM)
-WRITEDWORD64LE(program_write_dword_64le, ADDRESS_SPACE_PROGRAM)
-  WRITEQWORD64(program_write_qword_64le, ADDRESS_SPACE_PROGRAM)
+//	READBYTE64LE(program_read_byte_64le,   ADDRESS_SPACE_PROGRAM)
+//	READWORD64LE(program_read_word_64le,   ADDRESS_SPACE_PROGRAM)
+// READDWORD64LE(program_read_dword_64le,  ADDRESS_SPACE_PROGRAM)
+//	 READQWORD64(program_read_qword_64le,  ADDRESS_SPACE_PROGRAM)
+// WRITEBYTE64LE(program_write_byte_64le,  ADDRESS_SPACE_PROGRAM)
+// WRITEWORD64LE(program_write_word_64le,  ADDRESS_SPACE_PROGRAM)
+//WRITEDWORD64LE(program_write_dword_64le, ADDRESS_SPACE_PROGRAM)
+//	WRITEQWORD64(program_write_qword_64le, ADDRESS_SPACE_PROGRAM)
 
 
 /*-------------------------------------------------
-    Data memory handlers
+	Data memory handlers
 -------------------------------------------------*/
 
-     READBYTE8(data_read_byte_8,      ADDRESS_SPACE_DATA)
-    WRITEBYTE8(data_write_byte_8,     ADDRESS_SPACE_DATA)
+	 READBYTE8(data_read_byte_8,	  ADDRESS_SPACE_DATA)
+	WRITEBYTE8(data_write_byte_8,	  ADDRESS_SPACE_DATA)
 
   READBYTE16BE(data_read_byte_16be,   ADDRESS_SPACE_DATA)
-    READWORD16(data_read_word_16be,   ADDRESS_SPACE_DATA)
+	READWORD16(data_read_word_16be,   ADDRESS_SPACE_DATA)
  WRITEBYTE16BE(data_write_byte_16be,  ADDRESS_SPACE_DATA)
    WRITEWORD16(data_write_word_16be,  ADDRESS_SPACE_DATA)
 
   READBYTE16LE(data_read_byte_16le,   ADDRESS_SPACE_DATA)
-    READWORD16(data_read_word_16le,   ADDRESS_SPACE_DATA)
+	READWORD16(data_read_word_16le,   ADDRESS_SPACE_DATA)
  WRITEBYTE16LE(data_write_byte_16le,  ADDRESS_SPACE_DATA)
    WRITEWORD16(data_write_word_16le,  ADDRESS_SPACE_DATA)
 
+#if (0==PSP_NO_CPU32)
   READBYTE32BE(data_read_byte_32be,   ADDRESS_SPACE_DATA)
   READWORD32BE(data_read_word_32be,   ADDRESS_SPACE_DATA)
    READDWORD32(data_read_dword_32be,  ADDRESS_SPACE_DATA)
@@ -2543,131 +2663,138 @@ WRITEDWORD64LE(program_write_dword_64le, ADDRESS_SPACE_PROGRAM)
  WRITEBYTE32LE(data_write_byte_32le,  ADDRESS_SPACE_DATA)
  WRITEWORD32LE(data_write_word_32le,  ADDRESS_SPACE_DATA)
   WRITEDWORD32(data_write_dword_32le, ADDRESS_SPACE_DATA)
+#endif //(0==PSP_NO_CPU32)
 
-  READBYTE64BE(data_read_byte_64be,   ADDRESS_SPACE_DATA)
-  READWORD64BE(data_read_word_64be,   ADDRESS_SPACE_DATA)
- READDWORD64BE(data_read_dword_64be,  ADDRESS_SPACE_DATA)
-   READQWORD64(data_read_qword_64be,  ADDRESS_SPACE_DATA)
- WRITEBYTE64BE(data_write_byte_64be,  ADDRESS_SPACE_DATA)
- WRITEWORD64BE(data_write_word_64be,  ADDRESS_SPACE_DATA)
-WRITEDWORD64BE(data_write_dword_64be, ADDRESS_SPACE_DATA)
-  WRITEQWORD64(data_write_qword_64be, ADDRESS_SPACE_DATA)
+//	READBYTE64BE(data_read_byte_64be,	ADDRESS_SPACE_DATA)
+//	READWORD64BE(data_read_word_64be,	ADDRESS_SPACE_DATA)
+// READDWORD64BE(data_read_dword_64be,	ADDRESS_SPACE_DATA)
+//	 READQWORD64(data_read_qword_64be,	ADDRESS_SPACE_DATA)
+// WRITEBYTE64BE(data_write_byte_64be,	ADDRESS_SPACE_DATA)
+// WRITEWORD64BE(data_write_word_64be,	ADDRESS_SPACE_DATA)
+//WRITEDWORD64BE(data_write_dword_64be, ADDRESS_SPACE_DATA)
+//	WRITEQWORD64(data_write_qword_64be, ADDRESS_SPACE_DATA)
 
-  READBYTE64LE(data_read_byte_64le,   ADDRESS_SPACE_DATA)
-  READWORD64LE(data_read_word_64le,   ADDRESS_SPACE_DATA)
- READDWORD64LE(data_read_dword_64le,  ADDRESS_SPACE_DATA)
-   READQWORD64(data_read_qword_64le,  ADDRESS_SPACE_DATA)
- WRITEBYTE64LE(data_write_byte_64le,  ADDRESS_SPACE_DATA)
- WRITEWORD64LE(data_write_word_64le,  ADDRESS_SPACE_DATA)
-WRITEDWORD64LE(data_write_dword_64le, ADDRESS_SPACE_DATA)
-  WRITEQWORD64(data_write_qword_64le, ADDRESS_SPACE_DATA)
+//	READBYTE64LE(data_read_byte_64le,	ADDRESS_SPACE_DATA)
+//	READWORD64LE(data_read_word_64le,	ADDRESS_SPACE_DATA)
+// READDWORD64LE(data_read_dword_64le,	ADDRESS_SPACE_DATA)
+//	 READQWORD64(data_read_qword_64le,	ADDRESS_SPACE_DATA)
+// WRITEBYTE64LE(data_write_byte_64le,	ADDRESS_SPACE_DATA)
+// WRITEWORD64LE(data_write_word_64le,	ADDRESS_SPACE_DATA)
+//WRITEDWORD64LE(data_write_dword_64le, ADDRESS_SPACE_DATA)
+//	WRITEQWORD64(data_write_qword_64le, ADDRESS_SPACE_DATA)
 
 
 /*-------------------------------------------------
-    I/O memory handlers
+	I/O memory handlers
 -------------------------------------------------*/
 
-     READBYTE8(io_read_byte_8,      ADDRESS_SPACE_IO)
-    WRITEBYTE8(io_write_byte_8,     ADDRESS_SPACE_IO)
+	 READBYTE8(io_read_byte_8,		ADDRESS_SPACE_IO)
+	WRITEBYTE8(io_write_byte_8, 	ADDRESS_SPACE_IO)
 
-  READBYTE16BE(io_read_byte_16be,   ADDRESS_SPACE_IO)
-    READWORD16(io_read_word_16be,   ADDRESS_SPACE_IO)
- WRITEBYTE16BE(io_write_byte_16be,  ADDRESS_SPACE_IO)
-   WRITEWORD16(io_write_word_16be,  ADDRESS_SPACE_IO)
+  READBYTE16BE(io_read_byte_16be,	ADDRESS_SPACE_IO)
+	READWORD16(io_read_word_16be,	ADDRESS_SPACE_IO)
+ WRITEBYTE16BE(io_write_byte_16be,	ADDRESS_SPACE_IO)
+   WRITEWORD16(io_write_word_16be,	ADDRESS_SPACE_IO)
 
-  READBYTE16LE(io_read_byte_16le,   ADDRESS_SPACE_IO)
-    READWORD16(io_read_word_16le,   ADDRESS_SPACE_IO)
- WRITEBYTE16LE(io_write_byte_16le,  ADDRESS_SPACE_IO)
-   WRITEWORD16(io_write_word_16le,  ADDRESS_SPACE_IO)
+  READBYTE16LE(io_read_byte_16le,	ADDRESS_SPACE_IO)
+	READWORD16(io_read_word_16le,	ADDRESS_SPACE_IO)
+ WRITEBYTE16LE(io_write_byte_16le,	ADDRESS_SPACE_IO)
+   WRITEWORD16(io_write_word_16le,	ADDRESS_SPACE_IO)
 
-  READBYTE32BE(io_read_byte_32be,   ADDRESS_SPACE_IO)
-  READWORD32BE(io_read_word_32be,   ADDRESS_SPACE_IO)
-   READDWORD32(io_read_dword_32be,  ADDRESS_SPACE_IO)
- WRITEBYTE32BE(io_write_byte_32be,  ADDRESS_SPACE_IO)
- WRITEWORD32BE(io_write_word_32be,  ADDRESS_SPACE_IO)
+#if (0==PSP_NO_CPU32)
+  READBYTE32BE(io_read_byte_32be,	ADDRESS_SPACE_IO)
+  READWORD32BE(io_read_word_32be,	ADDRESS_SPACE_IO)
+   READDWORD32(io_read_dword_32be,	ADDRESS_SPACE_IO)
+ WRITEBYTE32BE(io_write_byte_32be,	ADDRESS_SPACE_IO)
+ WRITEWORD32BE(io_write_word_32be,	ADDRESS_SPACE_IO)
   WRITEDWORD32(io_write_dword_32be, ADDRESS_SPACE_IO)
 
-  READBYTE32LE(io_read_byte_32le,   ADDRESS_SPACE_IO)
-  READWORD32LE(io_read_word_32le,   ADDRESS_SPACE_IO)
-   READDWORD32(io_read_dword_32le,  ADDRESS_SPACE_IO)
- WRITEBYTE32LE(io_write_byte_32le,  ADDRESS_SPACE_IO)
- WRITEWORD32LE(io_write_word_32le,  ADDRESS_SPACE_IO)
+  READBYTE32LE(io_read_byte_32le,	ADDRESS_SPACE_IO)
+  READWORD32LE(io_read_word_32le,	ADDRESS_SPACE_IO)
+   READDWORD32(io_read_dword_32le,	ADDRESS_SPACE_IO)
+ WRITEBYTE32LE(io_write_byte_32le,	ADDRESS_SPACE_IO)
+ WRITEWORD32LE(io_write_word_32le,	ADDRESS_SPACE_IO)
   WRITEDWORD32(io_write_dword_32le, ADDRESS_SPACE_IO)
+#endif //(0==PSP_NO_CPU32)
 
-  READBYTE64BE(io_read_byte_64be,   ADDRESS_SPACE_IO)
-  READWORD64BE(io_read_word_64be,   ADDRESS_SPACE_IO)
- READDWORD64BE(io_read_dword_64be,  ADDRESS_SPACE_IO)
-   READQWORD64(io_read_qword_64be,  ADDRESS_SPACE_IO)
- WRITEBYTE64BE(io_write_byte_64be,  ADDRESS_SPACE_IO)
- WRITEWORD64BE(io_write_word_64be,  ADDRESS_SPACE_IO)
-WRITEDWORD64BE(io_write_dword_64be, ADDRESS_SPACE_IO)
-  WRITEQWORD64(io_write_qword_64be, ADDRESS_SPACE_IO)
+//	READBYTE64BE(io_read_byte_64be,   ADDRESS_SPACE_IO)
+//	READWORD64BE(io_read_word_64be,   ADDRESS_SPACE_IO)
+// READDWORD64BE(io_read_dword_64be,  ADDRESS_SPACE_IO)
+//	 READQWORD64(io_read_qword_64be,  ADDRESS_SPACE_IO)
+// WRITEBYTE64BE(io_write_byte_64be,  ADDRESS_SPACE_IO)
+// WRITEWORD64BE(io_write_word_64be,  ADDRESS_SPACE_IO)
+//WRITEDWORD64BE(io_write_dword_64be, ADDRESS_SPACE_IO)
+//	WRITEQWORD64(io_write_qword_64be, ADDRESS_SPACE_IO)
 
-  READBYTE64LE(io_read_byte_64le,   ADDRESS_SPACE_IO)
-  READWORD64LE(io_read_word_64le,   ADDRESS_SPACE_IO)
- READDWORD64LE(io_read_dword_64le,  ADDRESS_SPACE_IO)
-   READQWORD64(io_read_qword_64le,  ADDRESS_SPACE_IO)
- WRITEBYTE64LE(io_write_byte_64le,  ADDRESS_SPACE_IO)
- WRITEWORD64LE(io_write_word_64le,  ADDRESS_SPACE_IO)
-WRITEDWORD64LE(io_write_dword_64le, ADDRESS_SPACE_IO)
-  WRITEQWORD64(io_write_qword_64le, ADDRESS_SPACE_IO)
+//	READBYTE64LE(io_read_byte_64le,   ADDRESS_SPACE_IO)
+//	READWORD64LE(io_read_word_64le,   ADDRESS_SPACE_IO)
+// READDWORD64LE(io_read_dword_64le,  ADDRESS_SPACE_IO)
+//	 READQWORD64(io_read_qword_64le,  ADDRESS_SPACE_IO)
+// WRITEBYTE64LE(io_write_byte_64le,  ADDRESS_SPACE_IO)
+// WRITEWORD64LE(io_write_word_64le,  ADDRESS_SPACE_IO)
+//WRITEDWORD64LE(io_write_dword_64le, ADDRESS_SPACE_IO)
+//	WRITEQWORD64(io_write_qword_64le, ADDRESS_SPACE_IO)
 
 
 /*-------------------------------------------------
-    safe opcode reading
+	safe opcode reading
 -------------------------------------------------*/
 
-data8_t cpu_readop_safe(offs_t offset)
+UINT8 cpu_readop_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop_unsafe(offset);
 }
 
-data16_t cpu_readop16_safe(offs_t offset)
+UINT16 cpu_readop16_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop16_unsafe(offset);
 }
 
-data32_t cpu_readop32_safe(offs_t offset)
+#if (0==PSP_NO_CPU32)
+UINT32 cpu_readop32_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop32_unsafe(offset);
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t cpu_readop64_safe(offs_t offset)
-{
-	activecpu_set_opbase(offset);
-	return cpu_readop64_unsafe(offset);
-}
+//data64_t cpu_readop64_safe(offs_t offset)
+//{
+//	activecpu_set_opbase(offset);
+//	return cpu_readop64_unsafe(offset);
+//}
 
-data8_t cpu_readop_arg_safe(offs_t offset)
+UINT8 cpu_readop_arg_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop_arg_unsafe(offset);
 }
 
-data16_t cpu_readop_arg16_safe(offs_t offset)
+UINT16 cpu_readop_arg16_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop_arg16_unsafe(offset);
 }
 
-data32_t cpu_readop_arg32_safe(offs_t offset)
+#if (0==PSP_NO_CPU32)
+UINT32 cpu_readop_arg32_safe(offs_t offset)
 {
 	activecpu_set_opbase(offset);
 	return cpu_readop_arg32_unsafe(offset);
 }
+#endif //(0==PSP_NO_CPU32)
 
-data64_t cpu_readop_arg64_safe(offs_t offset)
-{
-	activecpu_set_opbase(offset);
-	return cpu_readop_arg64_unsafe(offset);
-}
+//data64_t cpu_readop_arg64_safe(offs_t offset)
+//{
+//	activecpu_set_opbase(offset);
+//	return cpu_readop_arg64_unsafe(offset);
+//}
 
 
 /*-------------------------------------------------
-    unmapped memory handlers
+	unmapped memory handlers
 -------------------------------------------------*/
 
 static READ8_HANDLER( mrh8_unmap_program )
@@ -2680,16 +2807,18 @@ static READ16_HANDLER( mrh16_unmap_program )
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*2), mem_mask ^ 0xffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap;
 }
+#if (0==PSP_NO_CPU32)
 static READ32_HANDLER( mrh32_unmap_program )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*4), mem_mask ^ 0xffffffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap;
 }
-static READ64_HANDLER( mrh64_unmap_program )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap;
-}
+#endif //(0==PSP_NO_CPU32)
+//static READ64_HANDLER( mrh64_unmap_program )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap;
+//}
 
 static WRITE8_HANDLER( mwh8_unmap_program )
 {
@@ -2699,14 +2828,16 @@ static WRITE16_HANDLER( mwh16_unmap_program )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory word write to %08X = %04X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*2), data, mem_mask ^ 0xffff);
 }
+#if (0==PSP_NO_CPU32)
 static WRITE32_HANDLER( mwh32_unmap_program )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory dword write to %08X = %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*4), data, mem_mask ^ 0xffffffff);
 }
-static WRITE64_HANDLER( mwh64_unmap_program )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-}
+#endif //(0==PSP_NO_CPU32)
+//static WRITE64_HANDLER( mwh64_unmap_program )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped program memory qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//}
 
 static READ8_HANDLER( mrh8_unmap_data )
 {
@@ -2718,16 +2849,18 @@ static READ16_HANDLER( mrh16_unmap_data )
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*2), mem_mask ^ 0xffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap;
 }
+#if (0==PSP_NO_CPU32)
 static READ32_HANDLER( mrh32_unmap_data )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*4), mem_mask ^ 0xffffffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap;
 }
-static READ64_HANDLER( mrh64_unmap_data )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap;
-}
+#endif //(0==PSP_NO_CPU32)
+//static READ64_HANDLER( mrh64_unmap_data )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap;
+//}
 
 static WRITE8_HANDLER( mwh8_unmap_data )
 {
@@ -2737,14 +2870,16 @@ static WRITE16_HANDLER( mwh16_unmap_data )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory word write to %08X = %04X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*2), data, mem_mask ^ 0xffff);
 }
+#if (0==PSP_NO_CPU32)
 static WRITE32_HANDLER( mwh32_unmap_data )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory dword write to %08X = %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*4), data, mem_mask ^ 0xffffffff);
 }
-static WRITE64_HANDLER( mwh64_unmap_data )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-}
+#endif //(0==PSP_NO_CPU32)
+//static WRITE64_HANDLER( mwh64_unmap_data )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped data memory qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//}
 
 static READ8_HANDLER( mrh8_unmap_io )
 {
@@ -2756,16 +2891,18 @@ static READ16_HANDLER( mrh16_unmap_io )
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*2), mem_mask ^ 0xffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap;
 }
+#if (0==PSP_NO_CPU32)
 static READ32_HANDLER( mrh32_unmap_io )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*4), mem_mask ^ 0xffffffff);
 	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap;
 }
-static READ64_HANDLER( mrh64_unmap_io )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap;
-}
+#endif //(0==PSP_NO_CPU32)
+//static READ64_HANDLER( mrh64_unmap_io )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O qword read from %08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*8), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//	return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap;
+//}
 
 static WRITE8_HANDLER( mwh8_unmap_io )
 {
@@ -2775,54 +2912,60 @@ static WRITE16_HANDLER( mwh16_unmap_io )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O word write to %08X = %04X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*2), data, mem_mask ^ 0xffff);
 }
+#if (0==PSP_NO_CPU32)
 static WRITE32_HANDLER( mwh32_unmap_io )
 {
 	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O dword write to %08X = %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*4), data, mem_mask ^ 0xffffffff);
 }
-static WRITE64_HANDLER( mwh64_unmap_io )
-{
-	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
-}
+#endif //(0==PSP_NO_CPU32)
+//static WRITE64_HANDLER( mwh64_unmap_io )
+//{
+//	if (!debugger_access) logerror("cpu #%d (PC=%08X): unmapped I/O qword write to %08X = %08X%08X & %08X%08X\n", cpu_getactivecpu(), activecpu_get_pc(), INV_SPACE_SHIFT(&cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO], offset*8), (int)(data >> 32), (int)(data & 0xffffffff), (int)(mem_mask >> 32) ^ 0xffffffff, (int)(mem_mask & 0xffffffff) ^ 0xffffffff);
+//}
 
 
 /*-------------------------------------------------
-    no-op memory handlers
+	no-op memory handlers
 -------------------------------------------------*/
 
 static READ8_HANDLER( mrh8_nop_program )   { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
 static READ16_HANDLER( mrh16_nop_program ) { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
-static READ32_HANDLER( mrh32_nop_program ) { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
-static READ64_HANDLER( mrh64_nop_program ) { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
 
-static READ8_HANDLER( mrh8_nop_data )      { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
+static READ8_HANDLER( mrh8_nop_data )	   { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
 static READ16_HANDLER( mrh16_nop_data )    { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
+
+static READ8_HANDLER( mrh8_nop_io ) 	   { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
+static READ16_HANDLER( mrh16_nop_io )	   { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
+
+static WRITE8_HANDLER( mwh8_nop )		   {  }
+static WRITE16_HANDLER( mwh16_nop ) 	   {  }
+#if (0==PSP_NO_CPU32)
+static READ32_HANDLER( mrh32_nop_program ) { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
+//static READ64_HANDLER( mrh64_nop_program ) { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_PROGRAM].unmap; }
 static READ32_HANDLER( mrh32_nop_data )    { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
-static READ64_HANDLER( mrh64_nop_data )    { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
-
-static READ8_HANDLER( mrh8_nop_io )        { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
-static READ16_HANDLER( mrh16_nop_io )      { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
-static READ32_HANDLER( mrh32_nop_io )      { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
-static READ64_HANDLER( mrh64_nop_io )      { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
-
-static WRITE8_HANDLER( mwh8_nop )          {  }
-static WRITE16_HANDLER( mwh16_nop )        {  }
-static WRITE32_HANDLER( mwh32_nop )        {  }
-static WRITE64_HANDLER( mwh64_nop )        {  }
+//static READ64_HANDLER( mrh64_nop_data )	 { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_DATA].unmap; }
+static READ32_HANDLER( mrh32_nop_io )	   { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
+//static READ64_HANDLER( mrh64_nop_io ) 	 { return cpudata[cpu_getactivecpu()].space[ADDRESS_SPACE_IO].unmap; }
+static WRITE32_HANDLER( mwh32_nop ) 	   {  }
+//static WRITE64_HANDLER( mwh64_nop )		 {	}
+#endif //(0==PSP_NO_CPU32)
 
 
 /*-------------------------------------------------
-    other static handlers
+	other static handlers
 -------------------------------------------------*/
 
 static WRITE8_HANDLER( mwh8_ramrom )   { bank_ptr[STATIC_RAM][offset] = bank_ptr[STATIC_RAM][offset + (opcode_base - opcode_arg_base)] = data; }
 static WRITE16_HANDLER( mwh16_ramrom ) { COMBINE_DATA(&bank_ptr[STATIC_RAM][offset*2]); COMBINE_DATA(&bank_ptr[0][offset*2 + (opcode_base - opcode_arg_base)]); }
+#if (0==PSP_NO_CPU32)
 static WRITE32_HANDLER( mwh32_ramrom ) { COMBINE_DATA(&bank_ptr[STATIC_RAM][offset*4]); COMBINE_DATA(&bank_ptr[0][offset*4 + (opcode_base - opcode_arg_base)]); }
-static WRITE64_HANDLER( mwh64_ramrom ) { COMBINE_DATA(&bank_ptr[STATIC_RAM][offset*8]); COMBINE_DATA(&bank_ptr[0][offset*8 + (opcode_base - opcode_arg_base)]); }
+#endif //(0==PSP_NO_CPU32)
+//static WRITE64_HANDLER( mwh64_ramrom ) { COMBINE_DATA(&bank_ptr[STATIC_RAM][offset*8]); COMBINE_DATA(&bank_ptr[0][offset*8 + (opcode_base - opcode_arg_base)]); }
 
 
 /*-------------------------------------------------
-    get_static_handler - returns points to static
-    memory handlers
+	get_static_handler - returns points to static
+	memory handlers
 -------------------------------------------------*/
 
 static genf *get_static_handler(int databits, int readorwrite, int spacenum, int which)
@@ -2837,36 +2980,36 @@ static genf *get_static_handler(int databits, int readorwrite, int spacenum, int
 	} static_handler_list[] =
 	{
 		{  8, STATIC_UNMAP,  ADDRESS_SPACE_PROGRAM, (genf *)mrh8_unmap_program, (genf *)mwh8_unmap_program },
-		{  8, STATIC_UNMAP,  ADDRESS_SPACE_DATA,    (genf *)mrh8_unmap_data,    (genf *)mwh8_unmap_data },
-		{  8, STATIC_UNMAP,  ADDRESS_SPACE_IO,      (genf *)mrh8_unmap_io,      (genf *)mwh8_unmap_io },
-		{  8, STATIC_NOP,    ADDRESS_SPACE_PROGRAM, (genf *)mrh8_nop_program,   (genf *)mwh8_nop },
-		{  8, STATIC_NOP,    ADDRESS_SPACE_DATA,    (genf *)mrh8_nop_data,      (genf *)mwh8_nop },
-		{  8, STATIC_NOP,    ADDRESS_SPACE_IO,      (genf *)mrh8_nop_io,        (genf *)mwh8_nop },
-		{  8, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,                       (genf *)mwh8_ramrom },
+		{  8, STATIC_UNMAP,  ADDRESS_SPACE_DATA,	(genf *)mrh8_unmap_data,	(genf *)mwh8_unmap_data },
+		{  8, STATIC_UNMAP,  ADDRESS_SPACE_IO,		(genf *)mrh8_unmap_io,		(genf *)mwh8_unmap_io },
+		{  8, STATIC_NOP,	 ADDRESS_SPACE_PROGRAM, (genf *)mrh8_nop_program,	(genf *)mwh8_nop },
+		{  8, STATIC_NOP,	 ADDRESS_SPACE_DATA,	(genf *)mrh8_nop_data,		(genf *)mwh8_nop },
+		{  8, STATIC_NOP,	 ADDRESS_SPACE_IO,		(genf *)mrh8_nop_io,		(genf *)mwh8_nop },
+		{  8, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,						(genf *)mwh8_ramrom },
 
 		{ 16, STATIC_UNMAP,  ADDRESS_SPACE_PROGRAM, (genf *)mrh16_unmap_program,(genf *)mwh16_unmap_program },
-		{ 16, STATIC_UNMAP,  ADDRESS_SPACE_DATA,    (genf *)mrh16_unmap_data,   (genf *)mwh16_unmap_data },
-		{ 16, STATIC_UNMAP,  ADDRESS_SPACE_IO,      (genf *)mrh16_unmap_io,     (genf *)mwh16_unmap_io },
-		{ 16, STATIC_NOP,    ADDRESS_SPACE_PROGRAM, (genf *)mrh16_nop_program,  (genf *)mwh16_nop },
-		{ 16, STATIC_NOP,    ADDRESS_SPACE_DATA,    (genf *)mrh16_nop_data,     (genf *)mwh16_nop },
-		{ 16, STATIC_NOP,    ADDRESS_SPACE_IO,      (genf *)mrh16_nop_io,       (genf *)mwh16_nop },
-		{ 16, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,                       (genf *)mwh16_ramrom },
-
+		{ 16, STATIC_UNMAP,  ADDRESS_SPACE_DATA,	(genf *)mrh16_unmap_data,	(genf *)mwh16_unmap_data },
+		{ 16, STATIC_UNMAP,  ADDRESS_SPACE_IO,		(genf *)mrh16_unmap_io, 	(genf *)mwh16_unmap_io },
+		{ 16, STATIC_NOP,	 ADDRESS_SPACE_PROGRAM, (genf *)mrh16_nop_program,	(genf *)mwh16_nop },
+		{ 16, STATIC_NOP,	 ADDRESS_SPACE_DATA,	(genf *)mrh16_nop_data, 	(genf *)mwh16_nop },
+		{ 16, STATIC_NOP,	 ADDRESS_SPACE_IO,		(genf *)mrh16_nop_io,		(genf *)mwh16_nop },
+		{ 16, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,						(genf *)mwh16_ramrom },
+#if (0==PSP_NO_CPU32)
 		{ 32, STATIC_UNMAP,  ADDRESS_SPACE_PROGRAM, (genf *)mrh32_unmap_program,(genf *)mwh32_unmap_program },
-		{ 32, STATIC_UNMAP,  ADDRESS_SPACE_DATA,    (genf *)mrh32_unmap_data,   (genf *)mwh32_unmap_data },
-		{ 32, STATIC_UNMAP,  ADDRESS_SPACE_IO,      (genf *)mrh32_unmap_io,     (genf *)mwh32_unmap_io },
-		{ 32, STATIC_NOP,    ADDRESS_SPACE_PROGRAM, (genf *)mrh32_nop_program,  (genf *)mwh32_nop },
-		{ 32, STATIC_NOP,    ADDRESS_SPACE_DATA,    (genf *)mrh32_nop_data,     (genf *)mwh32_nop },
-		{ 32, STATIC_NOP,    ADDRESS_SPACE_IO,      (genf *)mrh32_nop_io,       (genf *)mwh32_nop },
-		{ 32, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,                       (genf *)mwh32_ramrom },
-
-		{ 64, STATIC_UNMAP,  ADDRESS_SPACE_PROGRAM, (genf *)mrh64_unmap_program,(genf *)mwh64_unmap_program },
-		{ 64, STATIC_UNMAP,  ADDRESS_SPACE_DATA,    (genf *)mrh64_unmap_data,   (genf *)mwh64_unmap_data },
-		{ 64, STATIC_UNMAP,  ADDRESS_SPACE_IO,      (genf *)mrh64_unmap_io,     (genf *)mwh64_unmap_io },
-		{ 64, STATIC_NOP,    ADDRESS_SPACE_PROGRAM, (genf *)mrh64_nop_program,  (genf *)mwh64_nop },
-		{ 64, STATIC_NOP,    ADDRESS_SPACE_DATA,    (genf *)mrh64_nop_data,     (genf *)mwh64_nop },
-		{ 64, STATIC_NOP,    ADDRESS_SPACE_IO,      (genf *)mrh64_nop_io,       (genf *)mwh64_nop },
-		{ 64, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,                       (genf *)mwh64_ramrom }
+		{ 32, STATIC_UNMAP,  ADDRESS_SPACE_DATA,	(genf *)mrh32_unmap_data,	(genf *)mwh32_unmap_data },
+		{ 32, STATIC_UNMAP,  ADDRESS_SPACE_IO,		(genf *)mrh32_unmap_io, 	(genf *)mwh32_unmap_io },
+		{ 32, STATIC_NOP,	 ADDRESS_SPACE_PROGRAM, (genf *)mrh32_nop_program,	(genf *)mwh32_nop },
+		{ 32, STATIC_NOP,	 ADDRESS_SPACE_DATA,	(genf *)mrh32_nop_data, 	(genf *)mwh32_nop },
+		{ 32, STATIC_NOP,	 ADDRESS_SPACE_IO,		(genf *)mrh32_nop_io,		(genf *)mwh32_nop },
+		{ 32, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,						(genf *)mwh32_ramrom }//,
+#endif //(0==PSP_NO_CPU32)
+	//	{ 64, STATIC_UNMAP,  ADDRESS_SPACE_PROGRAM, (genf *)mrh64_unmap_program,(genf *)mwh64_unmap_program },
+	//	{ 64, STATIC_UNMAP,  ADDRESS_SPACE_DATA,	(genf *)mrh64_unmap_data,	(genf *)mwh64_unmap_data },
+	//	{ 64, STATIC_UNMAP,  ADDRESS_SPACE_IO,		(genf *)mrh64_unmap_io, 	(genf *)mwh64_unmap_io },
+	//	{ 64, STATIC_NOP,	 ADDRESS_SPACE_PROGRAM, (genf *)mrh64_nop_program,	(genf *)mwh64_nop },
+	//	{ 64, STATIC_NOP,	 ADDRESS_SPACE_DATA,	(genf *)mrh64_nop_data, 	(genf *)mwh64_nop },
+	//	{ 64, STATIC_NOP,	 ADDRESS_SPACE_IO,		(genf *)mrh64_nop_io,		(genf *)mwh64_nop },
+	//	{ 64, STATIC_RAMROM, ADDRESS_SPACE_PROGRAM, NULL,						(genf *)mwh64_ramrom }
 	};
 	int tablenum;
 
@@ -2878,9 +3021,9 @@ static genf *get_static_handler(int databits, int readorwrite, int spacenum, int
 	return NULL;
 }
 
-
+#if 00
 /*-------------------------------------------------
-    debugging
+	debugging
 -------------------------------------------------*/
 
 static void dump_map(FILE *file, const struct addrspace_data_t *space, const struct table_data_t *table)
@@ -2971,16 +3114,16 @@ void memory_dump(FILE *file)
 			if (cpudata[cpunum].space[spacenum].abits)
 			{
 				fprintf(file, "\n\n"
-				              "=========================================\n"
-				              "CPU %d address space %d read handler dump\n"
-				              "=========================================\n", cpunum, spacenum);
+							  "=========================================\n"
+							  "CPU %d address space %d read handler dump\n"
+							  "=========================================\n", cpunum, spacenum);
 				dump_map(file, &cpudata[cpunum].space[spacenum], &cpudata[cpunum].space[spacenum].read);
 
 				fprintf(file, "\n\n"
-				              "==========================================\n"
-				              "CPU %d address space %d write handler dump\n"
-				              "==========================================\n", cpunum, spacenum);
+							  "==========================================\n"
+							  "CPU %d address space %d write handler dump\n"
+							  "==========================================\n", cpunum, spacenum);
 				dump_map(file, &cpudata[cpunum].space[spacenum], &cpudata[cpunum].space[spacenum].write);
 			}
 }
-
+#endif

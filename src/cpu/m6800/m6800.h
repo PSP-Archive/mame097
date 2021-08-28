@@ -27,7 +27,7 @@ extern void m6800_get_info(UINT32 state, union cpuinfo *info);
 /****************************************************************************
  * For now make the 6801 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_M6801)
+#if (1==HAS_M6801)
 #define M6801_A 					M6800_A
 #define M6801_B 					M6800_B
 #define M6801_PC					M6800_PC
@@ -47,7 +47,7 @@ extern void m6801_get_info(UINT32 state, union cpuinfo *info);
 /****************************************************************************
  * For now make the 6802 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_M6802)
+#if (1==HAS_M6802)
 #define M6802_A 					M6800_A
 #define M6802_B 					M6800_B
 #define M6802_PC					M6800_PC
@@ -67,7 +67,7 @@ extern void m6802_get_info(UINT32 state, union cpuinfo *info);
 /****************************************************************************
  * For now make the 6803 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_M6803)
+#if (1==HAS_M6803)
 #define M6803_A 					M6800_A
 #define M6803_B 					M6800_B
 #define M6803_PC					M6800_PC
@@ -85,7 +85,7 @@ extern void m6802_get_info(UINT32 state, union cpuinfo *info);
 extern void m6803_get_info(UINT32 state, union cpuinfo *info);
 #endif
 
-#if (HAS_M6803||HAS_HD63701)
+#if (1==HAS_M6803||1==HAS_HD63701)
 /* By default, on a port write port bits which are not set as output in the DDR */
 /* are set to the value returned by a read from the same port. If you need to */
 /* know the DDR for e.g. port 1, do m6803_internal_registers_r(M6801_DDR1) */
@@ -100,7 +100,7 @@ extern void m6803_get_info(UINT32 state, union cpuinfo *info);
 /****************************************************************************
  * For now make the 6808 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_M6808)
+#if (1==HAS_M6808)
 #define M6808_A 					M6800_A
 #define M6808_B 					M6800_B
 #define M6808_PC					M6800_PC
@@ -120,7 +120,7 @@ extern void m6808_get_info(UINT32 state, union cpuinfo *info);
 /****************************************************************************
  * For now make the HD63701 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_HD63701)
+#if (1==HAS_HD63701)
 #define HD63701_A					 M6800_A
 #define HD63701_B					 M6800_B
 #define HD63701_PC					 M6800_PC
@@ -154,7 +154,7 @@ WRITE8_HANDLER( hd63701_internal_registers_w );
 /****************************************************************************
  * For now make the NSC8105 using the m6800 variables and functions
  ****************************************************************************/
-#if (HAS_NSC8105)
+#if (1==HAS_NSC8105)
 #define NSC8105_A					 M6800_A
 #define NSC8105_B					 M6800_B
 #define NSC8105_PC					 M6800_PC

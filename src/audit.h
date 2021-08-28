@@ -34,7 +34,7 @@
 
 typedef struct
 {
-	char rom[20];				/* name of rom file */
+	char rom[32];				/*20 name of rom file */
 	unsigned int explength;		/* expected length of rom file */
 	unsigned int length;		/* actual length of rom file */
 	const char* exphash;        /* expected hash data */
@@ -44,7 +44,7 @@ typedef struct
 
 typedef struct
 {
-	char	name[20];		/* name of missing sample file */
+	char	name[32];		/*20 name of missing sample file */
 } tMissingSample;
 
 typedef void (CLIB_DECL *verify_printf_proc)(const char *fmt,...);

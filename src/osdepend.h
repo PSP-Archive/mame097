@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-/* The Win32 port requires this constant for variable arg routines. */
+/* The Win 32 port requires this constant for variable arg routines. */
 #ifndef CLIB_DECL
 #define CLIB_DECL
 #endif
@@ -291,7 +291,8 @@ void osd_fclose(osd_file *file);
 
 ******************************************************************************/
 
-typedef INT64 cycles_t;
+//TMK typedef INT64 cycles_t;
+typedef UINT32 cycles_t;
 
 /* return the current number of cycles, or some other high-resolution timer */
 cycles_t osd_cycles(void);

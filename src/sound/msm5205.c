@@ -13,7 +13,7 @@
  *   01/06/99
  *  separate MSM5205 emulator form adpcm.c and some fix
  */
-
+/* e.g. taito ASUKA */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

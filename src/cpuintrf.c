@@ -13,7 +13,7 @@
 #include <signal.h>
 #include "driver.h"
 #include "state.h"
-#include "mamedbg.h"
+#include "mame.h"//#include "mamedbg.h"
 
 
 
@@ -74,30 +74,31 @@ void hd6309_get_info(UINT32 state, union cpuinfo *info);
 void m6809_get_info(UINT32 state, union cpuinfo *info);
 void m6809e_get_info(UINT32 state, union cpuinfo *info);
 void konami_get_info(UINT32 state, union cpuinfo *info);
+//void n68000_get_info(UINT32 state, union cpuinfo *info);
 void m68000_get_info(UINT32 state, union cpuinfo *info);
 void m68008_get_info(UINT32 state, union cpuinfo *info);
 void m68010_get_info(UINT32 state, union cpuinfo *info);
 void m68ec020_get_info(UINT32 state, union cpuinfo *info);
 void m68020_get_info(UINT32 state, union cpuinfo *info);
-void t11_get_info(UINT32 state, union cpuinfo *info);
+//void t1 1_get_info(UINT32 state, union cpuinfo *info);
 void s2650_get_info(UINT32 state, union cpuinfo *info);
 void tms34010_get_info(UINT32 state, union cpuinfo *info);
 void tms34020_get_info(UINT32 state, union cpuinfo *info);
-void ti990_10_get_info(UINT32 state, union cpuinfo *info);
-void tms9900_get_info(UINT32 state, union cpuinfo *info);
-void tms9940_get_info(UINT32 state, union cpuinfo *info);
-void tms9980a_get_info(UINT32 state, union cpuinfo *info);
-void tms9985_get_info(UINT32 state, union cpuinfo *info);
-void tms9989_get_info(UINT32 state, union cpuinfo *info);
-void tms9995_get_info(UINT32 state, union cpuinfo *info);
-void tms99105a_get_info(UINT32 state, union cpuinfo *info);
-void tms99110a_get_info(UINT32 state, union cpuinfo *info);
+//void ti990_10_get_info(UINT32 state, union cpuinfo *info);
+//void tms9900_get_info(UINT32 state, union cpuinfo *info);
+//void tms9940_get_info(UINT32 state, union cpuinfo *info);
+//void tms9980a_get_info(UINT32 state, union cpuinfo *info);
+//void tms9985_get_info(UINT32 state, union cpuinfo *info);
+//void tms9989_get_info(UINT32 state, union cpuinfo *info);
+//void tms9995_get_info(UINT32 state, union cpuinfo *info);
+//void tms99105a_get_info(UINT32 state, union cpuinfo *info);
+//void tms99110a_get_info(UINT32 state, union cpuinfo *info);
 void z8000_get_info(UINT32 state, union cpuinfo *info);
 void tms32010_get_info(UINT32 state, union cpuinfo *info);
 void tms32025_get_info(UINT32 state, union cpuinfo *info);
 void tms32026_get_info(UINT32 state, union cpuinfo *info);
 void tms32031_get_info(UINT32 state, union cpuinfo *info);
-void ccpu_get_info(UINT32 state, union cpuinfo *info);
+
 void adsp2100_get_info(UINT32 state, union cpuinfo *info);
 void adsp2101_get_info(UINT32 state, union cpuinfo *info);
 void adsp2104_get_info(UINT32 state, union cpuinfo *info);
@@ -105,11 +106,9 @@ void adsp2105_get_info(UINT32 state, union cpuinfo *info);
 void adsp2115_get_info(UINT32 state, union cpuinfo *info);
 void adsp2181_get_info(UINT32 state, union cpuinfo *info);
 void psxcpu_get_info(UINT32 state, union cpuinfo *info);
-void asap_get_info(UINT32 state, union cpuinfo *info);
+//void as ap_get_info(UINT32 state, union cpuinfo *info);
 void upd7810_get_info(UINT32 state, union cpuinfo *info);
 void upd7807_get_info(UINT32 state, union cpuinfo *info);
-void jaguargpu_get_info(UINT32 state, union cpuinfo *info);
-void jaguardsp_get_info(UINT32 state, union cpuinfo *info);
 void r3000be_get_info(UINT32 state, union cpuinfo *info);
 void r3000le_get_info(UINT32 state, union cpuinfo *info);
 void r4600be_get_info(UINT32 state, union cpuinfo *info);
@@ -139,10 +138,7 @@ void e116xs_get_info(UINT32 state, union cpuinfo *info);
 void e116xsr_get_info(UINT32 state, union cpuinfo *info);
 void e132n_get_info(UINT32 state, union cpuinfo *info);
 void e132t_get_info(UINT32 state, union cpuinfo *info);
-void e132xn_get_info(UINT32 state, union cpuinfo *info);
-void e132xt_get_info(UINT32 state, union cpuinfo *info);
-void e132xs_get_info(UINT32 state, union cpuinfo *info);
-void e132xsr_get_info(UINT32 state, union cpuinfo *info);
+
 void gms30c2116_get_info(UINT32 state, union cpuinfo *info);
 void gms30c2132_get_info(UINT32 state, union cpuinfo *info);
 void gms30c2216_get_info(UINT32 state, union cpuinfo *info);
@@ -357,6 +353,9 @@ const struct
 #if (HAS_V20)
 	{ CPU_V20, v20_get_info },
 #endif
+#if (HAS_NEC30)
+	{ CPU_NEC30, v30_get_info },
+#endif
 #if (HAS_V30)
 	{ CPU_V30, v30_get_info },
 #endif
@@ -393,7 +392,7 @@ const struct
 #if (HAS_I8751)
 	{ CPU_I8751, i8751_get_info },
 #endif
-#if (HAS_I8751)
+#if (HAS_I8752)
 	{ CPU_I8752, i8752_get_info },
 #endif
 #if (HAS_M6800)
@@ -429,7 +428,7 @@ const struct
 #if (HAS_HD6309)
 	{ CPU_HD6309, hd6309_get_info },
 #endif
-#if (HAS_M6809)
+#if (HAS_M6809Z)
 	{ CPU_M6809, m6809_get_info },
 #endif
 #if (HAS_M6809E)
@@ -437,6 +436,9 @@ const struct
 #endif
 #if (HAS_KONAMI)
 	{ CPU_KONAMI, konami_get_info },
+#endif
+#if (HAS_N68000)
+	{ CPU_N68000, m68000_get_info },
 #endif
 #if (HAS_M68000)
 	{ CPU_M68000, m68000_get_info },
@@ -453,9 +455,9 @@ const struct
 #if (HAS_M68020)
 	{ CPU_M68020, m68020_get_info },
 #endif
-#if (HAS_T11)
-	{ CPU_T11, t11_get_info },
-#endif
+//#if (HAS_T1 1)
+//	{ CPU_T1 1, t1 1_get_info },
+//#endif
 #if (HAS_S2650)
 	{ CPU_S2650, s2650_get_info },
 #endif
@@ -465,33 +467,33 @@ const struct
 #if (HAS_TMS34020)
 	{ CPU_TMS34020, tms34020_get_info },
 #endif
-#if (HAS_TI990_10)
-	{ CPU_TI990_10, ti990_10_get_info },
-#endif
-#if (HAS_TMS9900)
-	{ CPU_TMS9900, tms9900_get_info },
-#endif
-#if (HAS_TMS9940)
-	{ CPU_TMS9940, tms9940_get_info },
-#endif
-#if (HAS_TMS9980)
-	{ CPU_TMS9980, tms9980a_get_info },
-#endif
-#if (HAS_TMS9985)
-	{ CPU_TMS9985, tms9985_get_info },
-#endif
-#if (HAS_TMS9989)
-	{ CPU_TMS9989, tms9989_get_info },
-#endif
-#if (HAS_TMS9995)
-	{ CPU_TMS9995, tms9995_get_info },
-#endif
-#if (HAS_TMS99105A)
-	{ CPU_TMS99105A, tms99105a_get_info },
-#endif
-#if (HAS_TMS99110A)
-	{ CPU_TMS99110A, tms99110a_get_info },
-#endif
+//#if (HAS_TI990_10)
+//	{ CPU_TI990_10, ti990_10_get_info },
+//#endif
+//#if (HAS_TMS9900)
+//	{ CPU_TMS9900, tms9900_get_info },
+//#endif
+//#if (HAS_TMS9940)
+//	{ CPU_TMS9940, tms9940_get_info },
+//#endif
+//#if (HAS_TMS9980)
+//	{ CPU_TMS9980, tms9980a_get_info },
+//#endif
+//#if (HAS_TMS9985)
+//	{ CPU_TMS9985, tms9985_get_info },
+//#endif
+//#if (HAS_TMS9989)
+//	{ CPU_TMS9989, tms9989_get_info },
+//#endif
+//#if (HAS_TMS9995)
+//	{ CPU_TMS9995, tms9995_get_info },
+//#endif
+//#if (HAS_TMS99105A)
+//	{ CPU_TMS99105A, tms99105a_get_info },
+//#endif
+//#if (HAS_TMS99110A)
+//	{ CPU_TMS99110A, tms99110a_get_info },
+//#endif
 #if (HAS_Z8000)
 	{ CPU_Z8000, z8000_get_info },
 #endif
@@ -506,9 +508,6 @@ const struct
 #endif
 #if (HAS_TMS32031)
 	{ CPU_TMS32031, tms32031_get_info },
-#endif
-#if (HAS_CCPU)
-	{ CPU_CCPU, ccpu_get_info },
 #endif
 #if (HAS_ADSP2100)
 	{ CPU_ADSP2100, adsp2100_get_info },
@@ -531,18 +530,14 @@ const struct
 #if (HAS_PSXCPU)
 	{ CPU_PSXCPU, psxcpu_get_info },
 #endif
-#if (HAS_ASAP)
-	{ CPU_ASAP, asap_get_info },
-#endif
+//#if (HAS_AS AP)
+//	{ CPU_AS AP, as ap_get_info },
+//#endif
 #if (HAS_UPD7810)
 	{ CPU_UPD7810, upd7810_get_info },
 #endif
 #if (HAS_UPD7807)
 	{ CPU_UPD7807, upd7807_get_info },
-#endif
-#if (HAS_JAGUAR)
-	{ CPU_JAGUARGPU, jaguargpu_get_info },
-	{ CPU_JAGUARDSP, jaguardsp_get_info },
 #endif
 #if (HAS_R3000)
 	{ CPU_R3000BE, r3000be_get_info },
@@ -601,48 +596,8 @@ const struct
 #if (HAS_SPC700)
 	{ CPU_SPC700, spc700_get_info },
 #endif
-#if (HAS_E116T)
-	{ CPU_E116T, e116t_get_info },
-#endif
-#if (HAS_E116XT)
-	{ CPU_E116XT, e116xt_get_info },
-#endif
-#if (HAS_E116XS)
-	{ CPU_E116XS, e116xs_get_info },
-#endif
-#if (HAS_E116XSR)
-	{ CPU_E116XSR, e116xsr_get_info },
-#endif
-#if (HAS_E132N)
-	{ CPU_E132N, e132n_get_info },
-#endif
-#if (HAS_E132T)
-	{ CPU_E132T, e132t_get_info },
-#endif
-#if (HAS_E132XN)
-	{ CPU_E132XN, e132xn_get_info },
-#endif
-#if (HAS_E132XT)
-	{ CPU_E132XT, e132xt_get_info },
-#endif
-#if (HAS_E132XS)
-	{ CPU_E132XS, e132xs_get_info },
-#endif
-#if (HAS_E132XSR)
-	{ CPU_E132XSR, e132xsr_get_info },
-#endif
-#if (HAS_GMS30C2116)
-	{ CPU_GMS30C2116, gms30c2116_get_info },
-#endif
-#if (HAS_GMS30C2132)
-	{ CPU_GMS30C2132, gms30c2132_get_info },
-#endif
-#if (HAS_GMS30C2216)
-	{ CPU_GMS30C2216, gms30c2216_get_info },
-#endif
-#if (HAS_GMS30C2232)
-	{ CPU_GMS30C2232, gms30c2232_get_info },
-#endif
+
+
 #if (HAS_I386)
 	{ CPU_I386, i386_get_info },
 #endif
@@ -1349,7 +1304,7 @@ void cpunum_reset(int cpunum, void *param, int (*irqack)(int))
     Read a byte
 --------------------------*/
 
-data8_t cpunum_read_byte(int cpunum, offs_t address)
+UINT8 cpunum_read_byte(int cpunum, offs_t address)
 {
 	int result;
 	VERIFY_CPUNUM(0, cpunum_read_byte);
@@ -1364,7 +1319,7 @@ data8_t cpunum_read_byte(int cpunum, offs_t address)
     Write a byte
 --------------------------*/
 
-void cpunum_write_byte(int cpunum, offs_t address, data8_t data)
+void cpunum_write_byte(int cpunum, offs_t address, UINT8 data)
 {
 	VERIFY_CPUNUM_VOID(cpunum_write_byte);
 	cpuintrf_push_context(cpunum);

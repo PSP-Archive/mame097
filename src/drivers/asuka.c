@@ -148,7 +148,7 @@ INTERRUPT_GEN( cadash_interrupt )
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	cpu_setbank( 1, memory_region(REGION_CPU2) + ((data-1) & 0x03) * 0x4000 + 0x10000 );
+	memory_set_bankptr( 1, memory_region(REGION_CPU2) + ((data-1) & 0x03) * 0x4000 + 0x10000 );
 }
 
 
@@ -1026,7 +1026,7 @@ VIDEO_EOF( asuka )
 static MACHINE_DRIVER_START( bonzeadv )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)    /* checked on PCB */
+	MDRV_CPU_ADD(N68000, 8000000)    /* checked on PCB */
 	MDRV_CPU_PROGRAM_MAP(bonzeadv_readmem,bonzeadv_writemem)
 	MDRV_CPU_VBLANK_INT(irq4_line_hold,1)
 
@@ -1061,7 +1061,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( asuka )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz ??? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz ??? */
 	MDRV_CPU_PROGRAM_MAP(asuka_readmem,asuka_writemem)
 	MDRV_CPU_VBLANK_INT(irq5_line_hold,1)
 
@@ -1099,7 +1099,8 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( cadash )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 12000000)	/* 12 MHz ??? */
+//	MDRV_CPU_ADD(N68000, 12000000)	/* 12 MHz ??? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 12 MHz ??? */
 	MDRV_CPU_PROGRAM_MAP(cadash_readmem,cadash_writemem)
 	MDRV_CPU_VBLANK_INT(cadash_interrupt,1)
 
@@ -1133,7 +1134,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( mofflott )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz ??? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz ??? */
 	MDRV_CPU_PROGRAM_MAP(asuka_readmem,asuka_writemem)
 	MDRV_CPU_VBLANK_INT(irq5_line_hold,1)
 
@@ -1171,7 +1172,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( galmedes )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz ??? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz ??? */
 	MDRV_CPU_PROGRAM_MAP(asuka_readmem,asuka_writemem)
 	MDRV_CPU_VBLANK_INT(irq5_line_hold,1)
 
@@ -1205,7 +1206,7 @@ MACHINE_DRIVER_END
 static MACHINE_DRIVER_START( eto )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M68000, 8000000)	/* 8 MHz ??? */
+	MDRV_CPU_ADD(N68000, 8000000)	/* 8 MHz ??? */
 	MDRV_CPU_PROGRAM_MAP(eto_readmem,eto_writemem)
 	MDRV_CPU_VBLANK_INT(irq5_line_hold,1)
 
@@ -1525,7 +1526,7 @@ ROM_START( eto )
 	ROM_CONTINUE(         0x10000, 0x0c000 )	/* banked stuff */
 ROM_END
 
-
+//   年度[short_name][parrent]  machine   inputs --- 画面の向き  "発売メーカー" "ゲーム名(発売国)"
 GAME( 1988, bonzeadv, 0,        bonzeadv, bonzeadv, 0, ROT0,   "Taito Corporation Japan", "Bonze Adventure (World)" )
 GAME( 1988, bonzeadu, bonzeadv, bonzeadv, jigkmgri, 0, ROT0,   "Taito America Corporation", "Bonze Adventure (US)" )
 GAME( 1988, jigkmgri, bonzeadv, bonzeadv, jigkmgri, 0, ROT0,   "Taito Corporation", "Jigoku Meguri (Japan)" )

@@ -8,7 +8,7 @@ Namco System 86 Video Hardware
 #include "vidhrdw/generic.h"
 
 
-data8_t *rthunder_videoram1, *rthunder_videoram2, *rthunder_spriteram;
+UINT8 *rthunder_videoram1, *rthunder_videoram2, *rthunder_spriteram;
 
 static int tilebank;
 static int xscroll[4], yscroll[4];	/* scroll + priority */
@@ -47,7 +47,6 @@ PALETTE_INIT( namcos86 )
 {
 	int i;
 	int totcolors,totlookup;
-
 
 	totcolors = Machine->drv->total_colors;
 	totlookup = Machine->drv->color_table_len;
@@ -102,7 +101,7 @@ PALETTE_INIT( namcos86 )
 
 ***************************************************************************/
 
-INLINE void get_tile_info(int tile_index,int layer,data8_t *vram)
+INLINE void get_tile_info(int tile_index,int layer,UINT8 *vram)
 {
 	int attr = vram[2*tile_index + 1];
 	int tile_offs;
@@ -281,8 +280,8 @@ sprite format:
 
 static void draw_sprites(struct mame_bitmap *bitmap, const struct rectangle *cliprect)
 {
-	const data8_t *source = &spriteram[0x0800-0x20];	/* the last is NOT a sprite */
-	const data8_t *finish = &spriteram[0];
+	const UINT8 *source = &spriteram[0x0800-0x20];	/* the last is NOT a sprite */
+	const UINT8 *finish = &spriteram[0];
 	struct GfxElement *gfx = Machine->gfx[2];
 	struct GfxElement mygfx = *gfx;
 
