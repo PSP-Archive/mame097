@@ -1,6 +1,9 @@
+#include <pspctrl.h>
+#include <psputils.h>
+
 #include "driver.h"
 #include "rc.h"
-#include "syscall.h"	//tmk
+//#include "syscall.h"	//tmk
 #include "keyboard.h"	//tmk
 /*orginals*/
 SceCtrlData/*ctrl_data_t*/ psp_ctl;

@@ -1,11 +1,12 @@
-
+#include <pspiofilemgr.h>
+#include <pspctrl.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "driver.h"
 
 #include "menu.h"
-#include "syscall.h"
+//#include "syscall.h"
 //#include "colbl.c"
 
 
@@ -343,7 +344,7 @@ void save_config(void)
 	strcpy(p, "PSPMAME.CFG");
 
 	int fd;
-	fd = sceIoOpen(CfgPath,O_CREAT|O_WRONLY|O_TRUNC, 0777);
+	fd = sceIoOpen(CfgPath,PSP_O_CREAT|PSP_O_WRONLY|PSP_O_TRUNC, 0777);
 	if(fd>=0){
 		sceIoWrite(fd, &setting, sizeof(setting));
 		sceIoClose(fd);
@@ -385,7 +386,7 @@ void load_config(void)
 	strcpy(p, "PSPMAME.CFG");
 
 	int fd;
-	fd = sceIoOpen(CfgPath,O_RDONLY, 0777);
+	fd = sceIoOpen(CfgPath,PSP_O_RDONLY, 0777);
 	if(fd>=0){
 		sceIoRead(fd, &setting, sizeof(setting));
 		sceIoClose(fd);
@@ -433,7 +434,7 @@ void load_config(void)
 	strcpy(p, "MENU.BMP");
 
 	int fd;
-	fd = sceIoOpen(BgPath,O_RDONLY,0777);
+	fd = sceIoOpen(BgPath,PSP_O_RDONLY,0777);
 	if(fd>=0){
 		sceIoRead(fd, menu_bg_buf, 480*272*3+0x36);
 		sceIoClose(fd);

@@ -1,7 +1,7 @@
 // primitive graphics for Hello World PSP
 
 #include "pg.h"
-#include "syscall.h"
+//#include "syscall.h"
 
 #include "font3333.c"
 #include "font5x10.c"

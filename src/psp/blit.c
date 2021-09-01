@@ -373,7 +373,7 @@ BITBLIT( psp_dma )
 		p_src += n_lineoffset;
 		n_line--;
 	}
-	sceDmacMemcpy(n_dstaddress, &line_buf[psp_dma_offset2], psp_dma_offset -psp_dma_offset2);
+	//sceDmacMemcpy(n_dstaddress, &line_buf[psp_dma_offset2], psp_dma_offset -psp_dma_offset2);
 	pgScreenFlip();
 }
 BLITSCREEN_END

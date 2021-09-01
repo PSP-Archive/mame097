@@ -1,17 +1,21 @@
+#include <pspkernel.h>
+#include <pspthreadman.h>
+#include <psppower.h>
+#include <pspctrl.h>
 #include <time.h>
 #include "driver.h"
 
 //#include "pg.h"
-#include "syscall.h"
+//#include "syscall.h"
 #include "menu.h"
 
 
-
+#define MAXPATH   0x108
 extern SETTING setting;
 
 /*static*/ int psp_exit/* =0*/;
 
-int _main (int argc, char **argv);
+int run_mame (int argc, char **argv);
 
 extern void Get_DriverList(void);
 extern void Draw_All(void);
@@ -19,6 +23,15 @@ extern int Confirm_Control(void);
 extern int Control(void);
 extern int	dlist_curpos;
 extern void Draw_Confirm(void);
+
+/* Define the module info section */
+PSP_MODULE_INFO("PSPMAME", 0, 1, 10);
+
+/* Define the main thread's attribute value (optional) */
+PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+
+PSP_HEAP_SIZE_KB(-512); //-1024
+
 //============================================================
 //	HOMEキー関連
 //============================================================
@@ -48,7 +61,7 @@ static /*SceKernelCallbackFunction*/int ExitCallback(int arg1, int arg2, void *a
 static /*SceKernelCallbackFunction*/int PowerCallback(int unknown, int pwrflags, void *arg)
 {
 	int cbid;
-	if(pwrflags & POWER_CB_POWER){
+	if(pwrflags & PSP_POWER_CB_AC_POWER){
 		scePowerSetClockFrequency(222,222,111);
 		save_config();
 	}
@@ -94,6 +107,12 @@ int SetupCallbacks(void)
 	return thread_id;
 }
 
+static char curdir[MAXPATH];
+
+char *getCrDir(void) {
+	return curdir;
+}
+
 //============================================================
 //	GUI
 //============================================================
@@ -106,7 +125,7 @@ int SetupCallbacks(void)
 //============================================================
 //	メイン
 //============================================================
-int xmain(int argc, char *argv)
+int main(int argc, char *argv[])
 {
 //	int game_index;
 	int res = 0;
@@ -163,7 +182,7 @@ int xmain(int argc, char *argv)
 				}
 				psp_exit =0;
 
-				res = _main(_argc+1, _argv);
+				res = run_mame(_argc+1, _argv);
 				//res = run_game (game_index);
 
 				scePowerSetClockFrequency(222,222,111);

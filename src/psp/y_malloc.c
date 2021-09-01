@@ -1,5 +1,5 @@
 #include <sys/types.h>
-#include "syscall.h"
+//#include "syscall.h"
 
 #define SBRK_API	1			// API‚ð—˜—p‚·‚é
 #define SBRK_VRAM	1			// VRAM‚ð—˜—p‚·‚é

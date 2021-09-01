@@ -10,7 +10,7 @@
 
 #include <math.h>
 #include "blit.h"
-#include "syscall.h"
+//#include "syscall.h"
 
 #define makecol(r,g,b) ((((b>>3) & 0x1F)<<10)|(((g>>3) & 0x1F)<<5)|(((r>>3) & 0x1F)<<0)|0x8000)
 

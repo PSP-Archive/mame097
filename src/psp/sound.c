@@ -1,7 +1,7 @@
 
 #include "driver.h"
 #include "pg.h"
-#include "syscall.h"
+//#include "syscall.h"
 
 //unsigned char sound_buf[512 *2 *2 *2]; // *short *streo *buff
 //#define PGA_SAMPLES 1024

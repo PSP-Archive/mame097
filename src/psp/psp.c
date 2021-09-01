@@ -66,7 +66,7 @@ int osd_is_bad_read_ptr(const void *ptr, size_t size)
 	return 0;
 }
 
-int _main (int argc, char **argv)
+int run_mame (int argc, char **argv)
 {
 	int game_index;
 	int res = 0;

@@ -40,7 +40,7 @@ Version 0.2, May 2000
 
 #include "misc.h"
 
-#include "syscall.h"
+//#include "syscall.h"
 
 
 //#define HAVE_GETTIMEOFDAY 1

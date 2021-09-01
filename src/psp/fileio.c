@@ -17,7 +17,8 @@
 #include <limits.h>
 #include <ctype.h>
 
-#include "syscall.h"
+//#include "syscall.h"
+#include <pspiofilemgr.h>
 
 #define VERBOSE			0
 
@@ -478,11 +479,11 @@ osd_file *osd_fopen(int pathtype, int pathindex, const char *filename, const cha
 	
 	/* convert the mode into disposition and attrib */
 	if (strchr(mode, 'r'))
-		disposition = 0, attrib = O_RDONLY;
+		disposition = 0, attrib = PSP_O_RDONLY;
 	if (strchr(mode, 'w'))
-		disposition = O_CREAT | O_TRUNC, attrib = O_WRONLY;
+		disposition = PSP_O_CREAT | PSP_O_TRUNC, attrib = PSP_O_WRONLY;
 	if (strchr(mode, '+'))
-		attrib = O_RDWR;
+		attrib = PSP_O_RDWR;
 	
 	/* compose the full path */
 	compose_path(fullpath, pathtype, pathindex, filename);
@@ -493,7 +494,7 @@ osd_file *osd_fopen(int pathtype, int pathindex, const char *filename, const cha
 	if( file->handle == INVALID_HANDLE_VALUE )
 	{
 		/* if it's read-only, or if the path exists, then that's final */
-		if( ( disposition & O_CREAT ) == 0 || errno != ENOENT )
+		if( ( disposition & PSP_O_CREAT ) == 0 || errno != ENOENT )
 			return NULL;
 	
 		/* create the path and try again */
