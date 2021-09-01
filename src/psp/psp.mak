@@ -24,7 +24,5 @@ OSOBJS = $(OBJ)/psp/psp.o $(OBJ)/psp/video.o $(OBJ)/psp/blit.o \
 	$(OBJ)/psp/sound.o $(OBJ)/psp/input.o $(OBJ)/psp/rc.o \
 	$(OBJ)/psp/misc.o $(OBJ)/psp/ticker.o $(OBJ)/psp/config.o \
 	$(OBJ)/psp/fileio.o \
-	$(OBJ)/psp/pg.o $(OBJ)/psp/pspmain.o $(OBJ)/psp/menu.o \
-	$(OBJ)/psp/y_malloc.o \
-	$(OBJ)/psp/v_malloc.o 
+	$(OBJ)/psp/pg.o $(OBJ)/psp/pspmain.o $(OBJ)/psp/menu.o 
 

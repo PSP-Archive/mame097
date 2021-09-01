@@ -1,7 +1,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "syscall.h"
+//#include "syscall.h"
 #include "filer.h"
 #include "menu.h"
 #include "pg.h"

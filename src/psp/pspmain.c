@@ -40,7 +40,7 @@ PSP_HEAP_SIZE_KB(-512); //-1024
 	Exit Callback
 --------------------------------------------------------*/
 
-static /*SceKernelCallbackFunction*/int ExitCallback(int arg1, int arg2, void *arg)
+int exit_callback(int arg1, int arg2, void *common)
 {
 	psp_exit =1;
 //	malloc_psp_term();
@@ -58,30 +58,28 @@ static /*SceKernelCallbackFunction*/int ExitCallback(int arg1, int arg2, void *a
 	Power Callback
 --------------------------------------------------------*/
 
-static /*SceKernelCallbackFunction*/int PowerCallback(int unknown, int pwrflags, void *arg)
+int power_callback(int unknown, int pwrflags, void *common)
 {
-	int cbid;
-	if(pwrflags & PSP_POWER_CB_AC_POWER){
+	if(pwrflags & PSP_POWER_CB_POWER_SWITCH){
 		scePowerSetClockFrequency(222,222,111);
 		save_config();
 	}
-	cbid = sceKernelCreateCallback("Power Callback", (void *)PowerCallback, NULL);
+
+	int cbid = sceKernelCreateCallback("Power Callback", power_callback, 0);
 	scePowerRegisterCallback(0, cbid);
-	return 0;
 }
 
 /*--------------------------------------------------------
 	コールバックスレッド作成
 --------------------------------------------------------*/
 
-static int CallbackThread(/*SceSize*/int args, void *argp)
+int CallbackThread(int args, void *argp)
 {
 	int cbid;
 
-	cbid = sceKernelCreateCallback("Exit Callback", (void *)ExitCallback, NULL);
+	cbid = sceKernelCreateCallback("Exit Callback", exit_callback, 0);
 	sceKernelRegisterExitCallback(cbid);
-
-	cbid = sceKernelCreateCallback("Power Callback", (void *)PowerCallback, NULL);
+	cbid = sceKernelCreateCallback("Power Callback", power_callback, 0);
 	scePowerRegisterCallback(0, cbid);
 
 //	sceKernelPollCallbacks();
@@ -96,21 +94,36 @@ static int CallbackThread(/*SceSize*/int args, void *argp)
 /* Sets up the callback thread and returns its thread id */
 int SetupCallbacks(void)
 {
-	/*SceUID*/int thread_id = 0;
-	thread_id = sceKernelCreateThread("Update Thread", CallbackThread, 0x12, 0xFA0, 0, NULL);
-//	thread_id = sceKernelCreateThread("update_thread", (pg_threadfunc_t)CallbackThread, 0x11, 0xFA0, 0, 0);
-	if(thread_id >= 0)
+	int thid = 0;
+
+	thid = sceKernelCreateThread("update_thread", CallbackThread, 0x12, 0xFA0, 0, 0);
+	if(thid >= 0)
 	{
-		sceKernelStartThread(thread_id, 0, 0);
+		sceKernelStartThread(thid, 0, 0);
 	}
 
-	return thread_id;
+	return thid;
 }
 
 static char curdir[MAXPATH];
 
 char *getCrDir(void) {
 	return curdir;
+}
+
+int chdir(const char *path)
+{
+	if (strchr(path, ':')) {
+		strcpy(curdir, path);
+	} else {
+		return -1; //FIXME
+	}
+
+	int curdir_length = strlen(curdir);
+	curdir[curdir_length++] = '/';
+	curdir[curdir_length] = 0;
+
+	return 0;
 }
 
 //============================================================
@@ -141,20 +154,20 @@ int main(int argc, char *argv[])
 	pgcInit();
 	pgScreenFrame(2,0);
 
-	sceCtrlSetSamplingMode(1);//sceCtrlSetAnalogMode(1);
 	sceCtrlSetSamplingCycle(0);//sceCtrlInit(0);
-
+sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 	//
 	Get_DriverList();
 
 
 	char sPath[40], *pPtr;
-	strcpy(sPath, argv);
+	strcpy(sPath, argv[0]);
 	pPtr =strrchr(sPath, '/');
 	*pPtr = 0;
 	chdir(sPath);
 
 	_argv[_argc++] =argv;
+    sceIoChdir(getCrDir());
 	//_argv[_argc++] ="-log";
 
 	load_config();
@@ -186,7 +199,7 @@ int main(int argc, char *argv[])
 				//res = run_game (game_index);
 
 				scePowerSetClockFrequency(222,222,111);
-				malloc_psp_term();
+				//malloc_psp_term();
 //				malloc_term();
 //				_sbrk_term();
 			}
