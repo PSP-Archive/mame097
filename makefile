@@ -81,12 +81,18 @@ VPATH=src $(wildcard src/cpu/*)
 PSPSDK=$(shell psp-config --pspsdk-path)
 
 # compiler, linker and utilities
-AR = @ar
-CC = @gcc
-LD = @gcc
-ASM = @nasm
-#TMK ASMFLAGS = -f coff
-#ASMFLAGS = -march=r4000 -g -mabi=eabi -mgp32 -c -xassembler -O
+LD = psp-ld
+CC       = psp-gcc
+CXX      = psp-g++
+AS       = psp-gcc
+LD       = psp-gcc
+AR       = psp-ar
+RANLIB   = psp-ranlib
+STRIP    = psp-strip
+MKSFO    = mksfo
+PACK_PBP = pack-pbp
+FIXUP    = psp-fixup-imports
+
 MD = -mkdir
 RM = @rm -f
 
@@ -126,7 +132,7 @@ ifdef SYMBOLS
 CFLAGS += -O0 -Wall -Wno-unused -g
 else
 CFLAGS += -DNDEBUG \
-	$(ARCH) -Og -fomit-frame-pointer -fno-strict-aliasing \
+	$(ARCH) -O3 -fomit-frame-pointer -fno-strict-aliasing \
 	-Wall -Wno-sign-compare -Wunused \
 	-Wpointer-arith -Wbad-function-cast -Wcast-align \
 	-Wstrict-prototypes -Wundef \
@@ -190,8 +196,21 @@ endif
 
 all:	maketree emulator extra
 
-# include OS-specific rules first
-include src/$(MAMEOS)/$(MAMEOS2).mak
+# only PSP specific output files and rules
+OSOBJS = $(OBJ)/psp/psp.o \
+    $(OBJ)/psp/video.o \
+    $(OBJ)/psp/blit.o \
+	$(OBJ)/psp/sound.o \
+    $(OBJ)/psp/input.o \
+    $(OBJ)/psp/rc.o \
+	$(OBJ)/psp/misc.o \
+    $(OBJ)/psp/ticker.o \
+    $(OBJ)/psp/config.o \
+	$(OBJ)/psp/fileio.o \
+	$(OBJ)/psp/pg.o \
+    $(OBJ)/psp/pspmain.o \
+    $(OBJ)/psp/menu.o 
+
 
 # then the various core pieces
 # include the various .mak files
@@ -218,25 +237,15 @@ emulator: maketree $(EMULATOR)
 #TMK extra:	$(TOOLS) $(TEXTS)
 extra:	$(TEXTS)
 
+USE_PSPSDK_LIBC = 1
+
+PSP_EBOOT_ICON = icon0.png
+
 # combine the various definitions to one
 CDEFS = $(DEFS) $(COREDEFS) $(CPUDEFS) $(SOUNDDEFS) $(ASMDEFS) $(OPT_DEFS)
+OBJS  += $(CPUOBJS) $(SOUNDOBJS) $(COREOBJS) $(DRVLIBS) $(OSOBJS) $(ZLIB) $(EXPAT)
 
-# $(DBGDEFS)
-
-## always recompile the version string
-##	$(CC) $(CDEFS) $(CFLAGSPEDANTIC) -c src/version.c -o $(OBJ)/version.o
-
-# primary target
-$(EMULATOR): $(OBJS) $(COREOBJS) $(OSOBJS) $(DRVLIBS) $(EXPAT) $(ZLIB) $(OSDBGOBJS)
-	@echo Linking $@...
-	$(LD) -O0 $^ $(LIBS) -o $(TARGET).elf
-	$(FIXUP) $(TARGET).elf
-	$(STRIP) $(TARGET).elf -o $(TARGET)_strip.elf
-	$(MKSFO) '$(PSP_EBOOT_TITLE)' PARAM.SFO
-	$(PACK_PBP) EBOOT.PBP PARAM.SFO icon0.png  \
-		NULL NULL NULL  \
-		NULL $(TARGET)_strip.elf NULL
-	-rm -f $(TARGET)_strip.elf
+include $(PSPSDK)/lib/build.mak
 
 # secondary libraries
 $(OBJ)/libexpat.a: $(OBJ)/expat/xmlparse.o $(OBJ)/expat/xmlrole.o $(OBJ)/expat/xmltok.o
@@ -263,7 +272,7 @@ $(sort $(OBJDIRS)):
 
 maketree: $(sort $(OBJDIRS))
 
-clean:
+pspclean:
 	@echo Deleting object tree $(OBJ)...
 	$(RM) -r $(OBJ)
 	@echo Deleting $(EMULATOR)...
